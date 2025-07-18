@@ -87,6 +87,54 @@ impl Decimal {
 }
 
 impl Decimal {
+    pub fn to_token_amount(&self, rounding: Rounding) -> Result<TokenResult> {
+        let value = match rounding {
+            Rounding::Floor => self.0.checked_div(D9_U256).ok_or(MathOverflow)?,
+            Rounding::Ceiling => {
+                // Only round up if there's a remainder after division
+                if self.0 % D9_U256 == U256::from(0) {
+                    self.0.checked_div(D9_U256).ok_or(MathOverflow)?
+                } else {
+                    self.0
+                        .checked_add(D9_U256.checked_sub(U256::from(1)).ok_or(MathOverflow)?)
+                        .ok_or(MathOverflow)?
+                        .checked_div(D9_U256)
+                        .ok_or(MathOverflow)?
+                }
+            }
+        };
+
+        // If the value is greater than the max u64, return the max u64
+        Ok(if value > U256::from(u64::MAX) {
+            TokenResult(u64::MAX)
+        } else {
+            TokenResult(value.as_u64())
+        })
+    }
+
+    pub fn to_scaled(&self, rounding: Rounding) -> Result<u128> {
+        let value = match rounding {
+            Rounding::Floor => self.0,
+            Rounding::Ceiling => {
+                // Only add 1 if there's a fractional part
+                if self.0 % Decimal::ONE_E18.0 == U256::from(0) {
+                    self.0
+                } else {
+                    self.0.checked_add(U256::from(1)).ok_or(MathOverflow)?
+                }
+            }
+        };
+
+        // If the value is greater than the max u128, return the max u128
+        Ok(if value > U256::from(u128::MAX) {
+            u128::MAX
+        } else {
+            value.as_u128()
+        })
+    }
+}
+
+impl Decimal {
     pub fn add(&self, other: &Self) -> Result<Self> {
         let result = self.0.checked_add(other.0).ok_or(MathOverflow)?;
 
@@ -112,10 +160,12 @@ impl Decimal {
     }
 
     pub fn pow(&self, exponent: u64) -> Result<Self> {
+        // If the exponent is 0, return 1e18
         if exponent == 0 {
             return Ok(Decimal::ONE_E18);
         }
 
+        // If the exponent is 1, return the Decimal itself
         if exponent == 1 {
             return Ok(self.clone());
         }
@@ -132,6 +182,7 @@ impl Decimal {
                 base = base.mul(&base)?.div(&Decimal::ONE_E18)?;
             }
 
+            // Shift the exponent to the right by 1, to divide it by 2
             exp >>= 1;
         }
 
@@ -145,8 +196,11 @@ impl Decimal {
 
 impl Decimal {
     const MAX_ITERATIONS: usize = 100;
+
     const EPSILON: U256 = U256([1, 0, 0, 0]);
+
     const NTH_ROOT_UPPER_BOUND: u64 = 1_000_000;
+
     const NTH_ROOT_MAX_ITERATIONS: usize = 15;
 
     pub const E: U256 = U256([2_718_281_828_459_045_235, 0, 0, 0]);
@@ -162,25 +216,40 @@ impl Decimal {
         if n > Self::NTH_ROOT_UPPER_BOUND {
             let x = Decimal::ONE_E18.sub(self)?;
 
+            /*
+            First term
+            */
+            // Use from_scaled to keep n's raw value
             let n_decimal = Decimal::from_scaled(n);
             let first_term = x.div(&n_decimal)?;
 
-            let x_squared = x.mul(&x)?;
+            /*
+            Second term
+             */
+            let x_squared = x.mul(&x)?; // D36
 
             let n_value = n.checked_mul(n).ok_or(MathOverflow)?;
 
+            // Use (n-1) in numerator
             let n_minus_one = n.checked_sub(1).ok_or(MathOverflow)?;
 
-            let second_term = x_squared
-                .mul(&Decimal::from_scaled(n_minus_one))?
-                .div(&Decimal::ONE_E18)?
-                .div(&Decimal::from_scaled(n_value))?
-                .div(&Decimal::from_scaled(2u128))?;
+            // Calculate second term with correct coefficient
+            let second_term = x_squared // D36
+                .mul(&Decimal::from_scaled(n_minus_one))? // Multiply by (n-1)
+                .div(&Decimal::ONE_E18)? // Scale down
+                .div(&Decimal::from_scaled(n_value))? // Divide by n²
+                .div(&Decimal::from_scaled(2u128))?; // Divide by 2
 
-            let x_cubed = x_squared.mul(&x)?;
+            /*
+            Third term
+             */
+            let x_cubed = x_squared.mul(&x)?; // D36 * D18 = D54
+
+            // Calculate (n-1)(n-2)
             let n_minus_two = n.checked_sub(2).ok_or(MathOverflow)?;
             let numerator = n_minus_one.checked_mul(n_minus_two).ok_or(MathOverflow)?;
 
+            // Calculate n³
             let n_cubed = (n_value as u128)
                 .checked_mul(n as u128)
                 .ok_or(MathOverflow)?;
@@ -202,7 +271,8 @@ impl Decimal {
             return Ok(result);
         }
 
-        let mut low = Decimal::ZERO;
+        // For other cases use binary search with limited iterations
+        let mut low = Decimal::ZERO; // D18
         let mut high = if self.0 > Decimal::ONE_E18.0 {
             self.clone() // D18
         } else {
@@ -246,12 +316,14 @@ impl Decimal {
         let e = Decimal::from_scaled(Self::E);
         let mut power = 0i32;
 
+        // Handle numbers < 1 by multiplying by e until >= 1
         while normalized.0 < one.0 {
             // D18 x D18 = D36, so we need to div by D18
             normalized = normalized.mul(&e)?.div(&one)?;
             power -= 1;
         }
 
+        // Handle numbers > e by dividing by e until < e
         while normalized.0 >= e.0 {
             // D18 / D18 = D0, so we need to mul by D18
             normalized = normalized.mul(&one)?.div(&e)?;
@@ -261,8 +333,10 @@ impl Decimal {
         let numerator = normalized.sub(&one)?;
         let denominator = normalized.add(&one)?;
 
+        // D18 x D18 = D36, so we need to div by D18
         let z = numerator.mul(&one)?.div(&denominator)?;
 
+        // D18 x D18 = D36, so we need to div by D18
         let z_squared = z.mul(&z)?.div(&one)?;
 
         let mut term = z.clone();
@@ -271,18 +345,20 @@ impl Decimal {
 
         while n <= Self::MAX_ITERATIONS as u64 {
             result = result.add(&term.div(&Decimal::from_scaled(2 * n - 1))?)?;
+
+            // D18 x D18 = D36, so we need to div by D18
             term = term.mul(&z_squared)?.div(&one)?;
 
             if term.0 < Self::EPSILON {
                 break;
             }
-
             n += 1;
         }
 
         let mut final_result = result.mul(&Decimal::from_scaled(2u128))?;
 
         if power != 0 {
+            // one (D18) * plain number = D18
             let power_term = one.mul(&Decimal::from_scaled(power.unsigned_abs() as u64))?;
 
             if power > 0 {
@@ -292,6 +368,7 @@ impl Decimal {
             }
         }
 
+        // Scale result by D18
         final_result = Decimal(final_result.0);
 
         Ok(Some(final_result))

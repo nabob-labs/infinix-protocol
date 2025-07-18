@@ -4,7 +4,7 @@ use shared::check_condition;
 use shared::errors::ErrorCode;
 
 impl Actor {
-    pub fn process_init_needed(
+    pub fn process_init_if_needed(
         &mut self,
         account_bump: u8,
         context_bump: u8,

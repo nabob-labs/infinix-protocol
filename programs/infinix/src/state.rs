@@ -25,7 +25,7 @@ pub struct Infinix {
     pub bump: u8,
     pub status: u8,
     pub _padding: [u8; 14],
-    pub infinitx_token_mint: Pubkey,
+    pub infinix_token_mint: Pubkey,
     pub tvl_fee: u128,
     pub mint_fee: u128,
     pub dao_pending_fee_shares: u128,
@@ -33,7 +33,7 @@ pub struct Infinix {
     pub auction_length: u64,
     pub last_poke: u64,
     pub mandate: FixedSizeString,
-    pub fee_recipients_pending_fee_shares_to_minted: u128,
+    pub fee_recipients_pending_fee_shares_to_be_minted: u128,
 }
 
 impl Infinix {
@@ -75,7 +75,7 @@ pub struct FeeDistribution {
     pub infinix: Pubkey,
     pub cranker: Pubkey,
     pub amount_to_distribute: u128,
-    pub fee_recipients: [FeeRecipient; MAX_FEE_RECIPIENTS],
+    pub fee_recipients_state: [FeeRecipient; MAX_FEE_RECIPIENTS],
 }
 
 impl FeeDistribution {
@@ -91,7 +91,7 @@ impl Default for FeeDistribution {
             infinix: Pubkey::default(),
             cranker: Pubkey::default(),
             amount_to_distribute: 0,
-            fee_recipients: [FeeRecipient::default(); MAX_FEE_RECIPIENTS],
+            fee_recipients_state: [FeeRecipient::default(); MAX_FEE_RECIPIENTS],
         }
     }
 }
@@ -129,7 +129,7 @@ impl UserPendingBasket {
 #[repr(C)]
 pub struct Rebalance {
     pub bump: u8,
-    pub all_rebalances_details_added: u8,
+    pub all_rebalance_details_added: u8,
     pub _padding: [u8; 6],
     pub infinix: Pubkey,
     pub current_auction_id: u64,

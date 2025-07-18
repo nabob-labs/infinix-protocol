@@ -56,8 +56,8 @@ pub enum ErrorCode {
     #[msg("Invalid Fee Recipient Shares")]
     InvalidFeeRecipientPortion,
 
-    #[msg("Invalid Folio Status")]
-    InvalidFolioStatus,
+    #[msg("Invalid Infinix Status")]
+    InvalidInfinixStatus,
 
     #[msg("Invalid Recipient Token Account")]
     InvalidRecipientTokenAccount,
@@ -101,14 +101,14 @@ pub enum ErrorCode {
     #[msg("Invalid Token Amount")]
     InvalidTokenAmount,
 
-    #[msg("Invalid Folio Token Mint")]
-    InvalidFolioTokenMint,
+    #[msg("Invalid Infinix Token Mint")]
+    InvalidInfinixTokenMint,
 
     #[msg("Pending Token Amounts Is Not Empty")]
     PendingBasketIsNotEmpty,
 
-    #[msg("Token Mint Not In Old Folio Basket")]
-    TokenMintNotInOldFolioBasket,
+    #[msg("Token Mint Not In Old Infinix Basket")]
+    TokenMintNotInOldInfinixBasket,
 
     #[msg("Invalid Minting Fee")]
     InvalidMintFee,
@@ -173,8 +173,8 @@ pub enum ErrorCode {
     #[msg("Auction Cannot Be Opened Permissionlessly Yet")]
     AuctionCannotBeOpenedPermissionlesslyYet,
 
-    #[msg("Folio Not Rebalancing")]
-    FolioNotRebalancing,
+    #[msg("Infinix Not Rebalancing")]
+    InfinixNotRebalancing,
 
     #[msg("Auction Cannot Be Opened Permissionlessly With Deferred Price")]
     AuctionCannotBeOpenedPermissionlesslyWithDeferredPrice,
@@ -242,8 +242,8 @@ pub enum ErrorCode {
     #[msg("Invalid Token Rewards Token Account")]
     InvalidTokenRewardsTokenAccount,
 
-    #[msg("Invalid Folio Owner")]
-    InvalidFolioOwner,
+    #[msg("Invalid Infinix Owner")]
+    InvalidInfinixOwner,
 
     #[msg("Invalid Account Owner")]
     InvalidAccountOwner,
@@ -260,17 +260,17 @@ pub enum ErrorCode {
     #[msg("Invalid Fee Numerator")]
     InvalidFeeNumerator,
 
-    #[msg("New Folio Not Owned By New Folio Program")]
-    NewFolioNotOwnedByNewFolioProgram,
+    #[msg("New Infinix Not Owned By New Infinix Program")]
+    NewInfinixNotOwnedByNewInfinixProgram,
 
-    #[msg("Invalid New Folio")]
-    InvalidNewFolio,
+    #[msg("Invalid New Infinix")]
+    InvalidNewInfinix,
 
     #[msg("Can't Migrate To Same Program")]
     CantMigrateToSameProgram,
 
-    #[msg("Folio Not Migrating")]
-    FolioNotMigrating,
+    #[msg("Infinix Not Migrating")]
+    InfinixNotMigrating,
 
     #[msg("Invalid Fee Floor")]
     InvalidFeeFloor,
@@ -320,8 +320,8 @@ pub enum ErrorCode {
     #[msg("Invalid Token Balance")]
     InvalidTokenBalance,
 
-    #[msg("Folio is not poked. Poke folio, distribute fees and try again.")]
-    MigrationFailedFolioNotPoked,
+    #[msg("Infinix is not poked. Poke infinix, distribute fees and try again.")]
+    MigrationFailedInfinixNotPoked,
 
     #[msg("Dao pending fee to mint is higher.")]
     MigrationFailedDaoPendingFeeSharesTooHigh,

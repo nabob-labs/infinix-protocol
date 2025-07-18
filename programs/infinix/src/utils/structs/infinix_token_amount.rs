@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use bytemuck::{Pod, Zeroable};
-use shared::constants::MAX_INFINIX_TOKEN_AMOUNT;
+use shared::constants::{MAX_INFINIX_TOKEN_AMOUNTS};
 
 #[derive(
     AnchorSerialize,
@@ -23,13 +23,13 @@ pub struct InfinixTokenAmount {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace)]
 #[repr(C)]
 pub struct InfinixTokenBasket {
-    pub token_amounts: [InfinixTokenAmount; MAX_INFINIX_TOKEN_AMOUNT],
+    pub token_amounts: [InfinixTokenAmount; MAX_INFINIX_TOKEN_AMOUNTS],
 }
 
 impl Default for InfinixTokenBasket {
     fn default() -> Self {
         Self {
-            token_amounts: [InfinixTokenAmount::default(); MAX_INFINIX_TOKEN_AMOUNT],
+            token_amounts: [InfinixTokenAmount::default(); MAX_INFINIX_TOKEN_AMOUNTS],
         }
     }
 }

@@ -1,16 +1,164 @@
-[workspace]
-members = [
-    "shared",
-    "programs/*",
-]
-resolver = "2"
+# Solana AMM Index Token Basket Trading Strategy Engine
+# An optimized, production-ready Rust implementation for advanced index token strategies
+[package]
+name = "solana-amm-index-strategies"
+version = "0.1.0"
+edition = "2021"
+authors = ["Solana AMM Strategies Team"]
+description = "Optimized index token basket trading strategies with advanced execution optimization"
+license = "MIT"
+repository = "https://github.com/solana-amm-strategies"
+keywords = ["solana", "amm", "defi", "trading", "strategies"]
+categories = ["finance", "algorithms", "cryptography"]
 
+# 集成测试目录，Rust 默认识别 tests/，如需自定义可添加如下行
+# test = ["tests/integration.rs"]
+
+[dependencies]
+# Core Solana dependencies - Anchor 0.31.1 compatible versions
+solana-program = { version = "=2.2.1", default-features = false }
+spl-associated-token-account = "=6.0.0"
+spl-instruction-padding = "=0.3"
+spl-memo = "=6.0.0"
+spl-pod = "=0.5.0"
+spl-token = "=7.0.0"
+spl-token-2022 = "=7.0.0"
+spl-token-confidential-transfer-proof-extraction = "=0.2.1"
+spl-token-group-interface = "=0.5.0"
+spl-token-metadata-interface = "=0.6.0"
+anchor-lang = { version = "0.31.1", features = ["init-if-needed", "idl-build", "event-cpi"] }
+anchor-spl = "0.31.1"
+
+# Token and account management - Anchor 0.31.1 compatible versions
+# Note: These are included via anchor-spl
+
+# Serialization and data handling - Latest optimized versions
+# Note: borsh is provided by anchor-lang, no need for explicit dependency
+thiserror = "1.0.69"
+serde = { version = "1.0.215", features = ["derive", "rc"] }
+serde_json = "1.0.133"
+bincode = "1.3.3"
+postcard = { version = "1.0.10", features = ["alloc"] }
+rmp-serde = "1.3.0"
+
+# Mathematical operations and precision - Enhanced features
+num-traits = { version = "0.2.19", default-features = false, features = ["std"] }
+rust_decimal = { version = "1.36.0", features = ["borsh", "serde-with-str", "maths"] }
+rust_decimal_macros = "1.36.0"
+
+# Low-level utilities - Performance optimized
+arrayref = "0.3.9"
+bytemuck = { version = "1.19.0", features = ["derive", "extern_crate_alloc", "min_const_generics"] }
+zerocopy = { version = "0.7.35", features = ["derive", "simd"] }
+memchr = "2.7.4"
+static_assertions = "1.1.0"
+once_cell = "1.20.2"
+lazy_static = "1.5.0"
+
+# Security and documentation
+solana-security-txt = "1.1.1"
+
+# Additional performance and utility crates
+ahash = "0.8.11"
+smallvec = { version = "1.13.2", features = ["const_generics", "union"] }
+dashmap = "6.1.0"
+rayon = "1.10.0"
+parking_lot = "0.12.3"
+crossbeam = "0.8.4"
+indexmap = { version = "2.6.0", features = ["serde"] }
+
+# Async and concurrency
+futures = "0.3.31"
+futures-util = "0.3.31"
+tokio = { version = "1.42.0", features = ["rt", "sync", "time", "macros"] }
+async-trait = "0.1.83"
+pin-project = "1.1.7"
+
+# Error handling and logging
+anyhow = "1.0.93"
+log = "0.4.22"
+tracing = "0.1.40"
+eyre = "0.6.12"
+
+[dev-dependencies]
+# Testing and development dependencies - Anchor 0.31.1 compatible versions
+tokio-test = "0.4.4"
+proptest = "1.5.0"
+criterion = { version = "0.5.1", features = ["html_reports", "cargo_bench_support"] }
+
+# Additional testing utilities - Enhanced versions
+rstest = "0.23.0"
+serial_test = "3.1.1"
+env_logger = "0.11.5"
+pretty_assertions = "1.4.1"
+mockall = "0.13.0"
+wiremock = "0.6.2"
+test-case = "3.3.1"
+approx = "0.5.1"
+assert_cmd = "2.0.16"
+
+# Performance testing and profiling
+pprof = { version = "0.13.0", features = ["criterion", "protobuf-codec"] }
+dhat = "0.3.3"
+flamegraph = "0.6.5"
+perf-event = "0.4.8"
+iai = "0.1.1"
+
+# Fuzzing and property testing
+arbitrary = { version = "1.3.2", features = ["derive"] }
+quickcheck = "1.0.3"
+proptest-derive = "0.5.0"
+bolero = "0.11.1"
+honggfuzz = "0.5.56"
+
+# Development utilities
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
+tempfile = "3.13.0"
+insta = "1.40.0"
+assert_matches = "1.5.0"
+similar-asserts = "1.6.0"
+color-eyre = "0.6.3"
+predicates = "3.1.2"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+default = ["optimized"]
+no-entrypoint = []
+optimized = []
+testing = []
+security-txt = []
+
+# Optimization profiles
 [profile.release]
-overflow-checks = true
-lto = "fat"
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false
+
+# Development profile optimized for faster compilation
+[profile.dev]
+opt-level = 0
+debug = true
+split-debuginfo = "unpacked"
+
+# Profile for benchmarking
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
 codegen-units = 1
 
-[profile.release.build-override]
-opt-level = 3
-incremental = false
-codegen-units = 1
+# Profile for testing with optimizations
+[profile.test]
+opt-level = 1
+debug = true

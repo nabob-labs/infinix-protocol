@@ -1,31 +1,32 @@
-pub mod advanced_strategies;
-pub mod rebalancing_strategies;
-pub mod strategy_factory;
-pub mod strategy_registry;
-pub mod strategy_validator;
-pub mod weight_strategies;
+//!
+//! Strategies Module
+//!
+//! 本模块定义所有策略类型、参数结构体、配置结构体、优化与风险设置、版本管理 trait 及相关 trait，确保策略类型、参数、配置的合规性、可扩展性和可维护性。
 
+// 引入版本管理、Anchor 依赖、核心 trait 和类型。
 use crate::version::{ProgramVersion, Versioned, CURRENT_VERSION};
 use anchor_lang::prelude::*;
-// Removed conflicting borsh import
+use crate::core::adapter::AdapterTrait;
+use crate::core::types::StrategyParams;
 
-/// Enumeration of available weight strategy types
+/// 权重策略类型枚举，定义所有支持的权重分配算法。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, PartialEq, InitSpace)]
 pub enum WeightStrategyType {
-    /// Equal weight distribution across all tokens
+    /// 等权重分配
     EqualWeight,
-    /// Market capitalization weighted
+    /// 市值加权分配
     MarketCapWeighted,
-    /// Price momentum based weighting
+    /// 动量加权分配
     MomentumWeighted,
-    /// Volatility adjusted weighting
+    /// 波动率调整分配
     VolatilityAdjusted,
-    /// Custom fixed weights
+    /// 固定权重分配
     FixedWeight,
-    /// Dynamic rebalancing based on technical indicators
+    /// 技术指标动态分配
     TechnicalIndicator,
 }
 
+// u8 到 WeightStrategyType 的转换实现，便于序列化和兼容性。
 impl From<u8> for WeightStrategyType {
     fn from(value: u8) -> Self {
         match value {
@@ -40,6 +41,7 @@ impl From<u8> for WeightStrategyType {
     }
 }
 
+// WeightStrategyType 到 u8 的转换实现。
 impl From<WeightStrategyType> for u8 {
     fn from(strategy_type: WeightStrategyType) -> Self {
         match strategy_type {
@@ -53,21 +55,22 @@ impl From<WeightStrategyType> for u8 {
     }
 }
 
-/// Enumeration of available rebalancing strategy types
+/// 再平衡策略类型枚举，定义所有支持的再平衡算法。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, PartialEq, InitSpace)]
 pub enum RebalancingStrategyType {
-    /// Threshold-based rebalancing
+    /// 阈值触发再平衡
     ThresholdBased,
-    /// Time-based periodic rebalancing
+    /// 定时周期再平衡
     TimeBased,
-    /// Volatility-triggered rebalancing
+    /// 波动率触发再平衡
     VolatilityTriggered,
-    /// Drift-based rebalancing
+    /// 漂移触发再平衡
     DriftBased,
-    /// Hybrid approach combining multiple triggers
+    /// 混合多因子再平衡
     Hybrid,
 }
 
+// u8 到 RebalancingStrategyType 的转换实现。
 impl From<u8> for RebalancingStrategyType {
     fn from(value: u8) -> Self {
         match value {
@@ -81,6 +84,7 @@ impl From<u8> for RebalancingStrategyType {
     }
 }
 
+// RebalancingStrategyType 到 u8 的转换实现。
 impl From<RebalancingStrategyType> for u8 {
     fn from(strategy_type: RebalancingStrategyType) -> Self {
         match strategy_type {
@@ -93,148 +97,148 @@ impl From<RebalancingStrategyType> for u8 {
     }
 }
 
-/// Parameters for equal weight strategy
+/// 等权重策略参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct EqualWeightParams {
-    /// Number of tokens in the index
+    /// 指数包含的资产数量
     pub token_count: u32,
 }
 
-/// Parameters for market cap weighted strategy
+/// 市值加权策略参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct MarketCapWeightedParams {
-    /// Minimum weight for any token (basis points)
+    /// 最小权重（基点）
     pub min_weight: u64,
-    /// Maximum weight for any token (basis points)
+    /// 最大权重（基点）
     pub max_weight: u64,
-    /// Rebalancing frequency in days
+    /// 再平衡频率（天）
     pub rebalance_frequency: u32,
 }
 
-/// Parameters for momentum weighted strategy
+/// 动量加权策略参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct MomentumWeightedParams {
-    /// Lookback period for momentum calculation (days)
+    /// 动量回溯周期（天）
     pub lookback_period: u32,
-    /// Momentum factor weight
+    /// 动量因子权重
     pub momentum_factor: u64,
-    /// Base weight for each token (basis points)
+    /// 每个资产的基础权重（基点）
     pub base_weight: u64,
 }
 
-/// Parameters for volatility adjusted strategy
+/// 波动率调整策略参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct VolatilityAdjustedParams {
-    /// Volatility lookback period (days)
+    /// 波动率回溯周期（天）
     pub volatility_period: u32,
-    /// Risk aversion parameter
+    /// 风险厌恶参数
     pub risk_aversion: u64,
-    /// Target volatility (basis points)
+    /// 目标波动率（基点）
     pub target_volatility: u64,
 }
 
-/// Parameters for fixed weight strategy
+/// 固定权重策略参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct FixedWeightParams {
-    /// Fixed weights for each token (basis points, must sum to 10000)
+    /// 每个资产的固定权重（基点，需总和为 10000）
     pub weights: Vec<u64>,
 }
 
-/// Parameters for threshold-based rebalancing
+/// 阈值再平衡参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct ThresholdRebalanceParams {
-    /// Threshold deviation from target weight (basis points)
+    /// 偏离目标权重的阈值（基点）
     pub threshold: u64,
-    /// Minimum time between rebalances (seconds)
+    /// 最小再平衡间隔（秒）
     pub min_interval: u64,
 }
 
-/// Parameters for time-based rebalancing
+/// 定时再平衡参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct TimeBasedRebalanceParams {
-    /// Rebalancing interval in seconds
+    /// 再平衡间隔（秒）
     pub interval: u64,
-    /// Whether to allow early rebalancing if threshold is exceeded
+    /// 是否允许提前再平衡
     pub allow_early_rebalance: bool,
-    /// Early rebalance threshold (basis points)
+    /// 提前再平衡阈值（基点）
     pub early_threshold: u64,
 }
 
-/// Parameters for volatility-triggered rebalancing
+/// 波动率触发再平衡参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct VolatilityTriggeredParams {
-    /// Volatility threshold for triggering rebalance (basis points)
+    /// 触发再平衡的波动率阈值（基点）
     pub volatility_threshold: u64,
-    /// Lookback period for volatility calculation (seconds)
+    /// 波动率计算回溯周期（秒）
     pub volatility_period: u64,
-    /// Minimum time between rebalances (seconds)
+    /// 最小再平衡间隔（秒）
     pub min_interval: u64,
 }
 
-/// Parameters for drift-based rebalancing
+/// 漂移再平衡参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct DriftBasedParams {
-    /// Cumulative drift threshold (basis points)
+    /// 累计漂移阈值（基点）
     pub drift_threshold: u64,
-    /// Minimum time between rebalances (seconds)
+    /// 最小再平衡间隔（秒）
     pub min_interval: u64,
-    /// Drift calculation window (seconds)
+    /// 漂移计算窗口（秒）
     pub drift_window: u64,
 }
 
-/// Parameters for hybrid rebalancing strategy
+/// 混合再平衡参数结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct HybridRebalanceParams {
-    /// Enable threshold-based component
+    /// 启用阈值分量
     pub enable_threshold: bool,
-    /// Enable time-based component
+    /// 启用定时分量
     pub enable_time: bool,
-    /// Enable volatility-triggered component
+    /// 启用波动率分量
     pub enable_volatility: bool,
-    /// Enable drift-based component
+    /// 启用漂移分量
     pub enable_drift: bool,
-    /// Combination strategy for triggers
+    /// 组合策略类型
     pub combination_strategy: HybridCombinationStrategy,
-    /// Weight for threshold component
+    /// 阈值分量权重
     pub threshold_weight: u32,
-    /// Weight for time component
+    /// 定时分量权重
     pub time_weight: u32,
-    /// Weight for volatility component
+    /// 波动率分量权重
     pub volatility_weight: u32,
-    /// Weight for drift component
+    /// 漂移分量权重
     pub drift_weight: u32,
-    /// Trigger threshold for weighted combination
+    /// 组合触发阈值
     pub trigger_threshold: u32,
-    /// Parameters for threshold strategy
+    /// 阈值策略参数
     pub threshold_params: Vec<u8>,
-    /// Parameters for time strategy
+    /// 定时策略参数
     pub time_params: Vec<u8>,
-    /// Parameters for volatility strategy
+    /// 波动率策略参数
     pub volatility_params: Vec<u8>,
-    /// Parameters for drift strategy
+    /// 漂移策略参数
     pub drift_params: Vec<u8>,
 }
 
-/// Combination strategies for hybrid rebalancing
+/// 混合再平衡组合策略类型枚举。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub enum HybridCombinationStrategy {
-    /// Trigger if any component strategy triggers
+    /// 任一分量触发即触发
     Any,
-    /// Trigger if majority of enabled strategies trigger
+    /// 多数分量触发才触发
     Majority,
-    /// Trigger only if all enabled strategies trigger
+    /// 所有分量均触发才触发
     All,
-    /// Use weighted combination of strategy signals
+    /// 按权重加权组合信号
     Weighted,
 }
 
+// 为策略类型实现版本管理 trait。
 impl Versioned for WeightStrategyType {
     fn version(&self) -> ProgramVersion {
         CURRENT_VERSION
     }
-
     fn set_version(&mut self, _version: ProgramVersion) {
-        // Strategy types are immutable, version is always current
+        // 策略类型不可变，版本始终为当前
     }
 }
 
@@ -242,36 +246,35 @@ impl Versioned for RebalancingStrategyType {
     fn version(&self) -> ProgramVersion {
         CURRENT_VERSION
     }
-
     fn set_version(&mut self, _version: ProgramVersion) {
-        // Strategy types are immutable, version is always current
+        // 策略类型不可变，版本始终为当前
     }
 }
 
-/// Enhanced strategy configuration with version support
+/// 策略配置结构体，支持版本管理。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct StrategyConfig {
-    /// Strategy version
+    /// 策略版本
     pub version: ProgramVersion,
-    /// Configuration ID
+    /// 配置 ID
     pub config_id: u64,
-    /// Strategy authority
+    /// 策略权限
     pub authority: Pubkey,
-    /// Weight strategy configuration
+    /// 权重策略配置
     pub weight_config: WeightStrategyConfig,
-    /// Rebalancing strategy configuration
+    /// 再平衡策略配置
     pub rebalancing_config: RebalancingStrategyConfig,
-    /// Performance optimization settings
+    /// 性能优化设置
     pub optimization_settings: OptimizationSettings,
-    /// Risk management settings
+    /// 风险管理设置
     pub risk_settings: RiskSettings,
-    /// Creation timestamp
+    /// 创建时间戳
     pub created_at: i64,
-    /// Last update timestamp
+    /// 最后更新时间戳
     pub updated_at: i64,
 }
 
-/// Weight strategy configuration
+/// 权重策略配置结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct WeightStrategyConfig {
     pub strategy_type: WeightStrategyType,
@@ -281,7 +284,7 @@ pub struct WeightStrategyConfig {
     pub last_calculation: i64,
 }
 
-/// Rebalancing strategy configuration
+/// 再平衡策略配置结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct RebalancingStrategyConfig {
     pub strategy_type: RebalancingStrategyType,
@@ -291,34 +294,34 @@ pub struct RebalancingStrategyConfig {
     pub next_rebalance: i64,
 }
 
-/// Performance optimization settings
+/// 性能优化设置结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct OptimizationSettings {
-    /// Enable calculation caching
+    /// 启用缓存
     pub enable_caching: bool,
-    /// Enable parallel processing
+    /// 启用并行处理
     pub enable_parallel: bool,
-    /// Batch processing size
+    /// 批处理大小
     pub batch_size: u32,
-    /// Cache expiry time (seconds)
+    /// 缓存过期时间（秒）
     pub cache_expiry: u64,
 }
 
-/// Risk management settings
+/// 风险管理设置结构体。
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct RiskSettings {
-    /// Maximum weight concentration (basis points)
+    /// 最大权重集中度（基点）
     pub max_concentration: u64,
-    /// Maximum daily rebalance frequency
+    /// 每日最大再平衡次数
     pub max_daily_rebalances: u32,
-    /// Enable circuit breakers
+    /// 启用断路器
     pub enable_circuit_breakers: bool,
-    /// Volatility threshold for circuit breaker
+    /// 断路器波动率阈值
     pub volatility_circuit_breaker: u64,
 }
 
 impl StrategyConfig {
-    /// Create new strategy configuration
+    /// 创建新策略配置。
     pub fn new(
         config_id: u64,
         authority: Pubkey,
@@ -326,7 +329,6 @@ impl StrategyConfig {
         rebalancing_config: RebalancingStrategyConfig,
     ) -> Result<Self> {
         let current_time = Clock::get()?.unix_timestamp;
-
         Ok(Self {
             version: CURRENT_VERSION,
             config_id,
@@ -337,7 +339,7 @@ impl StrategyConfig {
                 enable_caching: true,
                 enable_parallel: false,
                 batch_size: 10,
-                cache_expiry: 300, // 5 minutes
+                cache_expiry: 300, // 5 分钟
             },
             risk_settings: RiskSettings {
                 max_concentration: 5000, // 50%
@@ -349,15 +351,13 @@ impl StrategyConfig {
             updated_at: current_time,
         })
     }
-
-    /// Update weight strategy configuration
+    /// 更新权重策略配置。
     pub fn update_weight_config(&mut self, new_config: WeightStrategyConfig) -> Result<()> {
         self.weight_config = new_config;
         self.updated_at = Clock::get()?.unix_timestamp;
         Ok(())
     }
-
-    /// Update rebalancing strategy configuration
+    /// 更新再平衡策略配置。
     pub fn update_rebalancing_config(
         &mut self,
         new_config: RebalancingStrategyConfig,
@@ -366,14 +366,12 @@ impl StrategyConfig {
         self.updated_at = Clock::get()?.unix_timestamp;
         Ok(())
     }
-
-    /// Check if strategy needs rebalancing
+    /// 判断是否需要再平衡。
     pub fn needs_rebalancing(&self) -> bool {
         let current_time = Clock::get().unwrap().unix_timestamp;
         self.rebalancing_config.is_active && current_time >= self.rebalancing_config.next_rebalance
     }
-
-    /// Get strategy performance metrics
+    /// 获取策略性能指标。
     pub fn get_performance_metrics(&self) -> StrategyPerformanceMetrics {
         StrategyPerformanceMetrics {
             config_id: self.config_id,
@@ -386,42 +384,55 @@ impl StrategyConfig {
     }
 }
 
+// 为策略配置实现版本管理 trait。
 impl Versioned for StrategyConfig {
     fn version(&self) -> ProgramVersion {
         self.version
     }
-
     fn set_version(&mut self, version: ProgramVersion) {
         self.version = version;
         self.updated_at = Clock::get().unwrap().unix_timestamp;
     }
-
     fn migrate_to_1_0_1(&mut self) -> Result<()> {
         msg!(
             "Migrating StrategyConfig {} to version 1.0.1",
             self.config_id
         );
-        // Add any specific migration logic
+        // 版本迁移逻辑
         Ok(())
     }
-
     fn migrate_to_1_1_0(&mut self) -> Result<()> {
         msg!(
             "Migrating StrategyConfig {} to version 1.1.0",
             self.config_id
         );
-        // Add any specific migration logic
+        // 版本迁移逻辑
         Ok(())
     }
 }
 
-/// Strategy performance metrics
+/// 策略性能指标结构体。
 #[derive(Debug, Clone)]
 pub struct StrategyPerformanceMetrics {
-    pub config_id: u64,
-    pub last_weight_calculation: i64,
-    pub last_rebalance: i64,
-    pub next_rebalance: i64,
-    pub uptime: i64,
-    pub is_active: bool,
+    pub config_id: u64,              // 配置 ID
+    pub last_weight_calculation: i64,// 上次权重计算时间
+    pub last_rebalance: i64,         // 上次再平衡时间
+    pub next_rebalance: i64,         // 下次再平衡时间
+    pub uptime: i64,                 // 运行时长
+    pub is_active: bool,             // 是否激活
+}
+
+/// 策略 trait，所有策略需实现。
+pub trait Strategy: AdapterTrait {
+    fn execute(&self, params: &StrategyParams) -> anchor_lang::Result<StrategyResult>;
+}
+
+/// 策略参数结构体（占位，具体定义见实现）。
+pub struct StrategyParams {
+    // ...参数定义...
+}
+
+/// 策略结果结构体（占位，具体定义见实现）。
+pub struct StrategyResult {
+    // ...结果定义...
 }

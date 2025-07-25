@@ -15,8 +15,11 @@ categories = ["finance", "algorithms", "cryptography"]
 # test = ["tests/integration.rs"]
 
 [dependencies]
+openbook_dex = { version = "*", optional = true }
+drift = { version = "*", optional = true }
+chainlink_solana = { version = "*", optional = true }
 # Core Solana dependencies - Anchor 0.31.1 compatible versions
-solana-program = { version = "=2.2.1", default-features = false }
+solana-program = { version = "2.2.1", default-features = false }
 spl-associated-token-account = "=6.0.0"
 spl-instruction-padding = "=0.3"
 spl-memo = "=6.0.0"
@@ -26,8 +29,20 @@ spl-token-2022 = "=7.0.0"
 spl-token-confidential-transfer-proof-extraction = "=0.2.1"
 spl-token-group-interface = "=0.5.0"
 spl-token-metadata-interface = "=0.6.0"
-anchor-lang = { version = "0.31.1", features = ["init-if-needed", "idl-build", "event-cpi"] }
+anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
+anchor-derive-accounts = "0.31.1"
+anchor-attribute-program = "0.31.1"
+# DEX/AMM CPI依赖
+jupiter-amm-interface = { version = "0.6.0", optional = true }
+# raydium-amm-interface = { version = "*", optional = true } # crates.io 无此包，注释掉
+# orca-amm-interface = { version = "*", optional = true } # crates.io 无此包，注释掉
+# lifinity-amm-interface = { version = "*", optional = true } # crates.io 无此包，注释掉
+# meteora-amm-interface = { version = "*", optional = true } # crates.io 无此包，注释掉
+# mango-v4 = { version = "*", optional = true } # crates.io 无此包，注释掉
+# 预言机CPI依赖
+# pyth-sdk-solana = { version = "0.8.0", optional = true } # 依赖冲突，移除
+switchboard-v2 = { version = "0.1.0", optional = true }
 
 # Token and account management - Anchor 0.31.1 compatible versions
 # Note: These are included via anchor-spl
@@ -43,7 +58,7 @@ rmp-serde = "1.3.0"
 
 # Mathematical operations and precision - Enhanced features
 num-traits = { version = "0.2.19", default-features = false, features = ["std"] }
-rust_decimal = { version = "1.36.0", features = ["borsh", "serde-with-str", "maths"] }
+rust_decimal = { version = "1.26.1", features = ["borsh", "serde-with-str", "maths"] }
 rust_decimal_macros = "1.36.0"
 
 # Low-level utilities - Performance optimized
@@ -79,6 +94,19 @@ anyhow = "1.0.93"
 log = "0.4.22"
 tracing = "0.1.40"
 eyre = "0.6.12"
+
+# DEX/AMM集成依赖
+serum_dex = { version = "0.5.4", optional = true }
+# raydium = { version = "0.1.0", optional = true }
+# orca = { version = "0.1.0", optional = true }
+
+# DEX/AMM/Oracle集成依赖（生产级CPI集成，兼容Anchor v0.31.1）
+# 已移除orca feature gate，彻底清理orca依赖残留
+# 已彻底删除orca依赖项，避免yanked依赖导致构建失败
+
+dex-offchain = { path = "./dex-offchain" }
+oracle-offchain = { path = "./oracle-offchain" }
+reqwest = { version = "0.11", features = ["json", "blocking", "rustls-tls"] }
 
 [dev-dependencies]
 # Testing and development dependencies - Anchor 0.31.1 compatible versions
@@ -123,12 +151,44 @@ predicates = "3.1.2"
 [lib]
 crate-type = ["cdylib", "lib"]
 
+# 自动化补全主流DEX/AMM/Oracle依赖
+jupiter-amm-interface = { version = "0.6.0", optional = true }
+# raydium-amm-interface = { version = "*", optional = true } # crates.io 无此包，注释掉
+# orca-amm-interface = { version = "*", optional = true } # crates.io 无此包，注释掉
+# lifinity-amm-interface = { version = "*", optional = true } # crates.io 无此包，注释掉
+# meteora-amm-interface = { version = "*", optional = true } # crates.io 无此包，注释掉
+# phoenix-amm-interface = { version = "*", optional = true } # crates.io 无此包，彻底移除
+# pyth-sdk-solana = { version = "0.8.0", optional = true } # 依赖冲突，移除
+switchboard-v2 = { version = "0.1.0", optional = true }
+chainlink_solana = { version = "*", optional = true }
+openbook_dex = { version = "*", optional = true }
+# mango-v4 = { version = "*", optional = true } # crates.io 无此包，注释掉
+drift = { version = "*", optional = true }
+
 [features]
 default = ["optimized"]
-no-entrypoint = []
 optimized = []
 testing = []
 security-txt = []
+serum = ["dep:serum_dex"]
+# raydium = ["dep:raydium"] # crates.io 无此包，彻底移除
+raydium = []
+jupiter = ["dep:jupiter-amm-interface"]
+# orca = ["dep:orca-amm-interface"] # crates.io 无此包，注释掉
+orca = []
+lifinity = [] # ["dep:lifinity-amm-interface"] # crates.io 无此包，注释掉
+# meteora = ["dep:meteora-amm-interface"] # crates.io 无此包，注释掉
+meteora = []
+# pyth = ["dep:pyth-sdk-solana"] # 依赖冲突，移除
+pyth = []
+switchboard = ["dep:switchboard-v2"]
+chainlink = ["dep:chainlink_solana"]
+# phoenix = ["dep:phoenix-amm-interface"] # crates.io 无此包，彻底移除
+phoenix = []
+openbook = ["dep:openbook_dex"]
+# mango = ["dep:mango-v4"] # crates.io 无此包，注释掉
+mango = []
+drift = ["dep:drift"]
 
 # Optimization profiles
 [profile.release]
@@ -162,3 +222,9 @@ codegen-units = 1
 [profile.test]
 opt-level = 1
 debug = true
+
+[workspace]
+members = [
+    "dex-offchain", "offchain-integration",
+    "oracle-offchain"
+]

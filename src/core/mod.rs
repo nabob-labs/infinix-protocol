@@ -1,104 +1,93 @@
 /*!
- * Core Module - Enhanced Foundational Types and Utilities for Anchor 0.31.1
+ * 核心模块 - 针对 Anchor 0.31.1 增强的基础类型与工具
  *
- * This module provides the foundational types, traits, and utilities
- * used throughout the Solana AMM Index Token Strategy Engine v3.0.0.
+ * 本模块为 Solana AMM Index Token Strategy Engine v3.0.0 提供基础类型、trait 和工具。
  *
- * ## Architecture Overview
+ * ## 架构概览
  *
- * The core module is organized into logical sub-modules:
- * - `constants`: System-wide constants and configuration values
- * - `types`: Fundamental data structures and type definitions
- * - `traits`: Common trait definitions and implementations
- * - `math`: Safe mathematical operations and calculations
- * - `validation`: Input validation and sanitization
- * - `security`: Security utilities and checks
- * - `performance`: Performance monitoring and optimization
- * - `cache`: High-performance caching system
- * - `macros`: Code generation and utility macros
+ * core 模块按逻辑子模块组织：
+ * - `constants`：系统级常量与配置
+ * - `types`：基础数据结构与类型定义
+ * - `traits`：通用 trait 定义与实现
+ * - `math`：安全数学运算与计算
+ * - `validation`：输入校验与数据清洗
+ * - `security`：安全工具与检查
+ * - `performance`：性能监控与优化
+ * - `cache`：高性能缓存系统
+ * - `macros`：代码生成与工具宏
  *
- * ## Key Features
+ * ## 主要特性
  *
- * - **Type Safety**: All types include comprehensive validation
- * - **Performance**: Optimized for Solana compute limits with 40-50% reduction
- * - **Security**: Built-in security checks and validations
- * - **Maintainability**: Clear separation of concerns with modular design
- * - **Scalability**: Pluggable architecture supporting future extensions
- * - **Memory Efficiency**: 60% improvement in memory usage
+ * - **类型安全**：所有类型均包含全面校验
+ * - **性能**：针对 Solana 计算资源优化，提升 40-50%
+ * - **安全**：内置安全检查与校验
+ * - **可维护性**：关注点分离，模块化设计
+ * - **可扩展性**：插件式架构，支持未来扩展
+ * - **内存效率**：内存使用提升 60%
  */
-
-pub mod cache;
-pub mod constants;
-pub mod macros;
-pub mod math;
-pub mod performance;
-pub mod security;
-pub mod traits;
-pub mod types;
-pub mod validation;
-
-// Re-export core types for convenience
-pub use cache::*;
-pub use constants::*;
-pub use math::*;
-pub use performance::*;
-pub use security::*;
-pub use traits::*;
-pub use types::*;
-pub use validation::*;
 
 use crate::error::StrategyError;
 use anchor_lang::prelude::*;
 
+// 引入统一的策略/参数类型定义
+use crate::algorithms::execution_optimizer::types::*;
+
 // ============================================================================
-// CORE TYPE ALIASES
+// 核心类型别名
 // ============================================================================
 
-/// Result type alias for strategy operations
+/// 策略操作通用结果类型
+/// - 用于所有策略相关操作的统一返回类型，便于错误处理和类型推断
 pub type StrategyResult<T> = Result<T>;
 
-/// Basis points type for percentage calculations
+/// 百分比基点类型（用于百分比计算）
+/// - 1bp = 0.01%，常用于金融场景的精确比例表示
 pub type BasisPoints = u64;
 
-/// Token amount type for precision
+/// 代币数量类型（高精度）
+/// - 用于所有代币数量相关的高精度运算
 pub type TokenAmount = u64;
 
-/// Timestamp type for time-based operations
+/// 时间戳类型（用于时间相关操作）
+/// - 统一使用 i64，便于与 Solana Clock 兼容
 pub type Timestamp = i64;
 
-/// Price type for precision calculations
+/// 价格类型（高精度）
+/// - 用于所有价格相关的高精度运算
 pub type Price = u64;
 
-/// Volume type for trading operations
+/// 交易量类型
+/// - 用于统计和分析交易量
 pub type Volume = u64;
 
-/// Gas units type for compute budget tracking
+/// Gas 单位类型（用于计算预算追踪）
+/// - 统一 Gas 计量，便于性能分析和资源追踪
 pub type GasUnits = u64;
 
 // ============================================================================
-// ENHANCED PERFORMANCE METRICS
+// 性能指标结构体
 // ============================================================================
 
-/// Comprehensive performance metrics for monitoring system performance
+/// 系统性能监控的综合指标结构体
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct PerformanceMetrics {
-    /// Gas units consumed during execution
+    /// 执行消耗的 Gas 单位
     pub gas_used: GasUnits,
-    /// Execution time in milliseconds
+    /// 执行耗时（毫秒）
     pub execution_time_ms: u64,
-    /// Slippage experienced in basis points
+    /// 实际滑点（基点）
     pub slippage_bps: u16,
-    /// Success rate in basis points (10000 = 100%)
+    /// 成功率（基点，10000=100%）
     pub success_rate_bps: u16,
-    /// MEV protection effectiveness score (0-10000)
+    /// MEV 保护效果评分（0-10000）
     pub mev_protection_score: u32,
-    /// Memory usage in bytes
+    /// 内存使用量（字节）
     pub memory_used_bytes: u64,
-    /// Cache hit rate in basis points
+    /// 缓存命中率（基点）
     pub cache_hit_rate_bps: u16,
-    /// Optimization efficiency score (0-10000)
+    /// 优化效率评分（0-10000）
     pub optimization_efficiency: u32,
-    /// Risk-adjusted performance score (0-10000)
+    /// 风险调整后性能评分（0-10000）
     pub risk_adjusted_score: u32,
 }
 
@@ -108,18 +97,19 @@ impl Default for PerformanceMetrics {
             gas_used: 0,
             execution_time_ms: 0,
             slippage_bps: 0,
-            success_rate_bps: 10_000,    // 100% success rate by default
-            mev_protection_score: 8_000, // Default good score
+            success_rate_bps: 10_000,    // 默认100%成功率
+            mev_protection_score: 8_000, // 默认良好
             memory_used_bytes: 0,
             cache_hit_rate_bps: 0,
-            optimization_efficiency: 7_000, // Default moderate efficiency
-            risk_adjusted_score: 8_000,     // Default good risk-adjusted score
+            optimization_efficiency: 7_000, // 默认中等效率
+            risk_adjusted_score: 8_000,     // 默认良好
         }
     }
 }
 
 impl PerformanceMetrics {
-    /// Create new performance metrics with validation
+    /// 构造带校验的性能指标
+    /// - 各项参数需满足合理边界
     pub fn new(
         gas_used: GasUnits,
         execution_time_ms: u64,
@@ -165,7 +155,7 @@ impl PerformanceMetrics {
         })
     }
 
-    /// Check if performance is within acceptable limits
+    /// 判断性能是否在可接受范围内
     pub fn is_acceptable(&self, limits: &PerformanceLimits) -> bool {
         self.gas_used <= limits.max_gas_used
             && self.execution_time_ms <= limits.max_execution_time_ms
@@ -178,7 +168,7 @@ impl PerformanceMetrics {
             && self.risk_adjusted_score >= limits.min_risk_adjusted_score
     }
 
-    /// Calculate comprehensive performance efficiency score
+    /// 计算综合性能效率评分
     pub fn efficiency_score(&self) -> u32 {
         let gas_efficiency = if self.gas_used > 0 {
             (MAX_COMPUTE_UNITS as u64 * 10_000 / self.gas_used) as u32
@@ -204,7 +194,7 @@ impl PerformanceMetrics {
             10_000
         };
 
-        // Weighted average of efficiency metrics
+        // 多项效率指标加权平均
         (gas_efficiency * 3
             + time_efficiency * 2
             + slippage_efficiency * 2
@@ -216,108 +206,84 @@ impl PerformanceMetrics {
             + self.risk_adjusted_score)
             / 15
     }
-
-    /// Merge with another performance metrics instance
-    pub fn merge(&mut self, other: &PerformanceMetrics) {
-        self.gas_used += other.gas_used;
-        self.execution_time_ms = (self.execution_time_ms + other.execution_time_ms) / 2;
-        self.slippage_bps = (self.slippage_bps + other.slippage_bps) / 2;
-        self.success_rate_bps = (self.success_rate_bps + other.success_rate_bps) / 2;
-        self.mev_protection_score = (self.mev_protection_score + other.mev_protection_score) / 2;
-        self.memory_used_bytes = std::cmp::max(self.memory_used_bytes, other.memory_used_bytes);
-        self.cache_hit_rate_bps = (self.cache_hit_rate_bps + other.cache_hit_rate_bps) / 2;
-        self.optimization_efficiency =
-            (self.optimization_efficiency + other.optimization_efficiency) / 2;
-        self.risk_adjusted_score = (self.risk_adjusted_score + other.risk_adjusted_score) / 2;
-    }
 }
 
 // ============================================================================
-// ENHANCED EXECUTION PARAMETERS
+// 执行参数结构体及相关实现
 // ============================================================================
 
-/// Execution parameters for trading strategies.
-///
-/// # Fields
-/// - `max_slippage_bps`: Maximum allowed slippage in basis points (1/10000)
-/// - `deadline`: Unix timestamp after which the execution is invalid
-/// - `use_mev_protection`: Whether to enable MEV protection
-/// - `split_large_orders`: Whether to split large orders for execution
-/// - `token_weights`: Weights for each token in the basket (must sum to 10000)
-/// - `token_mints`: List of token mint addresses
-/// - `execution_strategy`: Chosen execution strategy (Market, Limit, TWAP, etc.)
-/// - `risk_params`: Risk management parameters
-/// - `optimization_config`: Optimization configuration
+/// 交易策略执行参数
+/// - 统一描述策略执行所需的全部参数，支持多资产、多策略、多风险控制
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct ExecutionParams {
-    /// Maximum acceptable slippage in basis points
+    /// 最大允许滑点（基点，1/10000）
     pub max_slippage_bps: u16,
-    /// Execution deadline timestamp
+    /// 执行截止时间戳（Unix 时间，秒）
     pub deadline: i64,
-    /// Whether to use MEV protection
+    /// 是否启用 MEV 保护
     pub use_mev_protection: bool,
-    /// Whether to split large orders
+    /// 是否拆分大单
     pub split_large_orders: bool,
-    /// Token weights in basis points
+    /// 代币权重（基点，权重总和需为 10000）
     pub token_weights: Vec<u64>,
-    /// Token mint addresses
+    /// 代币 mint 地址列表
     pub token_mints: Vec<Pubkey>,
-    /// Execution strategy type
+    /// 执行策略类型
     pub execution_strategy: ExecutionStrategy,
-    /// Risk management parameters
+    /// 风险管理参数
     pub risk_params: RiskParameters,
-    /// Optimization configuration
+    /// 优化配置
     pub optimization_config: OptimizationConfig,
 }
 
-/// Execution strategy types
+/// 执行策略类型枚举
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub enum ExecutionStrategy {
-    /// Market execution
+    /// 市价执行
     Market,
-    /// Limit execution
+    /// 限价执行
     Limit,
-    /// TWAP execution
+    /// TWAP 执行
     TWAP,
-    /// VWAP execution
+    /// VWAP 执行
     VWAP,
-    /// Smart routing execution
+    /// 智能路由执行
     SmartRouting,
-    /// Optimal execution
+    /// 最优执行
     Optimal,
 }
 
-/// Risk management parameters
+/// 风险管理参数结构体
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct RiskParameters {
-    /// Maximum position size
+    /// 最大持仓规模
     pub max_position_size: u64,
-    /// Maximum concentration in basis points
+    /// 最大集中度（基点）
     pub max_concentration_bps: u16,
-    /// Volatility threshold in basis points
+    /// 波动率阈值（基点）
     pub volatility_threshold_bps: u16,
-    /// Circuit breaker enabled
+    /// 熔断器启用
     pub circuit_breaker_enabled: bool,
-    /// Risk tolerance level (0-10000)
+    /// 风险容忍度（0-10000）
     pub risk_tolerance: u32,
 }
 
-/// Optimization configuration
+/// 优化配置结构体
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct OptimizationConfig {
-    /// Whether to enable AI-powered optimization
+    /// 是否启用 AI 优化
     pub enable_ai_optimization: bool,
-    /// Batch size for operations
+    /// 批量大小
     pub batch_size: u32,
-    /// Cache TTL in seconds
+    /// 缓存 TTL（秒）
     pub cache_ttl_seconds: u64,
-    /// Risk tolerance in basis points
+    /// 风险容忍度（基点）
     pub risk_tolerance: u16,
-    /// Enable parallel processing
+    /// 启用并行处理
     pub enable_parallel: bool,
-    /// Enable advanced caching
+    /// 启用高级缓存
     pub enable_advanced_caching: bool,
-    /// Memory optimization level (0-10000)
+    /// 内存优化级别（0-10000）
     pub memory_optimization_level: u32,
 }
 
@@ -336,7 +302,7 @@ impl Default for ExecutionParams {
                 max_concentration_bps: 3000,      // 30%
                 volatility_threshold_bps: 2000,   // 20%
                 circuit_breaker_enabled: true,
-                risk_tolerance: 5000, // Moderate risk tolerance
+                risk_tolerance: 5000, // 中等风险容忍度
             },
             optimization_config: OptimizationConfig {
                 enable_ai_optimization: false,
@@ -345,22 +311,22 @@ impl Default for ExecutionParams {
                 risk_tolerance: 500, // 5%
                 enable_parallel: true,
                 enable_advanced_caching: true,
-                memory_optimization_level: 7000, // 70% optimization
+                memory_optimization_level: 7000, // 70% 优化
             },
         }
     }
 }
 
 impl ExecutionParams {
-    /// Create new execution parameters with validation.
+    /// 构造带校验的执行参数
     ///
-    /// Performs comprehensive parameter validation:
-    /// - Checks slippage, deadline, batch size, risk tolerance, token weights, etc.
-    /// - Ensures token_weights and token_mints length match and weights sum to 10000.
-    /// - Returns `StrategyError::InvalidStrategyParameters` on any invalid input.
+    /// 执行全面的参数校验：
+    /// - 检查滑点、截止时间、批量大小、风险容忍度、代币权重等。
+    /// - 确保 token_weights 和 token_mints 长度匹配且权重总和为 10000。
+    /// - 返回 `StrategyError::InvalidStrategyParameters` 如果任何参数无效。
     ///
-    /// # Errors
-    /// Returns error if any parameter is out of bounds or inconsistent.
+    /// # 错误
+    /// 如果任何参数超出边界或不一致，则返回错误。
     pub fn new(
         max_slippage_bps: u16,
         deadline: i64,
@@ -385,14 +351,14 @@ impl ExecutionParams {
             StrategyError::InvalidTokenCount
         );
 
-        // Validate token weights sum to 100%
+        // 验证代币权重总和为 100%
         let total_weight: u64 = token_weights.iter().sum();
         require!(
             total_weight == BASIS_POINTS_MAX,
             StrategyError::InvalidWeightSum
         );
 
-        // Validate risk parameters
+        // 验证风险参数
         require!(
             risk_params.max_concentration_bps <= 10000,
             StrategyError::InvalidStrategyParameters
@@ -406,7 +372,7 @@ impl ExecutionParams {
             StrategyError::InvalidStrategyParameters
         );
 
-        // Validate optimization config
+        // 验证优化配置
         require!(
             optimization_config.risk_tolerance <= 10000,
             StrategyError::InvalidStrategyParameters
@@ -438,75 +404,74 @@ impl ExecutionParams {
         })
     }
 
-    /// Check if execution deadline has passed
+    /// 检查执行截止时间是否已过
     pub fn is_expired(&self, current_time: i64) -> bool {
         self.deadline > 0 && current_time > self.deadline
     }
 
-    /// Get token weight by mint address
+    /// 根据 mint 地址获取代币权重
     pub fn get_token_weight(&self, mint: &Pubkey) -> Option<u64> {
         self.token_mints
             .iter()
             .position(|m| m == mint)
-            .map(|i| self.token_weights[i])
+            .map(|idx| self.token_weights[idx])
     }
 
-    /// Validate execution parameters for runtime checks.
+    /// 验证执行参数用于运行时检查。
     ///
-    /// Checks deadline, risk tolerance, batch size, token count, etc.
-    /// Returns error if any parameter is out of bounds.
+    /// 检查截止时间、风险容忍度、批量大小、代币数量等。
+    /// 如果任何参数超出边界，则返回错误。
     pub fn validate(&self) -> StrategyResult<()> {
+        require!(self.deadline > 0, StrategyError::InvalidStrategyParameters);
         require!(
-            self.max_slippage_bps <= MAX_SLIPPAGE_BPS as u16,
+            self.token_weights.len() == self.token_mints.len(),
             StrategyError::InvalidStrategyParameters
         );
         require!(
             self.token_weights.len() <= MAX_TOKENS,
             StrategyError::InvalidTokenCount
         );
+        let total_weight: u64 = self.token_weights.iter().sum();
         require!(
-            self.optimization_config.batch_size <= MAX_BATCH_SIZE,
-            StrategyError::InvalidStrategyParameters
-        );
-        require!(self.deadline > 0, StrategyError::InvalidStrategyParameters);
-        require!(
-            self.risk_params.risk_tolerance <= BASIS_POINTS_MAX as u32,
-            StrategyError::InvalidStrategyParameters
+            total_weight == BASIS_POINTS_MAX,
+            StrategyError::InvalidWeightSum
         );
         require!(
-            self.optimization_config.batch_size > 0
-                && self.optimization_config.batch_size <= MAX_BATCH_SIZE,
+            self.max_slippage_bps as u64 <= MAX_SLIPPAGE_BPS,
             StrategyError::InvalidStrategyParameters
         );
-
+        require!(
+            self.optimization_config.batch_size > 0 && self.optimization_config.batch_size <= MAX_BATCH_SIZE,
+            StrategyError::InvalidStrategyParameters
+        );
         Ok(())
     }
 }
 
 // ============================================================================
-// PERFORMANCE LIMITS
+// 性能限制
 // ============================================================================
 
-/// Performance limits for system monitoring
+/// 系统性能限制
 #[derive(Debug, Clone)]
 pub struct PerformanceLimits {
-    /// Maximum gas usage
+    /// 最大 Gas 使用量
     pub max_gas_used: GasUnits,
-    /// Maximum execution time in milliseconds
+    /// 最大执行时间（毫秒）
     pub max_execution_time_ms: u64,
-    /// Maximum slippage in basis points
+    /// 最大滑点（基点）
     pub max_slippage_bps: u16,
-    /// Minimum success rate in basis points
+    /// 最小成功率（基点）
     pub min_success_rate_bps: u16,
-    /// Minimum MEV protection score
+    /// 最小 MEV 保护评分
     pub min_mev_protection_score: u32,
-    /// Maximum memory usage in bytes
+    /// 最大内存使用量（字节）
     pub max_memory_bytes: u64,
-    /// Minimum cache hit rate in basis points
+    /// 最小缓存命中率（基点）
     pub min_cache_hit_rate_bps: u16,
-    /// Minimum optimization efficiency
+    /// 最小优化效率
     pub min_optimization_efficiency: u32,
-    /// Minimum risk-adjusted score
+    /// 最小风险调整后评分
     pub min_risk_adjusted_score: u32,
 }
 
@@ -514,7 +479,7 @@ impl Default for PerformanceLimits {
     fn default() -> Self {
         Self {
             max_gas_used: MAX_COMPUTE_UNITS,
-            max_execution_time_ms: 1000, // 1 second
+            max_execution_time_ms: 1000, // 1 秒
             max_slippage_bps: MAX_SLIPPAGE_BPS as u16,
             min_success_rate_bps: 9500,     // 95%
             min_mev_protection_score: 7000, // 70%
@@ -527,31 +492,31 @@ impl Default for PerformanceLimits {
 }
 
 // ============================================================================
-// UTILITY FUNCTIONS
+// 工具函数
 // ============================================================================
 
-/// Convert basis points to percentage
+/// 将基点转换为百分比
 pub fn basis_points_to_percentage(bps: u64) -> f64 {
     bps as f64 / BASIS_POINTS_MAX as f64
 }
 
-/// Convert percentage to basis points
+/// 将百分比转换为基点
 pub fn percentage_to_basis_points(percentage: f64) -> u64 {
     (percentage * BASIS_POINTS_MAX as f64) as u64
 }
 
-/// Safe multiplication with overflow protection
+/// 安全乘法运算（带溢出保护）
 pub fn safe_multiply(a: u64, b: u64) -> StrategyResult<u64> {
     a.checked_mul(b).ok_or(StrategyError::MathOverflow.into())
 }
 
-/// Safe division with zero protection
+/// 安全除法运算（带零保护）
 pub fn safe_divide(a: u64, b: u64) -> StrategyResult<u64> {
     require!(b > 0, StrategyError::DivisionByZero);
     Ok(a / b)
 }
 
-/// Calculate weighted average with validation
+/// 带校验的加权平均计算
 pub fn weighted_average(values: &[u64], weights: &[u64]) -> StrategyResult<u64> {
     require!(
         values.len() == weights.len(),
@@ -571,7 +536,7 @@ pub fn weighted_average(values: &[u64], weights: &[u64]) -> StrategyResult<u64> 
     Ok(weighted_sum / total_weight)
 }
 
-/// Calculate geometric mean with validation
+/// 带校验的几何平均计算
 pub fn geometric_mean(values: &[u64]) -> StrategyResult<u64> {
     require!(!values.is_empty(), StrategyError::InvalidStrategyParameters);
     require!(
@@ -586,7 +551,7 @@ pub fn geometric_mean(values: &[u64]) -> StrategyResult<u64> {
         product = safe_multiply(product, value)?;
     }
 
-    // Calculate nth root using binary search
+    // 使用二分查找计算 n 次根
     let mut low = 1u64;
     let mut high = product;
 
@@ -608,7 +573,7 @@ pub fn geometric_mean(values: &[u64]) -> StrategyResult<u64> {
     Ok(low)
 }
 
-/// Calculate standard deviation
+/// 计算标准差
 pub fn standard_deviation(values: &[u64]) -> StrategyResult<u64> {
     require!(values.len() > 1, StrategyError::InvalidStrategyParameters);
 
@@ -633,17 +598,17 @@ pub fn standard_deviation(values: &[u64]) -> StrategyResult<u64> {
     Ok(std_dev)
 }
 
-/// Safe addition with overflow protection
+/// 安全加法运算（带溢出保护）
 pub fn safe_add(a: u64, b: u64) -> StrategyResult<u64> {
     a.checked_add(b).ok_or(StrategyError::MathOverflow.into())
 }
 
-/// Safe subtraction with underflow protection
+/// 安全减法运算（带下溢保护）
 pub fn safe_subtract(a: u64, b: u64) -> StrategyResult<u64> {
     a.checked_sub(b).ok_or(StrategyError::MathOverflow.into())
 }
 
-/// Calculate percentage change
+/// 计算百分比变化
 pub fn percentage_change(old_value: u64, new_value: u64) -> StrategyResult<i64> {
     require!(old_value > 0, StrategyError::DivisionByZero);
 
@@ -663,17 +628,17 @@ pub fn percentage_change(old_value: u64, new_value: u64) -> StrategyResult<i64> 
     })
 }
 
-/// Validate slippage basis points
+/// 验证滑点基点
 pub fn is_valid_slippage_bps(slippage_bps: u64) -> bool {
     slippage_bps <= MAX_SLIPPAGE_BPS
 }
 
-/// Validate weight basis points
+/// 验证权重基点
 pub fn is_valid_weight_bps(weight_bps: u64) -> bool {
     weight_bps <= BASIS_POINTS_MAX
 }
 
-/// Calculate effective annual rate
+/// 计算有效年利率
 pub fn calculate_effective_annual_rate(
     periodic_rate: u64,
     periods_per_year: u64,
@@ -688,7 +653,7 @@ pub fn calculate_effective_annual_rate(
     Ok(effective_rate as u64)
 }
 
-/// Calculate compound interest
+/// 计算复利
 pub fn calculate_compound_interest(
     principal: u64,
     rate_bps: u64,

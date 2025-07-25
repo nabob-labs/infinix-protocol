@@ -1,80 +1,109 @@
 /*!
- * Advanced Core Traits Module
+ * 高级核心 Trait 模块
  *
- * Defines comprehensive traits for consistent behavior across the entire system.
- * These traits provide a foundation for:
- * - Strategy lifecycle management
- * - Risk assessment and monitoring
- * - Performance optimization
- * - Security and authorization
- * - Data validation and integrity
- * - Event handling and notifications
- * - Resource management and cleanup
+ * 定义了全系统一致行为的综合 trait。
+ * 这些 trait 为以下方面提供基础：
+ * - 策略生命周期管理
+ * - 风险评估与监控
+ * - 性能优化
+ * - 安全与权限
+ * - 数据校验与完整性
+ * - 事件处理与通知
+ * - 资源管理与清理
  */
 
 use crate::error::StrategyError;
 use anchor_lang::prelude::*;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::fmt::Debug;
 
-/// Common result type for strategy operations
+/// 策略操作通用结果类型
 pub type StrategyResult<T> = Result<T>;
 
-/// Validatable trait - 可验证对象
+/// 可验证对象 trait
+/// - 要求实现 validate 方法，统一参数合法性校验
 pub trait Validatable {
+    /// 校验对象参数合法性，返回 Result
     fn validate(&self) -> Result<()>;
 }
 
-/// Initializable trait - 可初始化对象
+/// 可初始化对象 trait
+/// - 要求实现 initialize 方法，支持参数化初始化
 pub trait Initializable {
+    /// 使用初始化参数初始化对象
     fn initialize(&mut self, params: InitializationParams) -> Result<()>;
 }
 
-/// Executable trait - 可执行对象
+/// 可执行对象 trait
+/// - 要求实现 execute/can_execute 方法，支持输入输出类型泛型
 pub trait Executable {
     type Input;
     type Output;
+    /// 执行操作，返回结果
     fn execute(&mut self, input: Self::Input) -> Result<Self::Output>;
+    /// 判断是否允许执行
     fn can_execute(&self) -> bool;
 }
 
-/// Optimizable trait - 可优化对象
+/// 可优化对象 trait
+/// - 要求实现 optimize/optimization_score 方法
 pub trait Optimizable {
+    /// 执行优化操作
     fn optimize(&mut self) -> Result<()>;
+    /// 获取优化得分（0-10000）
     fn optimization_score(&self) -> u32;
 }
 
-/// Cacheable trait - 可缓存对象
+/// 可缓存对象 trait
+/// - 要求实现 cache_key/is_cache_valid 方法
 pub trait Cacheable {
     type Key;
+    /// 获取缓存 key
     fn cache_key(&self) -> Self::Key;
+    /// 校验缓存是否有效
     fn is_cache_valid(&self, timestamp: i64) -> bool;
 }
 
-/// Monitorable trait - 可监控对象
+/// 可监控对象 trait
+/// - 要求实现 collect_metrics 方法
 pub trait Monitorable {
+    /// 收集当前性能指标
     fn collect_metrics(&self) -> Metrics;
 }
 
-/// Lockable trait - 可加锁对象
+/// 可加锁对象 trait
+/// - 支持锁定/解锁/锁拥有者查询
 pub trait Lockable {
+    /// 是否已锁定
     fn is_locked(&self) -> bool;
+    /// 锁定对象
     fn lock(&mut self, authority: &Pubkey) -> Result<()>;
+    /// 解锁对象
     fn unlock(&mut self, authority: &Pubkey) -> Result<()>;
+    /// 查询锁拥有者
     fn lock_owner(&self) -> Option<Pubkey>;
 }
 
-/// RateLimited trait - 限流对象
+/// 限流对象 trait
+/// - 支持速率限制配置与检查
 pub trait RateLimited {
+    /// 检查速率限制
     fn check_rate_limit(&mut self) -> Result<()>;
+    /// 获取限流配置
     fn rate_limit_config(&self) -> RateLimitConfig;
+    /// 更新限流配置
     fn update_rate_limit(&mut self, config: RateLimitConfig, authority: &Pubkey) -> Result<()>;
 }
 
-/// CircuitBreakable trait - 支持熔断
+/// 支持熔断 trait
+/// - 支持熔断器配置与检查
 pub trait CircuitBreakable {
+    /// 检查熔断器状态
     fn check_circuit_breaker(&self) -> Result<()>;
+    /// 获取熔断器配置
     fn circuit_breaker_config(&self) -> CircuitBreakerConfig;
+    /// 更新熔断器配置
     fn update_circuit_breaker(
         &mut self,
         config: CircuitBreakerConfig,
@@ -82,38 +111,52 @@ pub trait CircuitBreakable {
     ) -> Result<()>;
 }
 
-/// EventEmitter trait - 事件发布
+/// 事件发布 trait
+/// - 支持事件类型泛型
 pub trait EventEmitter {
     type Event;
+    /// 发布事件
     fn emit_event(&self, event: Self::Event) -> Result<()>;
 }
 
-/// NotificationHandler trait - 通知处理
+/// 通知处理 trait
+/// - 支持通知类型泛型
 pub trait NotificationHandler {
     type Notification;
+    /// 处理通知
     fn handle_notification(&mut self, notification: Self::Notification) -> Result<()>;
+    /// 判断是否能处理该类型通知
     fn can_handle(&self, notification: &Self::Notification) -> bool;
 }
 
-/// Versioned trait - 版本化对象
+/// 版本化对象 trait
+/// - 支持版本号管理
 pub trait Versioned {
+    /// 获取当前版本号
     fn version(&self) -> u32;
 }
 
-/// Metrics 结构体
+/// 性能指标结构体
 #[derive(Debug, Clone, Default)]
 pub struct Metrics {
+    /// 执行次数
     pub execution_count: u64,
+    /// 错误次数
     pub error_count: u64,
+    /// 平均执行耗时（毫秒）
     pub avg_execution_time_ms: u64,
+    /// 最后更新时间戳
     pub last_updated: i64,
 }
 
-/// RateLimitConfig 结构体
+/// 限流配置结构体
 #[derive(Debug, Clone)]
 pub struct RateLimitConfig {
+    /// 最大操作次数
     pub max_operations: u32,
+    /// 时间窗口（秒）
     pub time_window_seconds: u64,
+    /// 突发允许次数
     pub burst_allowance: u32,
 }
 
@@ -127,17 +170,21 @@ impl Default for RateLimitConfig {
     }
 }
 
-/// CircuitBreakerConfig 结构体
+/// 熔断器配置结构体
 #[derive(Debug, Clone, Default)]
 pub struct CircuitBreakerConfig {
+    /// 失败阈值
     pub failure_threshold: u32,
+    /// 恢复超时时间（秒）
     pub recovery_timeout_seconds: u64,
 }
 
-/// InitializationParams 结构体
+/// 初始化参数结构体
 #[derive(Debug, Clone)]
 pub struct InitializationParams {
+    /// 权限公钥
     pub authority: Pubkey,
+    /// bump 值
     pub bump: u8,
 }
 
@@ -653,41 +700,210 @@ pub enum MarketDataType {
 
 // RiskMetrics and PerformanceMetrics are defined in types.rs to avoid duplication
 
+/// 价格预言机接口（支持Pyth/Chainlink等）
+/// 实现该trait以集成链上或外部价格源。
+pub trait PriceOracle: Send + Sync {
+    /// 获取指定token的最新价格（单位：最小计价单位）
+    fn get_price(&self, token_mint: Pubkey) -> Result<u64>;
+}
+
+/// Anchor CPI集成 - Pyth PriceOracle
+pub struct AnchorPythPriceOracle;
+impl PriceOracle for AnchorPythPriceOracle {
+    fn get_price(&self, token_mint: Pubkey) -> Result<u64> {
+        // Anchor CPI集成Pyth真实价格获取逻辑
+        // TODO: 调用pyth-sdk-solana或anchor CPI，返回链上价格
+        Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+    }
+}
+
+/// DEX撮合接口（支持Serum/Raydium/Jupiter/Orca等）
+/// 实现该trait以集成链上或外部DEX/AMM。
+pub trait DexClient: Send + Sync {
+    /// 市价单撮合
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult>;
+    /// 限价单撮合
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult>;
+}
+
+/// Anchor CPI集成 - Jupiter DexClient
+pub struct AnchorJupiterDexClient;
+impl DexClient for AnchorJupiterDexClient {
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult> {
+        // Anchor CPI集成Jupiter真实swap逻辑
+        // TODO: 调用jupiter-amm-sdk或anchor CPI，返回swap结果
+        Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+    }
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult> {
+        // Jupiter不支持链上限价单，返回错误
+        Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+    }
+}
+
+/// Anchor CPI集成 - Orca DexClient
+pub struct AnchorOrcaDexClient;
+impl DexClient for AnchorOrcaDexClient {
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult> {
+        // Anchor CPI集成Orca真实swap逻辑
+        // TODO: 调用orca-sdk或anchor CPI，返回swap结果
+        Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+    }
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult> {
+        // Orca不支持链上限价单，返回错误
+        Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+    }
+}
+
+/// Anchor CPI集成 - Raydium DexClient
+pub struct AnchorRaydiumDexClient;
+impl DexClient for AnchorRaydiumDexClient {
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult> {
+        // Anchor CPI集成Raydium真实swap逻辑
+        // TODO: 调用raydium-sdk或anchor CPI，返回swap结果
+        Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+    }
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult> {
+        // Raydium不支持链上限价单，返回错误
+        Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+    }
+}
+
+/// 流动性源接口（聚合多DEX/AMM）
+/// 实现该trait以支持多源流动性聚合。
+pub trait LiquiditySource: Send + Sync {
+    /// 查询指定token的可用流动性
+    fn get_liquidity(&self, token_mint: Pubkey) -> Result<u64>;
+    /// 查询所有支持token的流动性
+    fn get_all_liquidity(&self) -> Result<Vec<(Pubkey, u64)>>;
+}
+
+/// Anchor CPI集成 - 多DEX/AMM流动性聚合器
+pub struct AnchorLiquidityAggregator;
+impl LiquiditySource for AnchorLiquidityAggregator {
+    fn get_liquidity(&self, token_mint: Pubkey) -> Result<u64> {
+        // Anchor CPI集成多DEX/AMM真实流动性查询逻辑
+        // TODO: 聚合Jupiter/Orca/Raydium等DEX流动性
+        Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+    }
+    fn get_all_liquidity(&self) -> Result<Vec<(Pubkey, u64)>> {
+        // Anchor CPI集成多DEX/AMM真实流动性查询逻辑
+        Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+    }
+}
+
+/// DEX/AMM聚合流动性源适配器模板
+pub struct LiquidityAggregator;
+impl LiquiditySource for LiquidityAggregator {
+    fn get_liquidity(&self, token_mint: Pubkey) -> Result<u64> {
+        // TODO: 集成多DEX/AMM真实流动性查询逻辑
+        msg!("[LiquidityAggregator] Querying liquidity for token: {}", token_mint);
+        Err(anchor_lang::error!(anchor_lang::error::ErrorCode::Custom(6200)))
+    }
+}
+
+/// DEX交易方向
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DexSide {
+    Buy,
+    Sell,
+}
+
+/// DEX交易结果
+#[derive(Debug, Clone)]
+pub struct DexTradeResult {
+    pub success: bool,
+    pub executed_amount: u64,
+    pub avg_price: u64,
+    pub fee_paid: u64,
+}
+
+/// Mock实现 - PriceOracle
+pub struct MockPriceOracle;
+impl PriceOracle for MockPriceOracle {
+    fn get_price(&self, token_mint: Pubkey) -> Result<u64> {
+        // 返回固定价格，便于测试
+        Ok(100_000_000)
+    }
+}
+
+/// Anchor CPI骨架 - Serum DexClient
+pub struct AnchorSerumDexClient;
+impl DexClient for AnchorSerumDexClient {
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult> {
+        {
+            // TODO: Anchor CPI集成Serum
+            // _serum::invoke_market_order(...)
+            Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+        }
+    }
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult> {
+        {
+            // TODO: Anchor CPI集成Serum
+            // _serum::invoke_limit_order(...)
+            Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+        }
+    }
+}
+
+/// Anchor CPI骨架 - Raydium LiquiditySource
+pub struct AnchorRaydiumLiquiditySource;
+impl LiquiditySource for AnchorRaydiumLiquiditySource {
+    fn get_liquidity(&self, token_mint: Pubkey) -> Result<u64> {
+        {
+            // TODO: Anchor CPI集成Raydium
+            // _raydium::invoke_get_liquidity(...)
+            Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+        }
+    }
+    fn get_all_liquidity(&self) -> Result<Vec<(Pubkey, u64)>> {
+        {
+            // TODO: Anchor CPI集成Raydium
+            // _raydium::invoke_get_all_liquidity(...)
+            Err(crate::error::StrategyError::ExternalIntegrationUnavailable.into())
+        }
+    }
+}
+
+/// 滑点建模trait
+/// 实现该trait以自定义滑点估算逻辑。
+pub trait SlippageModel: Send + Sync + Debug {
+    /// 估算滑点（返回bps）
+    fn estimate_slippage(&self, amount: u64, price: u64, liquidity: u64) -> u64;
+}
+
+/// 价格冲击建模trait
+/// 实现该trait以自定义市场冲击估算逻辑。
+pub trait MarketImpactModel: Send + Sync + Debug {
+    /// 估算价格冲击（返回bps）
+    fn estimate_impact(&self, amount: u64, liquidity: u64) -> u64;
+}
+
 // 单元测试
 #[cfg(test)]
 mod tests {
     use super::*;
     use anchor_lang::prelude::Pubkey;
 
-    struct DummyValidatable;
-    impl Validatable for DummyValidatable {
-        fn validate(&self) -> Result<()> {
-            Ok(())
-        }
-    }
     #[test]
-    fn test_validatable() {
-        let v = DummyValidatable;
-        assert!(v.validate().is_ok());
+    fn test_mock_price_oracle() {
+        let oracle = MockPriceOracle;
+        let price = oracle.get_price(Pubkey::default()).unwrap();
+        assert_eq!(price, 100_000_000);
     }
 
-    struct DummyInitializable {
-        pub initialized: bool,
-    }
-    impl Initializable for DummyInitializable {
-        fn initialize(&mut self, _params: InitializationParams) -> Result<()> {
-            self.initialized = true;
-            Ok(())
-        }
-    }
     #[test]
-    fn test_initializable() {
-        let mut i = DummyInitializable { initialized: false };
-        let params = InitializationParams {
-            authority: Pubkey::default(),
-            bump: 1,
-        };
-        assert!(i.initialize(params).is_ok());
-        assert!(i.initialized);
+    fn test_mock_dex_client_market_order() {
+        let dex = MockDexClient;
+        let result = dex.market_order(Pubkey::default(), 1000, DexSide::Buy).unwrap();
+        assert!(result.success);
+        assert_eq!(result.executed_amount, 1000);
+        assert_eq!(result.avg_price, 100_000_000);
+    }
+
+    #[test]
+    fn test_mock_liquidity_source() {
+        let liquidity = MockLiquiditySource;
+        let amount = liquidity.get_liquidity(Pubkey::default()).unwrap();
+        assert_eq!(amount, 1_000_000_000);
     }
 }

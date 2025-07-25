@@ -8,11 +8,16 @@ use crate::core::*;
 use crate::error::StrategyError;
 use anchor_lang::prelude::*;
 
-/// Performance optimization utilities
+/// 性能优化工具集
+/// - 提供批量处理、内存优化、缓存优化等通用性能提升方法
 pub struct OptimizationEngine;
 
 impl OptimizationEngine {
-    /// Optimize batch processing for multiple operations
+    /// 批量处理优化
+    /// - items: 待处理项列表
+    /// - processor: 单项处理函数
+    /// - max_batch_size: 最大批量大小
+    /// - 返回：所有处理结果
     pub fn optimize_batch_processing<T, R>(
         items: &[T],
         processor: impl Fn(&T) -> StrategyResult<R>,
@@ -29,7 +34,11 @@ impl OptimizationEngine {
         Ok(results)
     }
 
-    /// Calculate optimal batch size based on compute constraints
+    /// 计算最优批量大小
+    /// - item_compute_cost: 单项计算消耗
+    /// - available_compute: 可用计算资源
+    /// - max_items: 最大项数
+    /// - 返回：建议批量大小
     pub fn calculate_optimal_batch_size(
         item_compute_cost: u32,
         available_compute: u32,
@@ -47,14 +56,19 @@ impl OptimizationEngine {
         computed_size.min(max_items).max(1)
     }
 
-    /// Optimize memory usage for large data structures
+    /// 优化大数据结构的内存占用
+    /// - data: 可变数据向量
+    /// - 返回：处理结果
     pub fn optimize_memory_usage<T>(data: &mut Vec<T>) -> StrategyResult<()> {
         // Shrink to fit to reduce memory overhead
         data.shrink_to_fit();
         Ok(())
     }
 
-    /// Cache optimization for frequently accessed data
+    /// 缓存优化，控制缓存大小，LRU淘汰
+    /// - cache: 缓存哈希表
+    /// - max_size: 最大缓存项数
+    /// - 返回：处理结果
     pub fn optimize_cache_access<K, V>(
         cache: &mut std::collections::HashMap<K, V>,
         max_size: usize,
@@ -77,11 +91,15 @@ impl OptimizationEngine {
     }
 }
 
-/// Gas optimization utilities
+/// Gas 优化工具
+/// - 提供gas消耗估算、指令排序等方法
 pub struct GasOptimizer;
 
 impl GasOptimizer {
-    /// Estimate gas cost for operation
+    /// 估算操作的gas消耗
+    /// - operation_type: 操作类型
+    /// - data_size: 数据大小
+    /// - 返回：估算gas消耗
     pub fn estimate_gas_cost(operation_type: OperationType, data_size: usize) -> u64 {
         let base_cost = match operation_type {
             OperationType::Create => 5000,
@@ -94,7 +112,9 @@ impl GasOptimizer {
         base_cost + data_cost
     }
 
-    /// Optimize instruction ordering for gas efficiency
+    /// 指令排序优化以提升gas效率
+    /// - instructions: 指令数组
+    /// - 返回：处理结果
     pub fn optimize_instruction_order<T>(instructions: &mut [T]) -> StrategyResult<()> {
         // Simple optimization: sort by estimated cost (lowest first)
         // In a real implementation, this would use more sophisticated algorithms
@@ -102,7 +122,7 @@ impl GasOptimizer {
     }
 }
 
-/// Operation types for gas estimation
+/// 操作类型枚举（用于gas估算）
 #[derive(Debug, Clone, Copy)]
 pub enum OperationType {
     Create,
@@ -111,11 +131,16 @@ pub enum OperationType {
     Read,
 }
 
-/// MEV protection utilities
+/// MEV防护工具
+/// - 提供MEV攻击评估与防护策略
 pub struct MevProtection;
 
 impl MevProtection {
-    /// Check if transaction is vulnerable to MEV attacks
+    /// 评估交易的MEV攻击风险
+    /// - transaction_size: 交易规模
+    /// - slippage_tolerance: 滑点容忍度
+    /// - market_impact: 市场冲击
+    /// - 返回：MEV风险评分
     pub fn assess_mev_vulnerability(
         transaction_size: u64,
         slippage_tolerance: u64,
@@ -156,7 +181,9 @@ impl MevProtection {
         }
     }
 
-    /// Apply MEV protection strategies
+    /// 应用MEV防护策略
+    /// - vulnerability: 风险评分
+    /// - 返回：防护策略配置
     pub fn apply_protection(
         vulnerability: &MevVulnerabilityScore,
     ) -> StrategyResult<MevProtectionStrategy> {
@@ -185,14 +212,16 @@ impl MevProtection {
     }
 }
 
-/// MEV vulnerability assessment result
+/// MEV风险评分结构体
 #[derive(Debug, Clone)]
 pub struct MevVulnerabilityScore {
+    /// 风险分数（0-10000）
     pub score: u32, // 0-10000 (0-100%)
+    /// 风险等级
     pub risk_level: MevRiskLevel,
 }
 
-/// MEV risk levels
+/// MEV风险等级枚举
 #[derive(Debug, Clone, PartialEq)]
 pub enum MevRiskLevel {
     Low,
@@ -200,7 +229,7 @@ pub enum MevRiskLevel {
     High,
 }
 
-/// MEV protection strategy configuration
+/// MEV防护策略配置
 #[derive(Debug, Clone)]
 pub struct MevProtectionStrategy {
     pub use_private_mempool: bool,
@@ -209,11 +238,15 @@ pub struct MevProtectionStrategy {
     pub use_commit_reveal: bool,
 }
 
-/// Execution optimization utilities
+/// 执行优化工具
+/// - 提供操作路径优化、效率评分等
 pub struct ExecutionOptimizer;
 
 impl ExecutionOptimizer {
-    /// Optimize execution path for multiple operations
+    /// 优化多操作的执行路径
+    /// - operations: 操作列表
+    /// - cost_estimator: 成本估算函数
+    /// - 返回：最优执行顺序索引
     pub fn optimize_execution_path<T>(
         operations: &[T],
         cost_estimator: impl Fn(&T) -> u64,
@@ -230,7 +263,12 @@ impl ExecutionOptimizer {
         indexed_ops.into_iter().map(|(i, _)| i).collect()
     }
 
-    /// Calculate execution efficiency score
+    /// 计算执行效率评分
+    /// - actual_cost: 实际消耗
+    /// - estimated_cost: 预估消耗
+    /// - execution_time: 实际执行时间
+    /// - target_time: 目标时间
+    /// - 返回：效率分数（0-10000）
     pub fn calculate_efficiency_score(
         actual_cost: u64,
         estimated_cost: u64,
@@ -253,11 +291,14 @@ impl ExecutionOptimizer {
     }
 }
 
-/// Performance monitoring and optimization
+/// 性能监控与优化工具
 pub struct PerformanceOptimizer;
 
 impl PerformanceOptimizer {
-    /// Monitor and optimize performance metrics
+    /// 监控并优化性能指标
+    /// - current_metrics: 当前性能指标
+    /// - target_metrics: 目标性能指标
+    /// - 返回：优化建议
     pub fn optimize_performance(
         current_metrics: &PerformanceMetrics,
         target_metrics: &PerformanceMetrics,
@@ -292,7 +333,7 @@ impl PerformanceOptimizer {
     }
 }
 
-/// Optimization recommendations
+/// 优化建议结构体
 #[derive(Debug, Clone, Default)]
 pub struct OptimizationRecommendations {
     pub reduce_gas_usage: bool,

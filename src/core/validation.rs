@@ -1,12 +1,12 @@
 /*!
- * Validation Module
+ * 校验模块
  *
- * This module provides comprehensive validation functions for:
- * - Input parameter validation
- * - Account state validation
- * - Business logic constraints
- * - Security checks
- * - Data integrity verification
+ * 本模块提供全面的校验函数，涵盖：
+ * - 输入参数校验
+ * - 账户状态校验
+ * - 业务逻辑约束
+ * - 安全检查
+ * - 数据完整性验证
  */
 
 use crate::core::constants::*;
@@ -14,25 +14,31 @@ use crate::core::types::*;
 use crate::error::StrategyError;
 use anchor_lang::prelude::*;
 
-/// Validator trait - 可插拔参数/状态/业务校验器
+/// 通用校验 trait
+/// - 支持参数/状态/业务等多场景可插拔校验器
 pub trait Validator<T>: Send + Sync {
+    /// 校验 value 是否满足约束，失败返回 Err
     fn validate(&self, value: &T) -> Result<()>;
 }
 
-/// 工厂方法注册表
+/// 校验器注册表
+/// - 支持批量注册和统一校验
 pub struct ValidatorRegistry<T> {
     validators: Vec<Box<dyn Validator<T>>>,
 }
 
 impl<T> ValidatorRegistry<T> {
+    /// 创建新注册表
     pub fn new() -> Self {
         Self {
             validators: Vec::new(),
         }
     }
+    /// 注册校验器
     pub fn register(&mut self, validator: Box<dyn Validator<T>>) {
         self.validators.push(validator);
     }
+    /// 依次校验所有注册校验器
     pub fn validate_all(&self, value: &T) -> Result<()> {
         for v in &self.validators {
             v.validate(value)?;
@@ -41,9 +47,9 @@ impl<T> ValidatorRegistry<T> {
     }
 }
 
-/// 典型校验器实现
+/// 非空校验器
 pub struct NotEmptyValidator;
-impl<T: AsRef<[U]>> Validator<T> for NotEmptyValidator {
+impl<T: AsRef<[U]>, U> Validator<T> for NotEmptyValidator {
     fn validate(&self, value: &T) -> Result<()> {
         if value.as_ref().is_empty() {
             return Err(crate::error::StrategyError::InvalidStrategyParameters.into());
@@ -52,6 +58,7 @@ impl<T: AsRef<[U]>> Validator<T> for NotEmptyValidator {
     }
 }
 
+/// 数值范围校验器
 pub struct RangeValidator {
     pub min: u64,
     pub max: u64,
@@ -65,7 +72,7 @@ impl Validator<u64> for RangeValidator {
     }
 }
 
-/// 业务校验器示例
+/// 权重和校验器（业务约束）
 pub struct WeightsSumValidator;
 impl Validator<Vec<u64>> for WeightsSumValidator {
     fn validate(&self, value: &Vec<u64>) -> Result<()> {
@@ -76,76 +83,66 @@ impl Validator<Vec<u64>> for WeightsSumValidator {
     }
 }
 
-/// Comprehensive validation utilities
+/// 综合校验工具
 pub struct Validator;
 
 impl Validator {
-    /// Validate token weights sum to 100%
+    /// 校验权重和为 100%
     pub fn validate_weights(weights: &[u64]) -> Result<()> {
         if weights.is_empty() {
             return Err(StrategyError::InvalidTokenCount.into());
         }
-
         if weights.len() > MAX_TOKENS {
             return Err(StrategyError::InvalidTokenCount.into());
         }
-
         let total: u64 = weights.iter().sum();
         if total != BASIS_POINTS_MAX {
             return Err(StrategyError::InvalidWeightSum.into());
         }
-
-        // Validate individual weight constraints
+        // 校验单个权重边界
         for &weight in weights {
             if weight < MIN_TOKEN_WEIGHT_BPS || weight > MAX_TOKEN_WEIGHT_BPS {
                 return Err(StrategyError::InvalidStrategyParameters.into());
             }
         }
-
         Ok(())
     }
-
-    /// Validate token count is within acceptable limits
+    /// 校验代币数量在合法范围
     pub fn validate_token_count(count: usize) -> Result<()> {
         if count < MIN_TOKENS || count > MAX_TOKENS {
             return Err(StrategyError::InvalidTokenCount.into());
         }
         Ok(())
     }
-
-    /// Validate slippage tolerance
+    /// 校验滑点容忍度
     pub fn validate_slippage(slippage_bps: u64) -> Result<()> {
         if slippage_bps > MAX_SLIPPAGE_BPS {
             return Err(StrategyError::SlippageExceeded.into());
         }
         Ok(())
     }
-
-    /// Validate price impact
+    /// 校验价格冲击
     pub fn validate_price_impact(impact_bps: u64) -> Result<()> {
         if impact_bps > MAX_PRICE_IMPACT_BPS {
             return Err(StrategyError::SlippageExceeded.into());
         }
         Ok(())
     }
-
-    /// Validate rebalancing threshold
+    /// 校验再平衡阈值
     pub fn validate_rebalancing_threshold(threshold_bps: u64) -> Result<()> {
         if threshold_bps > MAX_REBALANCE_THRESHOLD_BPS {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
         Ok(())
     }
-
-    /// Validate time interval
+    /// 校验时间区间
     pub fn validate_time_interval(interval_seconds: u64) -> Result<()> {
         if interval_seconds < MIN_REBALANCE_INTERVAL || interval_seconds > MAX_REBALANCE_INTERVAL {
             return Err(StrategyError::InvalidTimeWindow.into());
         }
         Ok(())
     }
-
-    /// Validate fee parameters
+    /// 校验各类费用参数
     pub fn validate_fees(
         management_fee_bps: u16,
         performance_fee_bps: u16,
@@ -166,8 +163,7 @@ impl Validator {
         }
         Ok(())
     }
-
-    /// Validate basket creation amount
+    /// 校验篮子创建数量
     pub fn validate_basket_amount(amount: u64) -> Result<()> {
         if amount < MIN_BASKET_CREATION_AMOUNT {
             return Err(StrategyError::BasketAmountTooSmall.into());
@@ -177,104 +173,81 @@ impl Validator {
         }
         Ok(())
     }
-
-    /// Validate execution parameters
+    /// 校验执行参数
     pub fn validate_execution_params(params: &ExecutionParams) -> Result<()> {
         Self::validate_slippage(params.max_slippage_bps)?;
         Self::validate_price_impact(params.max_price_impact_bps)?;
-
         if params.min_fill_percentage_bps > BASIS_POINTS_MAX {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         if params.token_mints.len() != params.token_weights.len() {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Self::validate_token_count(params.token_mints.len())?;
         Self::validate_weights(&params.token_weights)?;
-
         Ok(())
     }
-
-    /// Validate price feed data
+    /// 校验价格喂价数据
     pub fn validate_price_feed(price_feed: &PriceFeed, current_timestamp: i64) -> Result<()> {
         if !price_feed.is_valid {
             return Err(StrategyError::PriceFeedUnavailable.into());
         }
-
         if price_feed.price == 0 {
             return Err(StrategyError::InvalidMarketData.into());
         }
-
-        // Check if price feed is stale
+        // 校验喂价是否过期
         if current_timestamp - price_feed.last_updated > PRICE_FEED_STALENESS_THRESHOLD {
             return Err(StrategyError::PriceFeedUnavailable.into());
         }
-
         Ok(())
     }
-
-    /// Validate market data consistency
+    /// 校验市场数据一致性
     pub fn validate_market_data(market_data: &MarketData) -> Result<()> {
         let token_count = market_data.token_supplies.len();
-
         if token_count != market_data.historical_prices.len()
             || token_count != market_data.volatilities.len()
             || token_count != market_data.technical_indicators.len()
         {
             return Err(StrategyError::InvalidMarketData.into());
         }
-
         Self::validate_token_count(token_count)?;
-
-        // Validate that supplies and prices are non-zero
+        // 校验供应和价格均非零
         for &supply in &market_data.token_supplies {
             if supply == 0 {
                 return Err(StrategyError::InvalidMarketData.into());
             }
         }
-
         for &price in &market_data.historical_prices {
             if price == 0 {
                 return Err(StrategyError::InvalidMarketData.into());
             }
         }
-
         Ok(())
     }
-
-    /// Validate risk metrics
+    /// 校验风险指标
     pub fn validate_risk_metrics(risk_metrics: &RiskMetrics) -> Result<()> {
         if risk_metrics.var_bps > MAX_VAR_THRESHOLD_BPS {
             return Err(StrategyError::RiskLimitsExceeded.into());
         }
-
         if risk_metrics.max_drawdown_bps > MAX_DRAWDOWN_THRESHOLD_BPS {
             return Err(StrategyError::RiskLimitsExceeded.into());
         }
-
         if risk_metrics.concentration_risk > BASIS_POINTS_MAX as u32 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
-
-    /// Validate optimization configuration
+    /// 校验优化配置
     pub fn validate_optimization_config(config: &OptimizationConfig) -> Result<()> {
         if config.max_batch_size > MAX_BATCH_SIZE {
             return Err(StrategyError::BatchSizeExceeded.into());
         }
-
         if config.optimization_timeout_seconds > MAX_EXECUTION_TIMEOUT {
             return Err(StrategyError::InvalidTimeWindow.into());
         }
-
         Ok(())
     }
-
-    /// Validate account authority
+    /// 校验账户权限
     pub fn validate_authority(
         expected_authority: &Pubkey,
         provided_authority: &Pubkey,
@@ -284,24 +257,21 @@ impl Validator {
         }
         Ok(())
     }
-
-    /// Validate account is not paused
+    /// 校验账户未暂停
     pub fn validate_not_paused(is_paused: bool) -> Result<()> {
         if is_paused {
             return Err(StrategyError::StrategyPaused.into());
         }
         Ok(())
     }
-
-    /// Validate timestamp is not in the future
+    /// 校验时间戳不在未来
     pub fn validate_timestamp(timestamp: i64, current_timestamp: i64) -> Result<()> {
         if timestamp > current_timestamp {
             return Err(StrategyError::InvalidTimeWindow.into());
         }
         Ok(())
     }
-
-    /// Validate deadline has not passed
+    /// 校验截止时间未过
     pub fn validate_deadline(deadline: i64, current_timestamp: i64) -> Result<()> {
         if deadline != 0 && current_timestamp > deadline {
             return Err(StrategyError::InvalidTimeWindow.into());
@@ -310,11 +280,30 @@ impl Validator {
     }
 }
 
-/// Business logic validation
+/// 通用数值区间校验
+pub fn validate_amount(amount: u64, min: u64, max: u64) -> Result<()> {
+    require!(amount >= min && amount <= max, crate::error::ErrorCode::InvalidAlgorithmParameters);
+    Ok(())
+}
+
+/// 校验 pubkey 非默认
+pub fn validate_pubkey(key: &Pubkey) -> Result<()> {
+    require!(*key != Pubkey::default(), crate::error::ErrorCode::InvalidAlgorithmParameters);
+    Ok(())
+}
+
+/// 校验权重和
+pub fn validate_weights(weights: &[u64], expected_sum: u64) -> Result<()> {
+    let sum: u64 = weights.iter().sum();
+    require!(sum == expected_sum, crate::error::ErrorCode::InvalidWeightSum);
+    Ok(())
+}
+
+/// 业务逻辑校验器
 pub struct BusinessValidator;
 
 impl BusinessValidator {
-    /// Validate rebalancing is needed
+    /// 校验是否需要再平衡
     pub fn validate_rebalancing_needed(
         current_weights: &[u64],
         target_weights: &[u64],
@@ -326,14 +315,12 @@ impl BusinessValidator {
         if current_weights.len() != target_weights.len() {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
-        // Check time interval
+        // 校验最小再平衡间隔
         let time_since_last = (current_timestamp - last_rebalanced) as u64;
         if time_since_last < min_interval {
             return Err(StrategyError::RebalancingThresholdNotMet.into());
         }
-
-        // Check weight deviation
+        // 校验权重偏差
         let mut max_deviation = 0u64;
         for (current, target) in current_weights.iter().zip(target_weights.iter()) {
             let deviation = if current > target {
@@ -343,15 +330,12 @@ impl BusinessValidator {
             };
             max_deviation = max_deviation.max(deviation);
         }
-
         if max_deviation < threshold_bps {
             return Err(StrategyError::RebalancingThresholdNotMet.into());
         }
-
         Ok(())
     }
-
-    /// Validate arbitrage opportunity is profitable
+    /// 校验套利机会是否有利可图
     pub fn validate_arbitrage_opportunity(
         price_difference: u64,
         transaction_costs: u64,
@@ -360,18 +344,14 @@ impl BusinessValidator {
         if price_difference <= transaction_costs {
             return Err(StrategyError::ArbitrageNotProfitable.into());
         }
-
         let profit = price_difference - transaction_costs;
         let profit_percentage = (profit * BASIS_POINTS_MAX) / price_difference;
-
         if profit_percentage < min_profit_bps {
             return Err(StrategyError::ArbitrageNotProfitable.into());
         }
-
         Ok(())
     }
-
-    /// Validate liquidity is sufficient for trade
+    /// 校验流动性是否充足
     pub fn validate_liquidity_sufficient(
         trade_amount: u64,
         available_liquidity: u64,
@@ -380,16 +360,13 @@ impl BusinessValidator {
         if available_liquidity == 0 {
             return Err(StrategyError::InsufficientLiquidity.into());
         }
-
         let liquidity_ratio = (trade_amount * BASIS_POINTS_MAX) / available_liquidity;
         if liquidity_ratio > min_liquidity_ratio_bps {
             return Err(StrategyError::InsufficientLiquidity.into());
         }
-
         Ok(())
     }
-
-    /// Validate portfolio concentration limits
+    /// 校验投资组合集中度限制
     pub fn validate_concentration_limits(
         weights: &[u64],
         max_concentration_bps: u64,
@@ -401,8 +378,7 @@ impl BusinessValidator {
         }
         Ok(())
     }
-
-    /// Validate circuit breaker conditions
+    /// 校验熔断器条件
     pub fn validate_circuit_breaker(
         price_change_bps: u64,
         volume_change_bps: u64,
@@ -417,27 +393,25 @@ impl BusinessValidator {
     }
 }
 
-/// Data integrity validation
+/// 数据完整性校验器
 pub struct DataValidator;
 
 impl DataValidator {
-    /// Validate array lengths match
+    /// 校验数组长度一致
     pub fn validate_array_lengths_match<T, U>(arr1: &[T], arr2: &[U]) -> Result<()> {
         if arr1.len() != arr2.len() {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
         Ok(())
     }
-
-    /// Validate array is not empty
+    /// 校验数组非空
     pub fn validate_not_empty<T>(arr: &[T]) -> Result<()> {
         if arr.is_empty() {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
         Ok(())
     }
-
-    /// Validate all values in array are positive
+    /// 校验所有值为正
     pub fn validate_all_positive(values: &[u64]) -> Result<()> {
         for &value in values {
             if value == 0 {
@@ -446,32 +420,28 @@ impl DataValidator {
         }
         Ok(())
     }
-
-    /// Validate values are within range
+    /// 校验值在区间内
     pub fn validate_range(value: u64, min: u64, max: u64) -> Result<()> {
         if value < min || value > max {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
         Ok(())
     }
-
-    /// Validate percentage values
+    /// 校验百分比值
     pub fn validate_percentage(percentage_bps: u64) -> Result<()> {
         if percentage_bps > BASIS_POINTS_MAX {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
         Ok(())
     }
-
-    /// Validate pubkey is not default
+    /// 校验 pubkey 非默认
     pub fn validate_pubkey_not_default(pubkey: &Pubkey) -> Result<()> {
         if *pubkey == Pubkey::default() {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
         Ok(())
     }
-
-    /// Validate account discriminator
+    /// 校验账户 discriminator
     pub fn validate_account_discriminator(
         account_data: &[u8],
         expected_discriminator: &[u8; 8],
@@ -479,45 +449,40 @@ impl DataValidator {
         if account_data.len() < 8 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         let discriminator = &account_data[0..8];
         if discriminator != expected_discriminator {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
 }
 
-/// Performance validation
+/// 性能校验器
 pub struct PerformanceValidator;
 
 impl PerformanceValidator {
-    /// Validate compute budget is sufficient
+    /// 校验计算预算充足
     pub fn validate_compute_budget(required_units: u32, available_units: u32) -> Result<()> {
         if required_units > available_units {
             return Err(StrategyError::ComputeBudgetExceeded.into());
         }
         Ok(())
     }
-
-    /// Validate memory usage is within limits
+    /// 校验内存使用量在限额内
     pub fn validate_memory_usage(used_memory: usize, max_memory: usize) -> Result<()> {
         if used_memory > max_memory {
             return Err(StrategyError::MemoryOptimizationFailed.into());
         }
         Ok(())
     }
-
-    /// Validate cache performance
+    /// 校验缓存性能
     pub fn validate_cache_performance(hit_rate_bps: u32, min_hit_rate_bps: u32) -> Result<()> {
         if hit_rate_bps < min_hit_rate_bps {
             return Err(StrategyError::CachePerformanceDegraded.into());
         }
         Ok(())
     }
-
-    /// Validate execution time is within limits
+    /// 校验执行时间在限额内
     pub fn validate_execution_time(execution_time_ms: u64, max_time_ms: u64) -> Result<()> {
         if execution_time_ms > max_time_ms {
             return Err(StrategyError::InvalidTimeWindow.into());

@@ -4,16 +4,39 @@ skip-lint = false
 seeds = false
 
 [programs.localnet]
-solana_amm_index_strategies = "AMM1ndex1oken1asket1rading1trategy1ngine"
+jupiter = "JUPITER_PROGRAM_PUBKEY"
+raydium = "RAYDIUM_PROGRAM_PUBKEY"
+orca = "ORCA_PROGRAM_PUBKEY"
+lifinity = "LIFINITY_PROGRAM_PUBKEY"
+meteora = "METEORA_PROGRAM_PUBKEY"
+pyth = "PYTH_PROGRAM_PUBKEY"
+switchboard = "SWITCHBOARD_PROGRAM_PUBKEY"
 
 [programs.devnet]
 solana_amm_index_strategies = "AMM1ndex1oken1asket1rading1trategy1ngine"
+jupiter = "Jup1ter11111111111111111111111111111111111111"
+raydium = "Raydium1111111111111111111111111111111111111"
+orca = "OrcaDex1111111111111111111111111111111111111"
+pyth = "Pyth111111111111111111111111111111111111111"
+switchboard = "Switchb1111111111111111111111111111111111111"
 
 [programs.mainnet]
 solana_amm_index_strategies = "AMM1ndex1oken1asket1rading1trategy1ngine"
+jupiter = "Jup1ter11111111111111111111111111111111111111"
+raydium = "Raydium1111111111111111111111111111111111111"
+orca = "OrcaDex1111111111111111111111111111111111111"
+pyth = "Pyth111111111111111111111111111111111111111"
+switchboard = "Switchb1111111111111111111111111111111111111"
 
 [registry]
 url = "https://api.apr.dev"
+jupiter = "https://raw.githubusercontent.com/jup-ag/jupiter-amm-interface/main/target/idl/jupiter.json"
+raydium = "https://raw.githubusercontent.com/raydium-io/raydium-amm-interface/main/target/idl/raydium.json"
+orca = "https://raw.githubusercontent.com/orca-so/orca-amm-interface/main/target/idl/orca.json"
+lifinity = "https://raw.githubusercontent.com/Lifinity/Lifinity-VAMM/main/target/idl/lifinity.json"
+meteora = "https://raw.githubusercontent.com/Meteora-ag/meteora-amm-interface/main/target/idl/meteora.json"
+pyth = "https://raw.githubusercontent.com/pyth-network/pyth-sdk-solana/main/target/idl/pyth.json"
+switchboard = "https://raw.githubusercontent.com/switchboard-xyz/switchboard-v2/main/target/idl/switchboard.json"
 
 [provider]
 cluster = "Localnet"

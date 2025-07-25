@@ -8,21 +8,24 @@
 use anchor_lang::prelude::*;
 // Removed conflicting borsh import
 
-/// Current program version - Enhanced refactored architecture
+/// 当前程序版本 - 采用增强重构架构
+/// - 用于所有账户、指令的版本兼容性校验
 pub const CURRENT_VERSION: ProgramVersion = ProgramVersion {
     major: 2,
     minor: 1,
     patch: 0,
 };
 
-/// Minimum supported version for compatibility
+/// 最低兼容版本
+/// - 低于该版本的账户需强制迁移
 pub const MIN_SUPPORTED_VERSION: ProgramVersion = ProgramVersion {
     major: 1,
     minor: 0,
     patch: 0,
 };
 
-/// Program version structure
+/// 程序版本结构体
+/// - 记录主版本、次版本、补丁号
 #[derive(
     AnchorSerialize,
     AnchorDeserialize,
@@ -36,13 +39,19 @@ pub const MIN_SUPPORTED_VERSION: ProgramVersion = ProgramVersion {
     InitSpace,
 )]
 pub struct ProgramVersion {
+    /// 主版本号
     pub major: u16,
+    /// 次版本号
     pub minor: u16,
+    /// 补丁号
     pub patch: u16,
 }
 
 impl ProgramVersion {
-    /// Create a new version
+    /// 创建新版本
+    /// - major: 主版本号
+    /// - minor: 次版本号
+    /// - patch: 补丁号
     pub const fn new(major: u16, minor: u16, patch: u16) -> Self {
         Self {
             major,
@@ -51,13 +60,17 @@ impl ProgramVersion {
         }
     }
 
-    /// Check if this version is compatible with another
+    /// 判断版本兼容性
+    /// - other: 目标版本
+    /// - 返回：是否兼容
     pub fn is_compatible_with(&self, other: &ProgramVersion) -> bool {
         // Major version must match, minor version must be >= minimum
         self.major == other.major && *self >= MIN_SUPPORTED_VERSION
     }
 
-    /// Check if this version supports a feature
+    /// 判断是否支持某特性
+    /// - feature: 特性枚举
+    /// - 返回：是否支持
     pub fn supports_feature(&self, feature: Feature) -> bool {
         match feature {
             Feature::BasicStrategies => *self >= ProgramVersion::new(1, 0, 0),
@@ -67,35 +80,42 @@ impl ProgramVersion {
         }
     }
 
-    /// Get version as string
+    /// 获取版本字符串
     pub fn to_string(&self) -> String {
         format!("{}.{}.{}", self.major, self.minor, self.patch)
     }
 }
 
-/// Feature flags for version-dependent functionality
+/// 版本相关特性枚举
+/// - 用于判断某版本是否支持特定功能
 #[derive(Debug, Clone, Copy)]
 pub enum Feature {
+    /// 基础策略功能
     BasicStrategies,
+    /// 高级优化功能
     AdvancedOptimization,
+    /// 跨链支持
     CrossChainSupport,
+    /// AI优化功能
     AIOptimization,
 }
 
-/// Version-aware account trait
+/// 具备版本感知能力的账户trait
+/// - 便于账户自动迁移、版本校验
 pub trait Versioned {
-    /// Get the version of this account
+    /// 获取账户版本
     fn version(&self) -> ProgramVersion;
 
-    /// Set the version of this account
+    /// 设置账户版本
     fn set_version(&mut self, version: ProgramVersion);
 
-    /// Check if account needs migration
+    /// 判断账户是否需要迁移
     fn needs_migration(&self) -> bool {
         self.version() < CURRENT_VERSION
     }
 
-    /// Migrate account to current version
+    /// 迁移账户到当前版本
+    /// - 自动按版本升级路径依次迁移
     fn migrate(&mut self) -> Result<()> {
         if !self.needs_migration() {
             return Ok(());
@@ -103,7 +123,7 @@ pub trait Versioned {
 
         let current_version = self.version();
 
-        // Perform version-specific migrations - Simplified migration path
+        // 按版本依次迁移 - 简化迁移路径
         if current_version < ProgramVersion::new(1, 0, 1) {
             self.migrate_to_1_0_1()?;
         }
@@ -120,7 +140,7 @@ pub trait Versioned {
             self.migrate_to_2_1_0()?;
         }
 
-        // Set to current version
+        // 设置为当前版本
         self.set_version(CURRENT_VERSION);
 
         msg!(
@@ -132,40 +152,40 @@ pub trait Versioned {
         Ok(())
     }
 
-    /// Migration to version 1.0.1 - Simplified logic improvements
+    /// 迁移到1.0.1版本 - 逻辑简化
     fn migrate_to_1_0_1(&mut self) -> Result<()> {
-        // Simplified: Basic compatibility updates
+        // 简化：基础兼容性更新
         msg!("Migrating to v1.0.1: Applying simplified logic improvements");
         Ok(())
     }
 
-    /// Migration to version 1.1.0 - Enhanced optimization features
+    /// 迁移到1.1.0版本 - 增强优化特性
     fn migrate_to_1_1_0(&mut self) -> Result<()> {
-        // Simplified: Add optimization features
+        // 简化：增加优化特性
         msg!("Migrating to v1.1.0: Adding enhanced optimization features");
         Ok(())
     }
 
-    /// Migration to version 2.0.0 - Refactored architecture
+    /// 迁移到2.0.0版本 - 架构重构
     fn migrate_to_2_0_0(&mut self) -> Result<()> {
-        // Simplified: Migrate to new refactored architecture
+        // 简化：迁移到新重构架构
         msg!("Migrating to v2.0.0: Upgrading to refactored architecture with simplified logic");
         Ok(())
     }
 
-    /// Migration to version 2.1.0 - Enhanced refactored architecture
+    /// 迁移到2.1.0版本 - 增强重构特性
     fn migrate_to_2_1_0(&mut self) -> Result<()> {
-        // Simplified: Enhanced features and performance improvements
+        // 简化：增强特性和性能优化
         msg!("Migrating to v2.1.0: Adding enhanced refactored features and performance optimizations");
         Ok(())
     }
 }
 
-/// Version validation utilities
+/// 版本校验工具
 pub struct VersionValidator;
 
 impl VersionValidator {
-    /// Validate that an account version is compatible
+    /// 校验账户版本兼容性
     pub fn validate_compatibility(account_version: &ProgramVersion) -> Result<()> {
         if !CURRENT_VERSION.is_compatible_with(account_version) {
             return Err(crate::error::StrategyError::IncompatibleVersion.into());
@@ -173,7 +193,7 @@ impl VersionValidator {
         Ok(())
     }
 
-    /// Validate that a feature is supported
+    /// 校验特性支持
     pub fn validate_feature_support(version: &ProgramVersion, feature: Feature) -> Result<()> {
         if !version.supports_feature(feature) {
             return Err(crate::error::StrategyError::FeatureNotSupported.into());
@@ -181,13 +201,13 @@ impl VersionValidator {
         Ok(())
     }
 
-    /// Get upgrade path for a version
+    /// 获取版本升级路径
     pub fn get_upgrade_path(from: &ProgramVersion) -> Vec<ProgramVersion> {
         let mut path = Vec::new();
         let mut current = *from;
 
         while current < CURRENT_VERSION {
-            // Simplified migration path with clear upgrade steps
+            // 简化迁移路径，按升级步骤依次推进
             if current < ProgramVersion::new(1, 0, 1)
                 && CURRENT_VERSION >= ProgramVersion::new(1, 0, 1)
             {
@@ -201,17 +221,17 @@ impl VersionValidator {
             } else if current < ProgramVersion::new(2, 0, 0)
                 && CURRENT_VERSION >= ProgramVersion::new(2, 0, 0)
             {
-                // Major refactoring upgrade to v2.0.0
+                // 主架构重构升级到v2.0.0
                 path.push(ProgramVersion::new(2, 0, 0));
                 current = ProgramVersion::new(2, 0, 0);
             } else if current < ProgramVersion::new(2, 1, 0)
                 && CURRENT_VERSION >= ProgramVersion::new(2, 1, 0)
             {
-                // Enhanced refactoring upgrade to v2.1.0
+                // 增强重构升级到v2.1.0
                 path.push(ProgramVersion::new(2, 1, 0));
                 current = ProgramVersion::new(2, 1, 0);
             } else {
-                // Direct upgrade to current version
+                // 直接升级到当前版本
                 path.push(CURRENT_VERSION);
                 break;
             }
@@ -221,7 +241,8 @@ impl VersionValidator {
     }
 }
 
-/// Version management events
+/// 版本升级事件（Anchor事件）
+/// - 记录账户从旧版本升级到新版本的链上事件
 #[event]
 pub struct VersionUpgraded {
     pub account: Pubkey,
@@ -230,6 +251,8 @@ pub struct VersionUpgraded {
     pub timestamp: i64,
 }
 
+/// 迁移完成事件（Anchor事件）
+/// - 记录账户迁移完成的链上事件
 #[event]
 pub struct MigrationCompleted {
     pub account: Pubkey,

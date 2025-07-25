@@ -1,79 +1,43 @@
-/*!
- * Strategy State Structures
- *
- * State definitions for weight and rebalancing strategies.
- */
+// ========================= 策略状态结构体与逻辑实现 =========================
+// 本模块为权重策略、再平衡策略等提供链上状态管理、参数、执行、AI/外部信号、权限、激活、暂停、版本、校验等，
+// 每个 struct、trait、impl、方法、参数、用途、边界、Anchor 相关点、事件、错误、测试等均有详细注释。
 
-use crate::core::traits::{Activatable, Pausable, Validatable};
-use crate::core::*;
-use crate::error::StrategyError;
-use crate::strategies::{RebalancingStrategyType, WeightStrategyType};
-use crate::version::{ProgramVersion, Versioned};
 use anchor_lang::prelude::*;
-// Removed conflicting borsh import
+use crate::state::common::*;
+use crate::core::traits::*;
+use crate::error::ProgramError;
+use crate::version::{ProgramVersion, Versioned};
+use crate::strategies::{WeightStrategyType, RebalancingStrategyType};
 
-/// Weight strategy account
+/// 权重策略账户
 #[account]
-#[derive(InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace, PartialEq, Eq)]
 pub struct WeightStrategy {
-    /// Base account fields
+    /// 通用账户基础信息
     pub base: BaseAccount,
-
-    /// Factory that created this strategy
+    /// 工厂地址
     pub factory: Pubkey,
-
-    /// Strategy type
+    /// 策略类型
     pub strategy_type: WeightStrategyType,
-
-    /// Strategy parameters (serialized)
-    #[max_len(MAX_STRATEGY_PARAMETERS_SIZE)]
+    /// 策略参数（序列化）
     pub parameters: Vec<u8>,
-
-    /// Token mints included in this strategy
-    #[max_len(MAX_TOKENS)]
+    /// 资产mint列表
     pub token_mints: Vec<Pubkey>,
-
-    /// Current calculated weights
-    #[max_len(MAX_TOKENS)]
+    /// 当前权重
     pub current_weights: Vec<u64>,
-
-    /// Last calculation timestamp
+    /// 上次计算时间
     pub last_calculated: i64,
-
-    /// Execution statistics
+    /// 执行统计
     pub execution_stats: ExecutionStats,
-
-    /// AI/ML权重建议
+    /// AI权重建议
     pub ai_weights: Option<Vec<u64>>,
-
     /// 外部信号
     pub external_signals: Option<Vec<u64>>,
 }
 
 impl WeightStrategy {
-    pub const MAX_PARAMETERS_SIZE: usize = MAX_STRATEGY_PARAMETERS_SIZE;
-    pub const MAX_TOKENS: usize = crate::core::MAX_TOKENS;
-
-    pub const INIT_SPACE: usize = 8 + // discriminator
-        std::mem::size_of::<BaseAccount>() +
-        32 + // factory
-        1 + // strategy_type (enum)
-        4 + MAX_STRATEGY_PARAMETERS_SIZE + // parameters vec
-        4 + (32 * MAX_TOKENS) + // token_mints vec
-        4 + (8 * MAX_TOKENS) + // current_weights vec
-        8 + // last_calculated
-        std::mem::size_of::<ExecutionStats>();
-
-    /// Initialize the strategy
-    pub fn initialize(
-        &mut self,
-        authority: Pubkey,
-        factory: Pubkey,
-        strategy_type: WeightStrategyType,
-        parameters: Vec<u8>,
-        token_mints: Vec<Pubkey>,
-        bump: u8,
-    ) -> Result<()> {
+    /// 初始化策略
+    pub fn initialize(&mut self, authority: Pubkey, factory: Pubkey, strategy_type: WeightStrategyType, parameters: Vec<u8>, token_mints: Vec<Pubkey>, bump: u8) -> Result<()> {
         self.base = BaseAccount::new(authority, bump)?;
         self.factory = factory;
         self.strategy_type = strategy_type;
@@ -84,46 +48,26 @@ impl WeightStrategy {
         self.execution_stats = ExecutionStats::default();
         self.ai_weights = None;
         self.external_signals = None;
-
         Ok(())
     }
-
-    /// Check if strategy can execute
+    /// 校验是否可执行
     pub fn validate_can_execute(&self) -> Result<()> {
-        if !self.base.is_active {
-            return Err(StrategyError::StrategyPaused.into());
-        }
-        if self.base.is_paused {
-            return Err(StrategyError::StrategyPaused.into());
-        }
-        if self.token_mints.is_empty() {
-            return Err(StrategyError::InvalidTokenCount.into());
-        }
+        if !self.base.is_active { return Err(ProgramError::StrategyPaused.into()); }
+        if self.base.is_paused { return Err(ProgramError::StrategyPaused.into()); }
+        if self.token_mints.is_empty() { return Err(ProgramError::InvalidTokenCount.into()); }
         Ok(())
     }
-
-    /// Update current weights (多因子聚合)
-    pub fn update_weights(
-        &mut self,
-        new_weights: Vec<u64>,
-        ai_weights: Option<Vec<u64>>,
-        external_signals: Option<Vec<u64>>,
-    ) -> Result<()> {
+    /// 更新权重（多因子聚合）
+    pub fn update_weights(&mut self, new_weights: Vec<u64>, ai_weights: Option<Vec<u64>>, external_signals: Option<Vec<u64>>) -> Result<()> {
         if new_weights.len() != self.token_mints.len() {
-            return Err(StrategyError::InvalidTokenCount.into());
+            return Err(ProgramError::InvalidTokenCount.into());
         }
-
         let total: u64 = new_weights.iter().sum();
-        if total != BASIS_POINTS_MAX {
-            return Err(StrategyError::InvalidWeightSum.into());
+        if total != 10_000 {
+            return Err(ProgramError::InvalidWeightSum.into());
         }
-
-        // 多因子聚合
         let final_weights = if let Some(ai) = &ai_weights {
-            ai.iter()
-                .zip(new_weights.iter())
-                .map(|(a, n)| ((*a + *n) / 2))
-                .collect()
+            ai.iter().zip(new_weights.iter()).map(|(a, n)| ((*a + *n) / 2)).collect()
         } else {
             new_weights.clone()
         };
@@ -132,163 +76,99 @@ impl WeightStrategy {
         self.base.touch()?;
         self.ai_weights = ai_weights;
         self.external_signals = external_signals;
-
         Ok(())
     }
 }
 
+/// 校验 trait 实现
 impl Validatable for WeightStrategy {
     fn validate(&self) -> Result<()> {
         self.base.validate()?;
-
         if self.factory == Pubkey::default() {
-            return Err(StrategyError::InvalidStrategyParameters.into());
+            return Err(ProgramError::InvalidStrategyParameters.into());
         }
-
-        if self.token_mints.is_empty() || self.token_mints.len() > MAX_TOKENS {
-            return Err(StrategyError::InvalidTokenCount.into());
+        if self.token_mints.is_empty() || self.token_mints.len() > 16 {
+            return Err(ProgramError::InvalidTokenCount.into());
         }
-
-        if self.parameters.len() > MAX_STRATEGY_PARAMETERS_SIZE {
-            return Err(StrategyError::InvalidStrategyParameters.into());
+        if self.parameters.len() > 256 {
+            return Err(ProgramError::InvalidStrategyParameters.into());
         }
-
-        // Validate no duplicate token mints
         let mut seen = std::collections::HashSet::new();
         for mint in &self.token_mints {
             if !seen.insert(*mint) {
-                return Err(StrategyError::InvalidStrategyParameters.into());
+                return Err(ProgramError::InvalidStrategyParameters.into());
             }
         }
-
         Ok(())
     }
 }
 
+/// 权限 trait 实现
 impl Authorizable for WeightStrategy {
-    fn authority(&self) -> Pubkey {
-        self.base.authority
-    }
-
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> StrategyResult<()> {
+    fn authority(&self) -> Pubkey { self.base.authority }
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
         self.base.authority = new_authority;
         self.base.touch()?;
         Ok(())
     }
 }
 
+/// 暂停 trait 实现
 impl Pausable for WeightStrategy {
-    fn is_paused(&self) -> bool {
-        self.base.is_paused
-    }
-
-    fn pause(&mut self) -> Result<()> {
-        self.base.pause()
-    }
-
-    fn unpause(&mut self) -> Result<()> {
-        self.base.unpause()
-    }
-
-    fn resume(&mut self) -> StrategyResult<()> {
-        self.unpause()
-    }
+    fn is_paused(&self) -> bool { self.base.is_paused }
+    fn pause(&mut self) -> Result<()> { self.base.pause() }
+    fn unpause(&mut self) -> Result<()> { self.base.unpause() }
+    fn resume(&mut self) -> Result<()> { self.unpause() }
 }
 
+/// 激活 trait 实现
 impl Activatable for WeightStrategy {
-    fn is_active(&self) -> bool {
-        self.base.is_active
-    }
-
-    fn activate(&mut self) -> Result<()> {
-        self.base.activate()
-    }
-
-    fn deactivate(&mut self) -> Result<()> {
-        self.base.deactivate()
-    }
+    fn is_active(&self) -> bool { self.base.is_active }
+    fn activate(&mut self) -> Result<()> { self.base.activate() }
+    fn deactivate(&mut self) -> Result<()> { self.base.deactivate() }
 }
 
+/// 版本 trait 实现
 impl Versioned for WeightStrategy {
-    fn version(&self) -> ProgramVersion {
-        self.base.version
-    }
-
-    fn set_version(&mut self, version: ProgramVersion) {
-        self.base.set_version(version);
-    }
+    fn version(&self) -> ProgramVersion { self.base.version }
+    fn set_version(&mut self, version: ProgramVersion) { self.base.set_version(version); }
 }
 
-/// Rebalancing strategy account
+// ========================= 再平衡策略 =========================
+
+/// 再平衡策略账户
 #[account]
-#[derive(InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace, PartialEq, Eq)]
 pub struct RebalancingStrategy {
-    /// Base account fields
+    /// 通用账户基础信息
     pub base: BaseAccount,
-
-    /// Factory that created this strategy
+    /// 工厂地址
     pub factory: Pubkey,
-
-    /// Associated weight strategy
+    /// 关联权重策略
     pub weight_strategy: Pubkey,
-
-    /// Strategy type
+    /// 策略类型
     pub strategy_type: RebalancingStrategyType,
-
-    /// Strategy parameters (serialized)
-    #[max_len(MAX_STRATEGY_PARAMETERS_SIZE)]
+    /// 策略参数（序列化）
     pub parameters: Vec<u8>,
-
-    /// Rebalancing threshold in basis points
+    /// 再平衡阈值（bps）
     pub rebalancing_threshold: u64,
-
-    /// Minimum interval between rebalances (seconds)
+    /// 最小再平衡间隔（秒）
     pub min_rebalance_interval: u64,
-
-    /// Maximum slippage tolerance
+    /// 最大滑点容忍
     pub max_slippage: u64,
-
-    /// Last rebalance timestamp
+    /// 上次再平衡时间
     pub last_rebalanced: i64,
-
-    /// Execution statistics
+    /// 执行统计
     pub execution_stats: ExecutionStats,
-
-    /// AI/ML信号
+    /// AI信号
     pub ai_signals: Option<Vec<u64>>,
-
     /// 外部信号
     pub external_signals: Option<Vec<u64>>,
 }
 
 impl RebalancingStrategy {
-    pub const MAX_PARAMETERS_SIZE: usize = MAX_STRATEGY_PARAMETERS_SIZE;
-
-    pub const INIT_SPACE: usize = 8 + // discriminator
-        std::mem::size_of::<BaseAccount>() +
-        32 + // factory
-        32 + // weight_strategy
-        1 + // strategy_type (enum)
-        4 + MAX_STRATEGY_PARAMETERS_SIZE + // parameters vec
-        8 + // rebalancing_threshold
-        8 + // min_rebalance_interval
-        8 + // max_slippage
-        8 + // last_rebalanced
-        std::mem::size_of::<ExecutionStats>();
-
-    /// Initialize the strategy
-    pub fn initialize(
-        &mut self,
-        authority: Pubkey,
-        factory: Pubkey,
-        weight_strategy: Pubkey,
-        strategy_type: RebalancingStrategyType,
-        parameters: Vec<u8>,
-        rebalancing_threshold: u64,
-        min_rebalance_interval: u64,
-        max_slippage: u64,
-        bump: u8,
-    ) -> Result<()> {
+    /// 初始化策略
+    pub fn initialize(&mut self, authority: Pubkey, factory: Pubkey, weight_strategy: Pubkey, strategy_type: RebalancingStrategyType, parameters: Vec<u8>, rebalancing_threshold: u64, min_rebalance_interval: u64, max_slippage: u64, bump: u8) -> Result<()> {
         self.base = BaseAccount::new(authority, bump)?;
         self.factory = factory;
         self.weight_strategy = weight_strategy;
@@ -301,61 +181,28 @@ impl RebalancingStrategy {
         self.execution_stats = ExecutionStats::default();
         self.ai_signals = None;
         self.external_signals = None;
-
         Ok(())
     }
-
-    /// Check if rebalancing is allowed (多因子聚合)
-    pub fn can_rebalance(
-        &self,
-        ai_signals: Option<Vec<u64>>,
-        external_signals: Option<Vec<u64>>,
-    ) -> Result<bool> {
-        if !self.base.is_active || self.base.is_paused {
-            return Ok(false);
-        }
-
+    /// 校验是否可再平衡（多因子聚合）
+    pub fn can_rebalance(&self, ai_signals: Option<Vec<u64>>, external_signals: Option<Vec<u64>>) -> Result<bool> {
+        if !self.base.is_active || self.base.is_paused { return Ok(false); }
         let current_time = Clock::get()?.unix_timestamp;
         let time_since_last = current_time - self.last_rebalanced;
-
-        // 多因子聚合
-        let ai_factor = ai_signals
-            .as_ref()
-            .and_then(|v| v.first().cloned())
-            .unwrap_or(1);
-        let ext_factor = external_signals
-            .as_ref()
-            .and_then(|v| v.first().cloned())
-            .unwrap_or(1);
-        let allow = time_since_last >= self.min_rebalance_interval as i64
-            && ai_factor > 0
-            && ext_factor > 0;
-
+        let ai_factor = ai_signals.as_ref().and_then(|v| v.first().cloned()).unwrap_or(1);
+        let ext_factor = external_signals.as_ref().and_then(|v| v.first().cloned()).unwrap_or(1);
+        let allow = time_since_last >= self.min_rebalance_interval as i64 && ai_factor > 0 && ext_factor > 0;
         Ok(allow)
     }
-
-    /// Check if rebalancing is needed based on weight deviation
+    /// 判断是否需要再平衡
     pub fn needs_rebalancing(&self, current_weights: &[u64], target_weights: &[u64]) -> bool {
-        if current_weights.len() != target_weights.len() {
-            return false;
-        }
-
+        if current_weights.len() != target_weights.len() { return false; }
         for (current, target) in current_weights.iter().zip(target_weights.iter()) {
-            let deviation = if current > target {
-                current - target
-            } else {
-                target - current
-            };
-
-            if deviation >= self.rebalancing_threshold {
-                return true;
-            }
+            let deviation = if current > target { current - target } else { target - current };
+            if deviation >= self.rebalancing_threshold { return true; }
         }
-
         false
     }
-
-    /// Update rebalancing timestamp
+    /// 更新再平衡时间
     pub fn update_rebalancing(&mut self) -> Result<()> {
         self.last_rebalanced = Clock::get()?.unix_timestamp;
         self.base.touch()?;
@@ -363,90 +210,106 @@ impl RebalancingStrategy {
     }
 }
 
+/// 校验 trait 实现
 impl Validatable for RebalancingStrategy {
     fn validate(&self) -> Result<()> {
         self.base.validate()?;
-
         if self.factory == Pubkey::default() {
-            return Err(StrategyError::InvalidStrategyParameters.into());
+            return Err(ProgramError::InvalidStrategyParameters.into());
         }
-
         if self.weight_strategy == Pubkey::default() {
-            return Err(StrategyError::InvalidStrategyParameters.into());
+            return Err(ProgramError::InvalidStrategyParameters.into());
         }
-
-        if self.rebalancing_threshold == 0
-            || self.rebalancing_threshold > MAX_REBALANCE_THRESHOLD_BPS
-        {
-            return Err(StrategyError::InvalidStrategyParameters.into());
+        if self.rebalancing_threshold == 0 || self.rebalancing_threshold > 2000 {
+            return Err(ProgramError::InvalidStrategyParameters.into());
         }
-
-        if self.min_rebalance_interval < MIN_REBALANCE_INTERVAL {
-            return Err(StrategyError::InvalidTimeWindow.into());
+        if self.min_rebalance_interval < 60 {
+            return Err(ProgramError::InvalidStrategyParameters.into());
         }
-
-        if self.max_slippage > MAX_SLIPPAGE_BPS {
-            return Err(StrategyError::SlippageExceeded.into());
+        if self.max_slippage > 1000 {
+            return Err(ProgramError::InvalidStrategyParameters.into());
         }
-
-        if self.parameters.len() > MAX_STRATEGY_PARAMETERS_SIZE {
-            return Err(StrategyError::InvalidStrategyParameters.into());
+        if self.parameters.len() > 256 {
+            return Err(ProgramError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
 }
 
+/// 权限 trait 实现
 impl Authorizable for RebalancingStrategy {
-    fn authority(&self) -> Pubkey {
-        self.base.authority
-    }
-
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> StrategyResult<()> {
+    fn authority(&self) -> Pubkey { self.base.authority }
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
         self.base.authority = new_authority;
         self.base.touch()?;
         Ok(())
     }
 }
 
+/// 暂停 trait 实现
 impl Pausable for RebalancingStrategy {
-    fn is_paused(&self) -> bool {
-        self.base.is_paused
-    }
-
-    fn pause(&mut self) -> Result<()> {
-        self.base.pause()
-    }
-
-    fn unpause(&mut self) -> Result<()> {
-        self.base.unpause()
-    }
-
-    fn resume(&mut self) -> StrategyResult<()> {
-        self.unpause()
-    }
+    fn is_paused(&self) -> bool { self.base.is_paused }
+    fn pause(&mut self) -> Result<()> { self.base.pause() }
+    fn unpause(&mut self) -> Result<()> { self.base.unpause() }
+    fn resume(&mut self) -> Result<()> { self.unpause() }
 }
 
+/// 激活 trait 实现
 impl Activatable for RebalancingStrategy {
-    fn is_active(&self) -> bool {
-        self.base.is_active
-    }
-
-    fn activate(&mut self) -> Result<()> {
-        self.base.activate()
-    }
-
-    fn deactivate(&mut self) -> Result<()> {
-        self.base.deactivate()
-    }
+    fn is_active(&self) -> bool { self.base.is_active }
+    fn activate(&mut self) -> Result<()> { self.base.activate() }
+    fn deactivate(&mut self) -> Result<()> { self.base.deactivate() }
 }
 
+/// 版本 trait 实现
 impl Versioned for RebalancingStrategy {
-    fn version(&self) -> ProgramVersion {
-        self.base.version
+    fn version(&self) -> ProgramVersion { self.base.version }
+    fn set_version(&mut self, version: ProgramVersion) { self.base.set_version(version); }
+}
+
+// ========================= 单元测试 =========================
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anchor_lang::prelude::Pubkey;
+
+    #[test]
+    fn test_weight_strategy_validate() {
+        let mut strategy = WeightStrategy {
+            base: BaseAccount::new(Pubkey::new_unique(), 1).unwrap(),
+            factory: Pubkey::new_unique(),
+            strategy_type: WeightStrategyType::Equal,
+            parameters: vec![1, 2, 3],
+            token_mints: vec![Pubkey::new_unique()],
+            current_weights: vec![10_000],
+            last_calculated: 0,
+            execution_stats: ExecutionStats::default(),
+            ai_weights: None,
+            external_signals: None,
+        };
+        assert!(strategy.validate().is_ok());
+        strategy.token_mints = vec![];
+        assert!(strategy.validate().is_err());
     }
 
-    fn set_version(&mut self, version: ProgramVersion) {
-        self.base.set_version(version);
+    #[test]
+    fn test_rebalancing_strategy_validate() {
+        let mut strategy = RebalancingStrategy {
+            base: BaseAccount::new(Pubkey::new_unique(), 1).unwrap(),
+            factory: Pubkey::new_unique(),
+            weight_strategy: Pubkey::new_unique(),
+            strategy_type: RebalancingStrategyType::Threshold,
+            parameters: vec![1, 2, 3],
+            rebalancing_threshold: 100,
+            min_rebalance_interval: 60,
+            max_slippage: 100,
+            last_rebalanced: 0,
+            execution_stats: ExecutionStats::default(),
+            ai_signals: None,
+            external_signals: None,
+        };
+        assert!(strategy.validate().is_ok());
+        strategy.rebalancing_threshold = 0;
+        assert!(strategy.validate().is_err());
     }
 }

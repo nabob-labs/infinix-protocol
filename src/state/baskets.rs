@@ -1,441 +1,295 @@
-/*!
- * Basket State Structures
- *
- * State definitions for basket management and trading.
- */
+// ========================= 篮子与指数代币统一状态实现 =========================
+// 本模块为篮子和指数代币提供统一状态结构体、核心业务字段和操作，
+// 每个 struct、trait、impl、方法、参数、用途、边界、Anchor 相关点、事件、错误、测试等均有详细注释。
 
-use crate::core::*;
-use crate::error::StrategyError;
-use crate::state::common::*;
-use crate::version::{ProgramVersion, Versioned};
 use anchor_lang::prelude::*;
-// Removed conflicting borsh import
+use crate::core::*;
+use crate::state::common::*;
+use crate::errors::basket_error::BasketError;
 
-/// Basket manager account
+/// 篮子/指数代币统一状态结构体
+/// - 记录篮子资产、权重、供应、权限、费用、状态、统计、风险等
+/// - 适用于所有 Anchor 账户，支持升级、权限、激活/暂停、再平衡等
 #[account]
-#[derive(InitSpace)]
-pub struct BasketManager {
-    /// Base account fields
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, InitSpace, PartialEq, Eq)]
+pub struct BasketIndexState {
+    /// 通用账户基础信息
     pub base: BaseAccount,
-
-    /// Number of baskets created
-    pub basket_count: u64,
-
-    /// Total value locked across all baskets
-    pub total_value_locked: u64,
-
-    /// Fee collector for basket operations
-    pub fee_collector: Pubkey,
-
-    /// Default fee in basis points
-    pub default_fee_bps: u16,
-
-    /// Execution statistics
-    pub execution_stats: ExecutionStats,
-}
-
-impl BasketManager {
-    pub const INIT_SPACE: usize = 8 + // discriminator
-        std::mem::size_of::<BaseAccount>() +
-        8 + // basket_count
-        8 + // total_value_locked
-        32 + // fee_collector
-        2 + // default_fee_bps
-        std::mem::size_of::<ExecutionStats>();
-
-    /// Initialize the basket manager
-    pub fn initialize(&mut self, authority: Pubkey, fee_collector: Pubkey, bump: u8) -> Result<()> {
-        self.base = BaseAccount::new(authority, bump)?;
-        self.basket_count = 0;
-        self.total_value_locked = 0;
-        self.fee_collector = fee_collector;
-        self.default_fee_bps = DEFAULT_FEE_BPS;
-        self.execution_stats = ExecutionStats::default();
-
-        Ok(())
-    }
-
-    /// Create a new basket ID
-    pub fn create_basket_id(&mut self) -> u64 {
-        let id = self.basket_count;
-        self.basket_count += 1;
-        id
-    }
-
-    /// Update total value locked
-    pub fn update_tvl(&mut self, amount: u64, is_addition: bool) -> Result<()> {
-        if is_addition {
-            self.total_value_locked = self.total_value_locked.saturating_add(amount);
-        } else {
-            self.total_value_locked = self.total_value_locked.saturating_sub(amount);
-        }
-        self.base.touch()?;
-        Ok(())
-    }
-}
-
-impl crate::core::traits::Validatable for BasketManager {
-    fn validate(&self) -> Result<()> {
-        self.base.validate()?;
-
-        if self.fee_collector == Pubkey::default() {
-            return Err(StrategyError::InvalidStrategyParameters.into());
-        }
-
-        if self.default_fee_bps > MAX_FEE_BPS {
-            return Err(StrategyError::InvalidStrategyParameters.into());
-        }
-
-        Ok(())
-    }
-}
-
-impl crate::core::traits::Authorizable for BasketManager {
-    fn authority(&self) -> Pubkey {
-        self.base.authority
-    }
-
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> StrategyResult<()> {
-        self.base.authority = new_authority;
-        self.base.touch()?;
-        Ok(())
-    }
-}
-
-impl crate::core::traits::Pausable for BasketManager {
-    fn is_paused(&self) -> bool {
-        self.base.is_paused
-    }
-
-    fn pause(&mut self) -> Result<()> {
-        self.base.pause()
-    }
-
-    fn unpause(&mut self) -> Result<()> {
-        self.base.unpause()
-    }
-
-    fn resume(&mut self) -> StrategyResult<()> {
-        self.unpause()
-    }
-}
-
-impl crate::core::traits::Activatable for BasketManager {
-    fn is_active(&self) -> bool {
-        self.base.is_active
-    }
-
-    fn activate(&mut self) -> Result<()> {
-        self.base.activate()
-    }
-
-    fn deactivate(&mut self) -> Result<()> {
-        self.base.deactivate()
-    }
-}
-
-impl crate::core::traits::Versioned for BasketManager {
-    fn version(&self) -> u32 {
-        self.base.version.as_u32()
-    }
-
-    fn set_version(&mut self, version: ProgramVersion) {
-        self.base.set_version(version);
-    }
-}
-
-/// Individual basket instance
-#[account]
-#[derive(InitSpace)]
-pub struct BasketInstance {
-    /// Base account fields
-    pub base: BaseAccount,
-
-    /// Manager that created this basket
-    pub manager: Pubkey,
-
-    /// Basket identifier
-    pub basket_id: u64,
-
-    /// Basket token mint
-    pub basket_mint: Pubkey,
-
-    /// Basket composition
-    #[max_len(MAX_TOKENS)]
+    /// 篮子唯一ID
+    pub id: u64,
+    /// 资产成分（最大16种）
     pub composition: Vec<BasketConstituent>,
-
-    /// Total supply of basket tokens
+    /// 各资产权重（bps，最大16项）
+    pub weights: Vec<u64>,
+    /// 当前总价值（USDC计价）
+    pub total_value: u64,
+    /// 当前总供应量
     pub total_supply: u64,
-
-    /// Net Asset Value per token
-    pub nav_per_token: u64,
-
-    /// Total fees collected
-    pub fees_collected: u64,
-
-    /// Number of operations performed
-    pub operation_count: u64,
-
-    /// Last rebalance timestamp
+    /// 权限账户
+    pub authority: Pubkey,
+    /// 管理员账户（可选）
+    pub manager: Option<Pubkey>,
+    /// 费用收集账户
+    pub fee_collector: Pubkey,
+    /// 创建费率（bps）
+    pub creation_fee_bps: u16,
+    /// 赎回费率（bps）
+    pub redemption_fee_bps: u16,
+    /// 当前状态
+    pub status: BasketStatus,
+    /// 是否激活
+    pub is_active: bool,
+    /// 是否暂停
+    pub is_paused: bool,
+    /// 是否启用再平衡
+    pub enable_rebalancing: bool,
+    /// 上次再平衡时间
     pub last_rebalanced: i64,
-
-    /// Execution statistics
+    /// 创建时间
+    pub created_at: i64,
+    /// 最后更新时间
+    pub updated_at: i64,
+    /// 执行统计
     pub execution_stats: ExecutionStats,
+    /// 风险指标
+    pub risk_metrics: Option<RiskMetrics>,
+    /// AI信号
+    pub ai_signals: Option<Vec<u64>>,
+    /// 外部信号
+    pub external_signals: Option<Vec<u64>>,
+    /// PDA bump
+    pub bump: u8,
 }
 
-impl BasketInstance {
-    pub const INIT_SPACE: usize = 8 + // discriminator
-        std::mem::size_of::<BaseAccount>() +
-        32 + // manager
-        8 + // basket_id
-        32 + // basket_mint
-        4 + (std::mem::size_of::<BasketConstituent>() * MAX_TOKENS) + // composition vec
-        8 + // total_supply
-        8 + // nav_per_token
-        8 + // fees_collected
-        8 + // operation_count
-        8 + // last_rebalanced
-        std::mem::size_of::<ExecutionStats>();
-
-    /// Initialize the basket
+impl BasketIndexState {
+    /// 初始化篮子状态
     pub fn initialize(
         &mut self,
         authority: Pubkey,
-        manager: Pubkey,
-        basket_id: u64,
-        basket_mint: Pubkey,
+        manager: Option<Pubkey>,
+        id: u64,
         composition: Vec<BasketConstituent>,
+        weights: Vec<u64>,
+        fee_collector: Pubkey,
+        creation_fee_bps: u16,
+        redemption_fee_bps: u16,
+        enable_rebalancing: bool,
         bump: u8,
-    ) -> Result<()> {
-        self.base = BaseAccount::new(authority, bump)?;
-        self.manager = manager;
-        self.basket_id = basket_id;
-        self.basket_mint = basket_mint;
+    ) {
+        let now = Clock::get().unwrap().unix_timestamp;
+        self.id = id;
         self.composition = composition;
+        self.weights = weights;
+        self.total_value = 0;
         self.total_supply = 0;
-        self.nav_per_token = PRICE_PRECISION; // Start at $1.00
-        self.fees_collected = 0;
-        self.operation_count = 0;
-        self.last_rebalanced = 0;
+        self.authority = authority;
+        self.manager = manager;
+        self.fee_collector = fee_collector;
+        self.creation_fee_bps = creation_fee_bps;
+        self.redemption_fee_bps = redemption_fee_bps;
+        self.status = BasketStatus::Active;
+        self.is_active = true;
+        self.is_paused = false;
+        self.enable_rebalancing = enable_rebalancing;
+        self.last_rebalanced = now;
+        self.created_at = now;
+        self.updated_at = now;
         self.execution_stats = ExecutionStats::default();
-
+        self.risk_metrics = None;
+        self.ai_signals = None;
+        self.external_signals = None;
+        self.bump = bump;
+    }
+    /// 铸造新代币
+    pub fn mint_tokens(&mut self, amount: u64) -> Result<()> {
+        self.total_supply = self.total_supply.checked_add(amount).ok_or(BasketError::Overflow)?;
         Ok(())
     }
-
-    /// Update basket supply
-    pub fn update_supply(&mut self, amount: u64, is_creation: bool) -> Result<()> {
-        if is_creation {
-            self.total_supply = self.total_supply.saturating_add(amount);
-        } else {
-            if amount > self.total_supply {
-                return Err(StrategyError::BasketRedemptionExceedsSupply.into());
-            }
-            self.total_supply = self.total_supply.saturating_sub(amount);
-        }
-
-        self.operation_count += 1;
-        self.base.touch()?;
-        Ok(())
-    }
-
-    /// Update NAV per token
-    pub fn update_nav(&mut self, new_nav: u64) -> Result<()> {
-        self.nav_per_token = new_nav;
-        self.base.touch()?;
-        Ok(())
-    }
-
-    /// Add fees collected
-    pub fn add_fees(&mut self, fee_amount: u64) -> Result<()> {
-        self.fees_collected = self.fees_collected.saturating_add(fee_amount);
-        self.base.touch()?;
-        Ok(())
-    }
-
-    /// Update rebalance timestamp
-    pub fn update_rebalance(&mut self) -> Result<()> {
-        self.last_rebalanced = Clock::get()?.unix_timestamp;
-        self.base.touch()?;
-        Ok(())
-    }
-
-    /// Check if basket can be operated on
-    pub fn validate_can_operate(&self) -> Result<()> {
-        if !self.base.is_active {
-            return Err(StrategyError::StrategyPaused.into());
-        }
-        if self.base.is_paused {
-            return Err(StrategyError::StrategyPaused.into());
-        }
+    /// 销毁代币
+    pub fn burn_tokens(&mut self, amount: u64) -> Result<()> {
+        require!(self.total_supply >= amount, BasketError::InsufficientValue);
+        self.total_supply -= amount;
         Ok(())
     }
 }
 
-impl crate::core::traits::Validatable for BasketInstance {
+/// 实现 NAV 计算 trait
+impl NavCalculable for BasketIndexState {
+    fn calculate_nav(&self, price_feeds: &[PriceFeed]) -> Result<u64> {
+        let mut total_value = 0u64;
+        for constituent in &self.composition {
+            if let Some(price_feed) = price_feeds.iter().find(|pf| pf.mint == constituent.token_mint) {
+                price_feed.validate()?;
+                let constituent_value = constituent.balance.checked_mul(price_feed.price).ok_or(BasketError::Overflow)?
+                    .checked_div(PRICE_PRECISION).ok_or(BasketError::Overflow)?;
+                total_value = total_value.checked_add(constituent_value).ok_or(BasketError::Overflow)?;
+            }
+        }
+        Ok(total_value)
+    }
+}
+
+/// 实现费用管理 trait
+impl FeeManageable for BasketIndexState {
+    fn collect_fees(&mut self, amount: u64) -> Result<()> {
+        self.total_value = self.total_value.checked_add(amount).ok_or(BasketError::Overflow)?;
+        Ok(())
+    }
+}
+
+/// 实现再平衡 trait
+impl Rebalancable for BasketIndexState {
+    fn rebalance(&mut self, new_weights: Vec<u64>) -> Result<()> {
+        if new_weights.len() != self.weights.len() {
+            return Err(BasketError::InvalidTokenCount.into());
+        }
+        let total_weight: u64 = new_weights.iter().sum();
+        if total_weight != 10_000 {
+            return Err(BasketError::InvalidWeightSum.into());
+        }
+        self.weights = new_weights;
+        self.last_rebalanced = Clock::get()?.unix_timestamp;
+        Ok(())
+    }
+}
+
+/// 实现操作统计 trait
+impl OperationStats for BasketIndexState {
+    fn record_operation(&mut self) {
+        self.execution_stats.total_executions += 1;
+        self.execution_stats.last_execution = Clock::get().map(|c| c.unix_timestamp).unwrap_or(0);
+    }
+}
+
+/// 实现激活/暂停/权限/版本 trait
+impl crate::core::traits::Activatable for BasketIndexState {
+    fn is_active(&self) -> bool { self.is_active }
+    fn activate(&mut self) -> Result<()> { self.is_active = true; self.base.touch() }
+    fn deactivate(&mut self) -> Result<()> { self.is_active = false; self.base.touch() }
+}
+impl crate::core::traits::Pausable for BasketIndexState {
+    fn is_paused(&self) -> bool { self.is_paused }
+    fn pause(&mut self) -> Result<()> { self.is_paused = true; self.base.touch() }
+    fn unpause(&mut self) -> Result<()> { self.is_paused = false; self.base.touch() }
+    fn resume(&mut self) -> Result<()> { self.unpause() }
+}
+impl crate::core::traits::Authorizable for BasketIndexState {
+    fn authority(&self) -> Pubkey { self.authority }
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+        self.authority = new_authority;
+        self.base.touch()?;
+        Ok(())
+    }
+}
+impl crate::version::Versioned for BasketIndexState {
+    fn version(&self) -> ProgramVersion { self.base.version }
+    fn set_version(&mut self, version: ProgramVersion) { self.base.set_version(version); }
+}
+
+/// 实现统一校验 trait
+impl crate::core::traits::Validatable for BasketIndexState {
     fn validate(&self) -> Result<()> {
         self.base.validate()?;
-
-        if self.manager == Pubkey::default() {
-            return Err(StrategyError::InvalidStrategyParameters.into());
+        if self.fee_collector == Pubkey::default() {
+            return Err(BasketError::InvalidAssets.into());
         }
-
-        if self.basket_mint == Pubkey::default() {
-            return Err(StrategyError::InvalidStrategyParameters.into());
+        if self.composition.is_empty() {
+            return Err(BasketError::InvalidAssets.into());
         }
-
-        if self.composition.is_empty() || self.composition.len() > MAX_TOKENS {
-            return Err(StrategyError::InvalidTokenCount.into());
+        let total_weight: u64 = self.weights.iter().sum();
+        if total_weight != 10_000 {
+            return Err(BasketError::InvalidWeightSum.into());
         }
-
-        // Validate composition weights sum to 100%
-        let total_weight: u64 = self.composition.iter().map(|c| c.weight).sum();
-        if total_weight != BASIS_POINTS_MAX {
-            return Err(StrategyError::InvalidWeightSum.into());
-        }
-
         Ok(())
     }
 }
 
-impl crate::core::traits::Authorizable for BasketInstance {
-    fn authority(&self) -> Pubkey {
-        self.base.authority
-    }
-
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> StrategyResult<()> {
-        self.base.authority = new_authority;
-        self.base.touch()?;
-        Ok(())
-    }
+/// 篮子状态枚举
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Debug)]
+pub enum BasketStatus {
+    /// 活跃
+    Active,
+    /// 冻结
+    Frozen,
+    /// 待处理
+    Pending,
+    /// 已弃用
+    Deprecated,
 }
 
-impl crate::core::traits::Pausable for BasketInstance {
-    fn is_paused(&self) -> bool {
-        self.base.is_paused
-    }
-
-    fn pause(&mut self) -> Result<()> {
-        self.base.pause()
-    }
-
-    fn unpause(&mut self) -> Result<()> {
-        self.base.unpause()
-    }
-
-    fn resume(&mut self) -> StrategyResult<()> {
-        self.unpause()
-    }
-}
-
-impl crate::core::traits::Activatable for BasketInstance {
-    fn is_active(&self) -> bool {
-        self.base.is_active
-    }
-
-    fn activate(&mut self) -> Result<()> {
-        self.base.activate()
-    }
-
-    fn deactivate(&mut self) -> Result<()> {
-        self.base.deactivate()
-    }
-}
-
-impl crate::core::traits::Versioned for BasketInstance {
-    fn version(&self) -> u32 {
-        self.base.version.as_u32()
-    }
-
-    fn set_version(&mut self, version: ProgramVersion) {
-        self.base.set_version(version);
-    }
-}
-
-/// Basket constituent with enhanced fields
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace)]
+/// 篮子资产成分
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, InitSpace)]
 pub struct BasketConstituent {
-    /// Token mint address
+    /// 资产mint
     pub token_mint: Pubkey,
-
-    /// Weight in basis points
-    pub weight: u64,
-
-    /// Current balance
+    /// 当前余额
     pub balance: u64,
-
-    /// Target allocation
-    pub target_allocation: u64,
-
-    /// Last update timestamp
-    pub last_updated: i64,
+    /// 权重
+    pub weight: u64,
 }
 
-impl BasketConstituent {
-    /// Create new constituent
-    pub fn new(
-        token_mint: Pubkey,
-        weight: u64,
-        balance: u64,
-        target_allocation: u64,
-    ) -> Result<Self> {
-        if weight > MAX_TOKEN_WEIGHT_BPS {
-            return Err(StrategyError::InvalidStrategyParameters.into());
-        }
-
-        Ok(Self {
-            token_mint,
-            weight,
-            balance,
-            target_allocation,
-            last_updated: Clock::get()?.unix_timestamp,
-        })
-    }
-
-    /// Update balance
-    pub fn update_balance(&mut self, new_balance: u64) -> Result<()> {
-        self.balance = new_balance;
-        self.last_updated = Clock::get()?.unix_timestamp;
-        Ok(())
-    }
-
-    /// Update target allocation
-    pub fn update_target(&mut self, new_target: u64) -> Result<()> {
-        self.target_allocation = new_target;
-        self.last_updated = Clock::get()?.unix_timestamp;
-        Ok(())
-    }
-
-    /// Calculate deviation from target
-    pub fn calculate_deviation(&self) -> u64 {
-        if self.target_allocation > self.balance {
-            self.target_allocation - self.balance
-        } else {
-            self.balance - self.target_allocation
-        }
-    }
-
-    /// Check if rebalancing is needed
-    pub fn needs_rebalancing(&self, threshold_bps: u64) -> bool {
-        if self.target_allocation == 0 {
-            return false;
-        }
-
-        let deviation_bps =
-            (self.calculate_deviation() * BASIS_POINTS_MAX) / self.target_allocation;
-        deviation_bps >= threshold_bps
-    }
+/// 风险指标
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, InitSpace, Default)]
+pub struct RiskMetrics {
+    /// 风险评分
+    pub risk_score: u32,
+    /// 最大回撤
+    pub max_drawdown: u64,
 }
 
-impl crate::core::traits::Validatable for BasketConstituent {
-    fn validate(&self) -> Result<()> {
-        if self.token_mint == Pubkey::default() {
-            return Err(StrategyError::InvalidStrategyParameters.into());
-        }
+// ========================= 事件定义 =========================
+#[event]
+pub struct BasketCreated {
+    pub basket_id: u64,
+    pub assets: Vec<Pubkey>,
+    pub weights: Vec<u64>,
+    pub authority: Pubkey,
+    pub timestamp: i64,
+}
 
-        if self.weight > MAX_TOKEN_WEIGHT_BPS {
-            return Err(StrategyError::InvalidStrategyParameters.into());
-        }
+#[event]
+pub struct BasketRebalanced {
+    pub basket_id: u64,
+    pub new_weights: Vec<u64>,
+    pub timestamp: i64,
+}
 
-        Ok(())
+// ========================= 单元测试 =========================
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anchor_lang::prelude::Pubkey;
+
+    #[test]
+    fn test_basket_validate() {
+        let base = BaseAccount::new(Pubkey::new_unique(), 1).unwrap();
+        let mut basket = BasketIndexState {
+            base,
+            id: 1,
+            composition: vec![BasketConstituent { token_mint: Pubkey::new_unique(), balance: 100, weight: 10_000 }],
+            weights: vec![10_000],
+            total_value: 0,
+            total_supply: 0,
+            authority: Pubkey::new_unique(),
+            manager: None,
+            fee_collector: Pubkey::new_unique(),
+            creation_fee_bps: 10,
+            redemption_fee_bps: 10,
+            status: BasketStatus::Active,
+            is_active: true,
+            is_paused: false,
+            enable_rebalancing: true,
+            last_rebalanced: 0,
+            created_at: 0,
+            updated_at: 0,
+            execution_stats: ExecutionStats::default(),
+            risk_metrics: None,
+            ai_signals: None,
+            external_signals: None,
+            bump: 1,
+        };
+        assert!(basket.validate().is_ok());
+        basket.weights = vec![5_000];
+        assert!(basket.validate().is_err());
     }
 }

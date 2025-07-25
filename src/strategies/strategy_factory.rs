@@ -1,35 +1,66 @@
-/*!
- * Strategy Factory Implementation
- *
- * Factory pattern for creating and managing different strategy types.
- */
+//!
+//! Strategy Factory Implementation
+//!
+//! 本模块实现策略工厂模式，用于创建和管理不同类型的策略配置，确保策略参数合规、可扩展、可插拔。
 
+// 引入核心模块、适配器 trait、错误类型和策略模块。
 use crate::core::*;
+use crate::core::adapter::AdapterTrait;
 use crate::error::StrategyError;
 use crate::strategies::*;
 use anchor_lang::prelude::*;
 
-/// Strategy factory for creating different types of strategies
+/// 策略工厂结构体，负责创建不同类型的策略配置。
 pub struct StrategyFactory;
 
+// 为策略工厂实现适配器 trait，便于统一注册和管理。
+impl AdapterTrait for StrategyFactory {
+    /// 返回适配器名称。
+    fn name(&self) -> &'static str { "strategy_factory" }
+    /// 返回适配器版本。
+    fn version(&self) -> &'static str { "1.0.0" }
+    /// 返回支持的资产列表。
+    fn supported_assets(&self) -> Vec<String> { vec!["SOL".to_string(), "USDC".to_string()] }
+    /// 返回适配器当前状态。
+    fn status(&self) -> Option<String> { Some("active".to_string()) }
+}
+
+// 使用构造器自动注册策略工厂到全局工厂。
+#[ctor::ctor]
+fn auto_register_strategy_factory() {
+    // 实例化策略工厂。
+    let adapter = StrategyFactory;
+    // 获取全局适配器工厂的可变引用。
+    let mut factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+    // 注册适配器。
+    factory.register(adapter);
+}
+
 impl StrategyFactory {
-    /// Create a weight strategy based on type and parameters
+    /// 创建权重策略配置，根据类型和参数。
+    ///
+    /// # 参数
+    /// * `strategy_type` - 权重策略类型。
+    /// * `parameters` - 策略参数字节数组。
+    /// * `token_mints` - 资产 mint 列表。
+    /// # 返回
+    /// * 权重策略配置或错误。
     pub fn create_weight_strategy(
         strategy_type: WeightStrategyType,
         parameters: &[u8],
         token_mints: &[Pubkey],
     ) -> StrategyResult<WeightStrategyConfig> {
-        // Validate inputs
+        // 校验资产数量边界。
         if token_mints.is_empty() || token_mints.len() > MAX_TOKENS {
             return Err(StrategyError::InvalidTokenCount.into());
         }
-
+        // 校验参数长度。
         if parameters.len() > MAX_STRATEGY_PARAMETERS_SIZE {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
+        // 获取当前时间戳。
         let current_time = Clock::get()?.unix_timestamp;
-
+        // 构建权重策略配置。
         let config = WeightStrategyConfig {
             strategy_type,
             parameters: parameters.to_vec(),
@@ -37,35 +68,32 @@ impl StrategyFactory {
             is_active: true,
             last_calculation: 0,
         };
-
-        // Validate the created configuration
+        // 校验配置合规性。
         Self::validate_weight_strategy_config(&config)?;
-
         Ok(config)
     }
-
-    /// Create a rebalancing strategy based on type and parameters
+    /// 创建再平衡策略配置。
     pub fn create_rebalancing_strategy(
         strategy_type: RebalancingStrategyType,
         parameters: &[u8],
         rebalancing_threshold: u64,
         min_interval: u64,
     ) -> StrategyResult<RebalancingStrategyConfig> {
-        // Validate inputs
+        // 校验参数长度。
         if parameters.len() > MAX_STRATEGY_PARAMETERS_SIZE {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
+        // 校验再平衡阈值。
         if rebalancing_threshold == 0 || rebalancing_threshold > MAX_REBALANCE_THRESHOLD_BPS {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
+        // 校验最小间隔。
         if min_interval < MIN_REBALANCE_INTERVAL {
             return Err(StrategyError::InvalidTimeWindow.into());
         }
-
+        // 获取当前时间戳。
         let current_time = Clock::get()?.unix_timestamp;
-
+        // 构建再平衡策略配置。
         let config = RebalancingStrategyConfig {
             strategy_type,
             parameters: parameters.to_vec(),
@@ -73,14 +101,11 @@ impl StrategyFactory {
             last_rebalance: 0,
             next_rebalance: current_time + min_interval as i64,
         };
-
-        // Validate the created configuration
+        // 校验配置合规性。
         Self::validate_rebalancing_strategy_config(&config)?;
-
         Ok(config)
     }
-
-    /// Create optimization settings with default values
+    /// 创建默认优化设置。
     pub fn create_optimization_settings() -> OptimizationSettings {
         OptimizationSettings {
             enable_caching: true,
@@ -89,8 +114,7 @@ impl StrategyFactory {
             cache_expiry: DEFAULT_CACHE_TTL as u64,
         }
     }
-
-    /// Create risk settings with default values
+    /// 创建默认风险设置。
     pub fn create_risk_settings() -> RiskSettings {
         RiskSettings {
             max_concentration: DEFAULT_CONCENTRATION_LIMIT_BPS,
@@ -99,41 +123,36 @@ impl StrategyFactory {
             volatility_circuit_breaker: CIRCUIT_BREAKER_THRESHOLD_BPS,
         }
     }
-
-    /// Create a complete strategy configuration
+    /// 创建完整策略配置。
     pub fn create_strategy_config(
         config_id: u64,
         authority: Pubkey,
         weight_config: WeightStrategyConfig,
         rebalancing_config: RebalancingStrategyConfig,
     ) -> StrategyResult<StrategyConfig> {
-        // Validate compatibility between weight and rebalancing strategies
+        // 校验权重与再平衡策略兼容性。
         Self::validate_strategy_compatibility(&weight_config, &rebalancing_config)?;
-
+        // 构建策略配置。
         let config = StrategyConfig::new(config_id, authority, weight_config, rebalancing_config)?;
-
         Ok(config)
     }
-
-    /// Validate weight strategy configuration
+    /// 校验权重策略配置合规性。
     fn validate_weight_strategy_config(config: &WeightStrategyConfig) -> StrategyResult<()> {
-        // Check token count
+        // 校验资产数量。
         if config.token_mints.is_empty() || config.token_mints.len() > MAX_TOKENS {
             return Err(StrategyError::InvalidTokenCount.into());
         }
-
-        // Check for duplicate token mints
+        // 检查资产 mint 是否重复。
         let mut seen = std::collections::HashSet::new();
         for mint in &config.token_mints {
             if !seen.insert(*mint) {
                 return Err(StrategyError::InvalidStrategyParameters.into());
             }
         }
-
-        // Validate strategy-specific parameters
+        // 校验策略类型参数。
         match config.strategy_type {
             WeightStrategyType::EqualWeight => {
-                // No additional validation needed
+                // 无需额外校验。
             }
             WeightStrategyType::MarketCapWeighted => {
                 Self::validate_market_cap_params(&config.parameters)?;
@@ -151,15 +170,12 @@ impl StrategyFactory {
                 Self::validate_technical_params(&config.parameters)?;
             }
         }
-
         Ok(())
     }
-
-    /// Validate rebalancing strategy configuration
+    /// 校验再平衡策略配置合规性。
     fn validate_rebalancing_strategy_config(
         config: &RebalancingStrategyConfig,
     ) -> StrategyResult<()> {
-        // Validate strategy-specific parameters
         match config.strategy_type {
             RebalancingStrategyType::ThresholdBased => {
                 Self::validate_threshold_params(&config.parameters)?;
@@ -177,97 +193,77 @@ impl StrategyFactory {
                 Self::validate_hybrid_params(&config.parameters)?;
             }
         }
-
         Ok(())
     }
-
-    /// Validate compatibility between weight and rebalancing strategies
+    /// 校验权重与再平衡策略兼容性。
     fn validate_strategy_compatibility(
         weight_config: &WeightStrategyConfig,
         rebalancing_config: &RebalancingStrategyConfig,
     ) -> StrategyResult<()> {
-        // Check if both strategies are active
+        // 检查策略是否激活。
         if !weight_config.is_active || !rebalancing_config.is_active {
             return Err(StrategyError::StrategyPaused.into());
         }
-
-        // Validate specific compatibility rules
+        // 兼容性规则。
         match (
             &weight_config.strategy_type,
             &rebalancing_config.strategy_type,
         ) {
             (WeightStrategyType::FixedWeight, RebalancingStrategyType::ThresholdBased) => {
-                // Fixed weights with threshold rebalancing might not make sense
-                // but we'll allow it for flexibility
+                // 固定权重与阈值再平衡允许但需谨慎。
             }
             (
                 WeightStrategyType::VolatilityAdjusted,
                 RebalancingStrategyType::VolatilityTriggered,
             ) => {
-                // These work well together
+                // 波动率相关策略兼容。
             }
             _ => {
-                // Most combinations are compatible
+                // 其他组合默认兼容。
             }
         }
-
         Ok(())
     }
-
-    /// Validate market cap weighted parameters
+    /// 校验市值加权参数。
     fn validate_market_cap_params(params: &[u8]) -> StrategyResult<()> {
         if params.is_empty() {
-            return Ok(()); // Use defaults
+            return Ok(()); // 使用默认值。
         }
-
-        // In a real implementation, deserialize and validate specific parameters
-        // For now, just check basic constraints
         if params.len() > 64 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
-
-    /// Validate momentum weighted parameters
+    /// 校验动量加权参数。
     fn validate_momentum_params(params: &[u8]) -> StrategyResult<()> {
         if params.is_empty() {
-            return Ok(()); // Use defaults
+            return Ok(());
         }
-
         if params.len() > 64 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
-
-    /// Validate volatility adjusted parameters
+    /// 校验波动率加权参数。
     fn validate_volatility_params(params: &[u8]) -> StrategyResult<()> {
         if params.is_empty() {
-            return Ok(()); // Use defaults
+            return Ok(());
         }
-
         if params.len() > 64 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
-
-    /// Validate fixed weight parameters
+    /// 校验固定权重参数。
     fn validate_fixed_weight_params(params: &[u8], token_count: usize) -> StrategyResult<()> {
         if params.is_empty() {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
-        // Check if parameters contain enough data for all tokens
-        let expected_size = token_count * 8; // 8 bytes per u64 weight
+        let expected_size = token_count * 8; // 每个权重 8 字节
         if params.len() < expected_size {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
-        // Validate that weights sum to 100%
+        // 校验权重总和为 10000。
         let mut total_weight = 0u64;
         for i in 0..token_count {
             let start_idx = i * 8;
@@ -276,97 +272,90 @@ impl StrategyFactory {
                     .try_into()
                     .map_err(|_| StrategyError::InvalidStrategyParameters)?;
                 let weight = u64::from_le_bytes(weight_bytes);
-
                 if weight > MAX_TOKEN_WEIGHT_BPS {
                     return Err(StrategyError::InvalidStrategyParameters.into());
                 }
-
                 total_weight += weight;
             }
         }
-
         if total_weight != BASIS_POINTS_MAX {
             return Err(StrategyError::InvalidWeightSum.into());
         }
-
         Ok(())
     }
-
-    /// Validate technical indicator parameters
+    /// 校验技术指标参数。
     fn validate_technical_params(params: &[u8]) -> StrategyResult<()> {
         if params.is_empty() {
-            return Ok(()); // Use defaults
+            return Ok(());
         }
-
         if params.len() > 128 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
-
-    /// Validate threshold-based rebalancing parameters
+    /// 校验阈值再平衡参数。
     fn validate_threshold_params(params: &[u8]) -> StrategyResult<()> {
         if params.is_empty() {
-            return Ok(()); // Use defaults
+            return Ok(());
         }
-
         if params.len() > 32 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
-
-    /// Validate time-based rebalancing parameters
+    /// 校验时间再平衡参数。
     fn validate_time_params(params: &[u8]) -> StrategyResult<()> {
         if params.is_empty() {
-            return Ok(()); // Use defaults
+            return Ok(());
         }
-
         if params.len() > 32 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
-
-    /// Validate volatility-triggered rebalancing parameters
+    /// 校验波动率触发再平衡参数。
     fn validate_volatility_trigger_params(params: &[u8]) -> StrategyResult<()> {
         if params.is_empty() {
-            return Ok(()); // Use defaults
+            return Ok(());
         }
-
         if params.len() > 32 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
-
-    /// Validate drift-based rebalancing parameters
+    /// 校验漂移再平衡参数。
     fn validate_drift_params(params: &[u8]) -> StrategyResult<()> {
         if params.is_empty() {
-            return Ok(()); // Use defaults
+            return Ok(());
         }
-
         if params.len() > 64 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
     }
-
-    /// Validate hybrid rebalancing parameters
+    /// 校验混合再平衡参数。
     fn validate_hybrid_params(params: &[u8]) -> StrategyResult<()> {
         if params.is_empty() {
-            return Ok(()); // Use defaults
+            return Ok(());
         }
-
         if params.len() > 128 {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
-
         Ok(())
+    }
+    /// 移除权重策略（可实现为全局注册表移除）。
+    pub fn remove_weight_strategy(strategy_type: WeightStrategyType) {
+        // 可实现为全局注册表移除
+    }
+    /// 列出所有支持的权重策略类型。
+    pub fn list_weight_strategies() -> Vec<WeightStrategyType> {
+        vec![
+            WeightStrategyType::EqualWeight,
+            WeightStrategyType::MarketCapWeighted,
+            WeightStrategyType::MomentumWeighted,
+            WeightStrategyType::VolatilityAdjusted,
+            WeightStrategyType::FixedWeight,
+            WeightStrategyType::TechnicalIndicator,
+        ]
     }
 }

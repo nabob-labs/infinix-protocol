@@ -1,117 +1,93 @@
-pub mod basket_manager;
-pub mod enhanced_trading_engine;
-pub mod execution_optimizer;
-pub mod liquidity_aggregator;
-pub mod risk_manager;
-pub mod trading_engine;
-
-// Re-export key types from sub-modules
-pub use basket_manager::*;
-pub use enhanced_trading_engine::*;
-pub use execution_optimizer::*;
-pub use liquidity_aggregator::*;
-pub use risk_manager::*;
-pub use trading_engine::*;
-
 use crate::core::constants::MAX_TOKENS;
 use anchor_lang::prelude::*;
 // Removed conflicting borsh import
 
-/// Core basket trading strategy types and utilities
+use crate::state::baskets::{BasketConstituent, BasketIndexState, BasketStatus};
+
+// 引入统一的策略/参数类型定义
+use crate::algorithms::execution_optimizer::types::*;
+
+// === 统一账户结构，Basket结构直接引用BasketIndexState ===
+#[account]
+/// 篮子账户结构体，封装所有篮子相关状态
+/// - 统一管理篮子资产、状态、策略等信息
+/// - 复用BasketIndexState，便于跨模块集成
+pub struct Basket {
+    /// 统一篮子状态，复用BasketIndexState
+    pub state: BasketIndexState,
+}
+
+// BasketComposition、BasketConstituent等类型已统一到state/baskets.rs，去除本地重复定义
+// 相关方法、事件、配置等全部依赖BasketIndexState及其相关类型
+
+// 其余策略、配置、执行等类型如需保留，建议迁移到统一的algorithms/traits.rs或state/baskets.rs中
+
+/// 篮子交易策略类型
+/// - 定义篮子相关的主要交易场景
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, PartialEq)]
 pub enum BasketTradingStrategy {
-    /// Create basket by buying constituent tokens
+    /// 通过买入成分代币创建篮子
     Creation,
-    /// Redeem basket by selling constituent tokens
+    /// 通过卖出成分代币赎回篮子
     Redemption,
-    /// Arbitrage between basket and constituent prices
+    /// 利用篮子与成分价格套利
     Arbitrage,
-    /// Rebalance existing basket holdings
+    /// 对现有篮子持仓再平衡
     Rebalancing,
 }
 
-/// Basket composition definition
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace)]
-pub struct BasketComposition {
-    /// Basket identifier
-    pub basket_id: u64,
-    /// Token mints and their target weights
-    #[max_len(MAX_TOKENS)]
-    pub constituents: Vec<BasketConstituent>,
-    /// Total basket supply
-    pub total_supply: u64,
-    /// Minimum creation/redemption amount
-    pub min_amount: u64,
-    /// Creation/redemption fee (basis points)
-    pub fee_bps: u16,
-    /// Last update timestamp
-    pub last_updated: i64,
-}
-
-/// Individual basket constituent
-/// Updated for Anchor 0.32 with InitSpace trait implementation
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace)]
-pub struct BasketConstituent {
-    /// Token mint address
-    pub mint: Pubkey,
-    /// Target weight in basis points (10000 = 100%)
-    pub weight: u64,
-    /// Current balance in the basket
-    pub balance: u64,
-    /// Minimum trade size for this token
-    pub min_trade_size: u64,
-    /// Liquidity pool address for trading
-    pub pool_address: Pubkey,
-}
-
-/// Trading execution parameters
+/// 交易执行参数
+/// - 控制篮子交易的滑点、价格冲击、成交方式等
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct ExecutionParams {
-    /// Maximum slippage tolerance (basis points)
+    /// 最大滑点容忍度（基点）
     pub max_slippage: u16,
-    /// Maximum price impact (basis points)
+    /// 最大价格冲击（基点）
     pub max_price_impact: u16,
-    /// Execution deadline (unix timestamp)
+    /// 执行截止时间（unix时间戳）
     pub deadline: i64,
-    /// Whether to use partial fills
+    /// 是否允许部分成交
     pub allow_partial_fill: bool,
-    /// Minimum fill percentage (basis points)
+    /// 最小成交百分比（基点）
     pub min_fill_percentage: u16,
 }
 
-/// Basket trading result
+/// 篮子交易结果
+/// - 记录一次篮子交易的执行明细
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct BasketTradeResult {
-    /// Trade execution ID
+    /// 交易执行ID
     pub execution_id: u64,
-    /// Actual tokens received/sent
+    /// 实际收到/发出的代币数量
     pub token_amounts: Vec<TokenAmount>,
-    /// Total execution cost
+    /// 总执行成本
     pub total_cost: u64,
-    /// Average slippage experienced
+    /// 平均滑点
     pub avg_slippage: u16,
-    /// Execution timestamp
+    /// 执行时间戳
     pub executed_at: i64,
-    /// Whether trade was fully executed
+    /// 是否完全成交
     pub fully_executed: bool,
 }
 
-/// Token amount for trade results
+/// 代币交易结果明细
+/// - 记录每个成分代币的成交数量、价格、滑点
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct TokenAmount {
-    /// Token mint
+    /// 代币mint
     pub mint: Pubkey,
-    /// Amount traded
+    /// 交易数量
     pub amount: u64,
-    /// Price at execution
+    /// 执行价格
     pub execution_price: u64,
-    /// Slippage experienced
+    /// 实际滑点
     pub slippage: u16,
 }
 
 // Additional type definitions for basket operations
 
 /// Optimization configuration for basket operations
+/// - 控制篮子操作的优化算法、并行度等
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct OptimizationConfig {
     /// Enable optimization features
@@ -127,6 +103,7 @@ pub struct OptimizationConfig {
 }
 
 /// Arbitrage configuration
+/// - 控制套利操作的最小利润、最大仓位、超时等
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct ArbitrageConfig {
     /// Minimum profit in basis points
@@ -140,6 +117,7 @@ pub struct ArbitrageConfig {
 }
 
 /// Rebalancing configuration
+/// - 控制再平衡操作的执行方式、风险限制等
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct RebalancingConfig {
     /// Execution method for rebalancing
@@ -150,45 +128,6 @@ pub struct RebalancingConfig {
     pub enable_gradual: bool,
     /// Rebalancing frequency limit
     pub frequency_limit: u32,
-}
-
-/// Execution methods
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
-pub enum ExecutionMethod {
-    /// Immediate execution
-    Immediate,
-    /// Gradual execution over time
-    Gradual,
-    /// Optimal execution algorithm
-    Optimal,
-    /// Custom execution strategy
-    Custom,
-}
-
-/// Risk limits configuration
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
-pub struct RiskLimits {
-    /// Maximum slippage tolerance
-    pub max_slippage_bps: u16,
-    /// Maximum price impact
-    pub max_price_impact_bps: u16,
-    /// Maximum position concentration
-    pub max_concentration_bps: u16,
-    /// VaR limit
-    pub var_limit: u64,
-}
-
-/// Market conditions snapshot
-#[derive(Debug, Clone)]
-pub struct MarketConditions {
-    /// Token liquidity mapping
-    pub token_liquidity: std::collections::HashMap<Pubkey, u64>,
-    /// Market volatility index
-    pub volatility_index: u32,
-    /// Current gas price
-    pub gas_price: u64,
-    /// Market timestamp
-    pub timestamp: i64,
 }
 
 /// Execution strategy for basket operations
@@ -449,7 +388,7 @@ pub struct OptimizedBasketResult {
     /// Basket ID
     pub basket_id: u64,
     /// Optimized composition
-    pub composition: BasketComposition,
+    pub composition: Vec<BasketConstituent>, // 替换为 Vec<BasketConstituent>
     /// Execution result
     pub execution_result: BasketCreationResult,
     /// Risk metrics

@@ -1,3 +1,6 @@
+// 工厂实现模块
+// - 实现策略工厂、权重策略工厂、再平衡策略工厂、资产工厂等
+// - 每个 struct、trait、方法、参数、用途、边界、Anchor 相关点均有详细注释
 /*!
  * Factory Implementations Module
  *
@@ -10,21 +13,28 @@ use crate::state::*;
 use crate::strategies::*;
 use crate::utils::price::{RebalanceAction, TokenWeight};
 // Removed conflicting import
+use crate::state::asset::{AssetManager, AssetType};
 use crate::utils::{MathOps, PriceUtils, ValidationUtils};
 use anchor_lang::prelude::*;
 
-/// Factory utilities for common operations
+/// 工厂工具集
+/// - 提供策略工厂通用校验、兼容性检查等方法
 pub struct FactoryUtils;
 
 impl FactoryUtils {
-    /// Validate that a factory can create strategies
+    /// 校验工厂是否可创建策略
+    /// - factory: 工厂对象，需实现Validatable trait
+    /// - 返回：校验结果
     pub fn validate_factory_can_create<T: crate::state::common::Validatable>(
         factory: &T,
     ) -> StrategyResult<()> {
         factory.validate()
     }
 
-    /// Validate strategy compatibility
+    /// 校验策略兼容性
+    /// - weight_strategy: 权重策略
+    /// - rebalancing_strategy: 再平衡策略
+    /// - 返回：校验结果
     pub fn validate_strategy_compatibility(
         weight_strategy: &WeightStrategy,
         rebalancing_strategy: &RebalancingStrategy,
@@ -41,11 +51,17 @@ impl FactoryUtils {
     }
 }
 
-/// Weight strategy factory manager
+/// 权重策略工厂管理器
+/// - 负责权重策略的初始化、创建、参数更新、权重计算等
 pub struct WeightStrategyFactoryManager;
 
 impl WeightStrategyFactoryManager {
-    /// Initialize a new weight strategy factory
+    /// 初始化权重策略工厂
+    /// - factory: 工厂对象
+    /// - authority: 管理员
+    /// - factory_id: 工厂ID
+    /// - bump: PDA bump
+    /// - 返回：处理结果
     pub fn initialize(
         factory: &mut WeightStrategyFactory,
         authority: Pubkey,
@@ -62,7 +78,15 @@ impl WeightStrategyFactoryManager {
         Ok(())
     }
 
-    /// Create a new weight strategy
+    /// 创建权重策略
+    /// - factory: 工厂对象
+    /// - strategy: 策略对象
+    /// - authority: 策略管理员
+    /// - strategy_type: 策略类型
+    /// - parameters: 策略参数
+    /// - token_mints: 成分代币列表
+    /// - bump: PDA bump
+    /// - 返回：处理结果
     pub fn create_strategy(
         factory: &mut WeightStrategyFactory,
         strategy: &mut WeightStrategy,
@@ -107,7 +131,10 @@ impl WeightStrategyFactoryManager {
         Ok(())
     }
 
-    /// Update strategy parameters
+    /// 更新策略参数
+    /// - strategy: 策略对象
+    /// - new_parameters: 新参数
+    /// - 返回：处理结果
     pub fn update_parameters(
         strategy: &mut WeightStrategy,
         new_parameters: Vec<u8>,
@@ -123,7 +150,10 @@ impl WeightStrategyFactoryManager {
         Ok(())
     }
 
-    /// Calculate weights using the strategy
+    /// 计算权重
+    /// - strategy: 策略对象
+    /// - price_feeds: 价格数据
+    /// - 返回：权重向量
     pub fn calculate_weights(
         strategy: &WeightStrategy,
         price_feeds: &[PriceFeed],
@@ -155,7 +185,9 @@ impl WeightStrategyFactoryManager {
         }
     }
 
-    /// Calculate equal weights
+    /// 计算等权重
+    /// - token_count: 代币数量
+    /// - 返回：权重向量
     fn calculate_equal_weights(token_count: usize) -> StrategyResult<Vec<u64>> {
         if token_count == 0 {
             return Err(StrategyError::InvalidTokenCount.into());
@@ -173,7 +205,10 @@ impl WeightStrategyFactoryManager {
         Ok(weights)
     }
 
-    /// Calculate market cap weighted weights
+    /// 计算市值加权权重
+    /// - strategy: 策略对象
+    /// - price_feeds: 价格数据
+    /// - 返回：权重向量
     fn calculate_market_cap_weights(
         strategy: &WeightStrategy,
         price_feeds: &[PriceFeed],
@@ -238,7 +273,10 @@ impl WeightStrategyFactoryManager {
         Ok(normalized_weights)
     }
 
-    /// Calculate momentum weighted weights
+    /// 计算动量加权权重
+    /// - strategy: 策略对象
+    /// - price_feeds: 价格数据
+    /// - 返回：权重向量
     fn calculate_momentum_weights(
         strategy: &WeightStrategy,
         price_feeds: &[PriceFeed],
@@ -273,7 +311,10 @@ impl WeightStrategyFactoryManager {
         Ok(weights)
     }
 
-    /// Calculate volatility adjusted weights
+    /// 计算波动率调整权重
+    /// - strategy: 策略对象
+    /// - price_feeds: 价格数据
+    /// - 返回：权重向量
     fn calculate_volatility_adjusted_weights(
         strategy: &WeightStrategy,
         price_feeds: &[PriceFeed],
@@ -314,7 +355,9 @@ impl WeightStrategyFactoryManager {
         Ok(weights)
     }
 
-    /// Get fixed weights from strategy parameters
+    /// 获取固定权重
+    /// - strategy: 策略对象
+    /// - 返回：权重向量
     fn get_fixed_weights(strategy: &WeightStrategy) -> StrategyResult<Vec<u64>> {
         if strategy.parameters.is_empty() {
             return Self::calculate_equal_weights(strategy.token_mints.len());
@@ -347,7 +390,10 @@ impl WeightStrategyFactoryManager {
         Ok(weights)
     }
 
-    /// Calculate technical indicator based weights
+    /// 计算技术指标加权权重
+    /// - strategy: 策略对象
+    /// - price_feeds: 价格数据
+    /// - 返回：权重向量
     fn calculate_technical_indicator_weights(
         strategy: &WeightStrategy,
         price_feeds: &[PriceFeed],
@@ -392,11 +438,17 @@ impl WeightStrategyFactoryManager {
     }
 }
 
-/// Rebalancing strategy factory manager
+/// 再平衡策略工厂管理器
+/// - 负责再平衡策略的初始化、创建、执行等
 pub struct RebalancingStrategyFactoryManager;
 
 impl RebalancingStrategyFactoryManager {
-    /// Initialize a new rebalancing strategy factory
+    /// 初始化再平衡策略工厂
+    /// - factory: 工厂对象
+    /// - authority: 管理员
+    /// - factory_id: 工厂ID
+    /// - bump: PDA bump
+    /// - 返回：处理结果
     pub fn initialize(
         factory: &mut RebalancingStrategyFactory,
         authority: Pubkey,
@@ -413,7 +465,18 @@ impl RebalancingStrategyFactoryManager {
         Ok(())
     }
 
-    /// Create a new rebalancing strategy
+    /// 创建再平衡策略
+    /// - factory: 工厂对象
+    /// - strategy: 策略对象
+    /// - authority: 策略管理员
+    /// - weight_strategy: 权重策略地址
+    /// - strategy_type: 策略类型
+    /// - parameters: 策略参数
+    /// - rebalancing_threshold: 再平衡阈值 (bps)
+    /// - min_rebalance_interval: 最小再平衡间隔 (秒)
+    /// - max_slippage: 最大滑点 (bps)
+    /// - bump: PDA bump
+    /// - 返回：处理结果
     pub fn create_strategy(
         factory: &mut RebalancingStrategyFactory,
         strategy: &mut RebalancingStrategy,
@@ -474,7 +537,12 @@ impl RebalancingStrategyFactoryManager {
         Ok(())
     }
 
-    /// Execute rebalancing
+    /// 执行再平衡
+    /// - rebalancing_strategy: 再平衡策略对象
+    /// - weight_strategy: 权重策略对象
+    /// - tokens: 代币权重列表
+    /// - total_portfolio_value: 总持仓价值
+    /// - 返回：再平衡动作列表
     pub fn execute_rebalancing(
         rebalancing_strategy: &mut RebalancingStrategy,
         weight_strategy: &WeightStrategy,
@@ -508,7 +576,11 @@ impl RebalancingStrategyFactoryManager {
         Ok(actions)
     }
 
-    /// Calculate rebalancing actions
+    /// 计算再平衡动作
+    /// - strategy: 再平衡策略对象
+    /// - tokens: 代币权重列表
+    /// - total_portfolio_value: 总持仓价值
+    /// - 返回：再平衡动作列表
     fn calculate_rebalancing_actions(
         strategy: &RebalancingStrategy,
         tokens: &[TokenWeight],
@@ -572,11 +644,16 @@ impl RebalancingStrategyFactoryManager {
     }
 }
 
-/// Rebalancing utilities
+/// 再平衡工具集
+/// - 提供再平衡动作校验、成本计算、执行顺序优化等方法
 pub struct RebalanceUtils;
 
 impl RebalanceUtils {
-    /// Validate rebalancing actions
+    /// 校验再平衡动作
+    /// - actions: 再平衡动作列表
+    /// - tokens: 代币权重列表
+    /// - max_slippage: 最大滑点
+    /// - 返回：处理结果
     pub fn validate_actions(
         actions: &[RebalanceAction],
         tokens: &[TokenWeight],
@@ -602,7 +679,9 @@ impl RebalanceUtils {
         Ok(())
     }
 
-    /// Calculate total cost of rebalancing actions
+    /// 计算再平衡总成本
+    /// - actions: 再平衡动作列表
+    /// - 返回：总成本
     pub fn calculate_total_cost(actions: &[RebalanceAction]) -> StrategyResult<u64> {
         let mut total_cost = 0u64;
 
@@ -615,13 +694,19 @@ impl RebalanceUtils {
         Ok(total_cost)
     }
 
-    /// Optimize rebalancing execution order
+    /// 优化再平衡执行顺序
+    /// - actions: 再平衡动作列表
+    /// - 设计意图：通过价格影响排序，最小化整体影响
     pub fn optimize_execution_order(actions: &mut [RebalanceAction]) {
         // Sort by price impact (lowest first) to minimize overall impact
         actions.sort_by(|a, b| a.price_impact.cmp(&b.price_impact));
     }
 
-    /// Calculate rebalancing efficiency score
+    /// 计算再平衡效率得分
+    /// - actions: 再平衡动作列表
+    /// - total_cost: 总成本
+    /// - portfolio_value: 总持仓价值
+    /// - 返回：效率得分 (0-100)
     pub fn calculate_efficiency_score(
         actions: &[RebalanceAction],
         total_cost: u64,
@@ -644,5 +729,42 @@ impl RebalanceUtils {
         // Combine cost efficiency and action efficiency
         let cost_efficiency = BASIS_POINTS_MAX - std::cmp::min(cost_ratio, BASIS_POINTS_MAX);
         ((cost_efficiency + action_efficiency) / 2) as u32
+    }
+}
+
+pub struct AssetFactory;
+
+impl AssetFactory {
+    /// 创建资产管理器
+    /// - authority: 管理员
+    /// - asset_type: 资产类型
+    /// - fee_collector: 费用收集者
+    /// - creation_fee_bps: 创建费用bps
+    /// - redemption_fee_bps: 赎回费用bps
+    /// - bump: PDA bump
+    /// - 返回：资产管理器对象
+    pub fn create_asset_manager(
+        authority: Pubkey,
+        asset_type: AssetType,
+        fee_collector: Pubkey,
+        creation_fee_bps: u16,
+        redemption_fee_bps: u16,
+        bump: u8,
+    ) -> AssetManager {
+        let mut manager = AssetManager {
+            base: crate::state::common::BaseAccount::default(),
+            asset_type,
+            asset_count: 0,
+            fee_collector,
+            creation_fee_bps,
+            redemption_fee_bps,
+            total_value_locked: 0,
+            execution_stats: crate::core::performance::ExecutionStats::default(),
+            created_at: 0,
+            updated_at: 0,
+            bump,
+        };
+        // 可扩展初始化逻辑
+        manager
     }
 }

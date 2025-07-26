@@ -8,7 +8,6 @@ use std::collections::HashMap; // HashMap用于名称到实例/元数据映射
 use std::sync::{Arc, RwLock}; // Arc/RwLock保证线程安全
 use crate::oracles::traits::OracleAdapter; // OracleAdapter trait
 use once_cell::sync::Lazy; // Lazy单例
-use std::sync::Arc; // Arc多线程安全
 use log::info; // 日志输出
 
 /// 适配器状态枚举

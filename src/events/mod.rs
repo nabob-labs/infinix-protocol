@@ -5,6 +5,9 @@ pub mod basket_event;
 /// 指数代币相关事件模块
 pub mod index_token_event;
 
+use anchor_lang::prelude::*;
+use anchor_lang::event;
+
 /// 篮子指数铸造事件
 /// 表示某篮子指数被成功铸造（Mint）时的链上事件，便于追踪指数创建、成交量与算法来源。
 #[event]

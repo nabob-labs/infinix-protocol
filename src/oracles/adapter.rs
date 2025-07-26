@@ -184,7 +184,7 @@ lazy_static::lazy_static! {
 #[macro_export]
 macro_rules! auto_register_oracle_adapter {
     ($name:expr, $adapter:expr) => {
-        #[ctor::ctor]
+        // #[ctor::ctor]
         fn auto_register() {
             $crate::oracles::adapter::ORACLE_ADAPTER_REGISTRY.register($name, std::sync::Arc::new($adapter));
         }

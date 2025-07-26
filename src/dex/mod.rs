@@ -24,26 +24,11 @@ pub mod raydium;            // Raydium 适配器
 pub mod raydium_adapter;    // Raydium 适配器实现
 pub mod traits;             // 通用 trait
 
-// 重新导出常用类型和函数，便于外部访问。
+// 移除重复的glob导出，确保每个类型只被导出一次
 pub use adapter::*;
 pub use adapter_registry::*;
 pub use factory::*;
-pub use jupiter::*;
-pub use lifinity::*;
-pub use lifinity_adapter::*;
-pub use logging::*;
-pub use mango_adapter::*;
-pub use meteora::*;
-pub use meteora_adapter::*;
-pub use openbook::*;
-pub use openbook_adapter::*;
-pub use orca::*;
-pub use orca_adapter::*;
-pub use phoenix::*;
-pub use phoenix_adapter::*;
-pub use raydium::*;
-pub use raydium_adapter::*;
-pub use traits::*;
+// pub use traits::*; // 移除traits的glob导出，避免与adapter冲突
 
 /// DEX 模块版本号。
 pub const DEX_MODULE_VERSION: &str = "1.0.0";

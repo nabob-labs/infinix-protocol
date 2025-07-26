@@ -733,4 +733,136 @@ pub mod index_token_program { // 定义主合约模块，所有链上指令均�
     ) -> Result<()> { // Anchor标准返回类型，表示指令执行成功或失败
         instructions::index_token::batch_strategy_subscribe_index_token(ctx, strategies, exec_params) // 调用实际批量策略申购实现，返回执行结果
     }
+    /// ETF资产mint指令
+    pub fn mint_etf(ctx: Context<instructions::etf::MintEtf>, amount: u64) -> Result<()> {
+        instructions::etf::mint_etf(ctx, amount)
+    }
+    /// ETF资产burn指令
+    pub fn burn_etf(ctx: Context<instructions::etf::BurnEtf>, amount: u64) -> Result<()> {
+        instructions::etf::burn_etf(ctx, amount)
+    }
+    /// ETF资产transfer指令
+    pub fn transfer_etf(ctx: Context<instructions::etf::TransferEtf>, amount: u64) -> Result<()> {
+        instructions::etf::transfer_etf(ctx, amount)
+    }
+    /// ETF资产rebalance指令
+    pub fn rebalance_etf(ctx: Context<instructions::etf::RebalanceEtf>, new_weights: Vec<u64>) -> Result<()> {
+        instructions::etf::rebalance_etf(ctx, new_weights)
+    }
+    /// ETF资产估值指令
+    pub fn value_etf(ctx: Context<instructions::etf::ValueEtf>) -> Result<u64> {
+        instructions::etf::value_etf(ctx)
+    }
+    /// ETF资产跨DEX路由指令
+    pub fn route_etf(ctx: Context<instructions::etf::RouteEtf>, params: crate::core::types::TradeParams) -> Result<()> {
+        instructions::etf::route_etf(ctx, params)
+    }
+    /// ETF自动再平衡指令
+    pub fn auto_rebalance_etf(ctx: Context<instructions::etf::AutoRebalanceEtf>, strategy_type: crate::strategies::RebalancingStrategyType, params: Vec<u64>) -> Result<()> {
+        instructions::etf::auto_rebalance_etf(ctx, strategy_type, params)
+    }
+    /// RWA资产估值指令
+    pub fn value_rwa(ctx: Context<instructions::rwa::ValueRwa>, oracle_params: Vec<crate::core::types::OracleParams>) -> Result<u64> {
+        instructions::rwa::value_rwa(ctx, oracle_params)
+    }
+    /// 跨市场套利指令
+    pub fn arbitrage_trade(ctx: Context<instructions::arbitrage::ArbitrageTrade>, params: Vec<crate::core::types::TradeParams>, min_profit: u64) -> Result<()> {
+        instructions::arbitrage::arbitrage_trade(ctx, params, min_profit)
+    }
+    /// 适配器动态注册指令
+    pub fn register_adapter(ctx: Context<instructions::adapter::RegisterAdapter>, name: String, adapter_type: String, version: String, supported_assets: Vec<String>) -> Result<()> {
+        instructions::adapter::register_adapter(ctx, name, adapter_type, version, supported_assets)
+    }
+    /// 适配器动态注销指令
+    pub fn unregister_adapter(ctx: Context<instructions::adapter::UnregisterAdapter>, name: String) -> Result<()> {
+        instructions::adapter::unregister_adapter(ctx, name)
+    }
+    /// 适配器热插拔指令
+    pub fn hot_swap_adapter(ctx: Context<instructions::adapter::HotSwapAdapter>, name: String, new_version: String) -> Result<()> {
+        instructions::adapter::hot_swap_adapter(ctx, name, new_version)
+    }
+    /// RWA资产增发指令
+    /// # 参数
+    /// - ctx: Context<instructions::rwa::MintRwa>，Anchor账户上下文，自动校验账户权限与生命周期
+    /// - amount: u64，增发的RWA资产数量，必须为正整数
+    /// # 返回值
+    /// - Result<()>: Anchor标准返回类型，表示指令执行成功或失败
+    /// # 安全性
+    /// - Anchor自动校验账户权限、生命周期、PDA
+    /// - 需确保amount参数合法，防止溢出与非法操作
+    pub fn mint_rwa(ctx: Context<instructions::rwa::MintRwa>, amount: u64) -> Result<()> {
+        instructions::rwa::mint_rwa(ctx, amount)
+    }
+    /// RWA资产销毁指令
+    /// # 参数
+    /// - ctx: Context<instructions::rwa::BurnRwa>，Anchor账户上下文，自动校验账户权限与生命周期
+    /// - amount: u64，销毁的RWA资产数量，必须为正整数
+    /// # 返回值
+    /// - Result<()>: Anchor标准返回类型，表示指令执行成功或失败
+    /// # 安全性
+    /// - Anchor自动校验账户权限、生命周期、PDA
+    /// - 需确保amount参数合法，防止溢出与非法操作
+    pub fn burn_rwa(ctx: Context<instructions::rwa::BurnRwa>, amount: u64) -> Result<()> {
+        instructions::rwa::burn_rwa(ctx, amount)
+    }
+    /// RWA资产买入指令
+    /// # 参数
+    /// - ctx: Context<instructions::rwa::BuyRwa>，Anchor账户上下文，自动校验账户权限与生命周期
+    /// - amount: u64，买入的RWA资产数量，必须为正整数
+    /// # 返回值
+    /// - Result<()>: Anchor标准返回类型，表示指令执行成功或失败
+    /// # 安全性
+    /// - Anchor自动校验账户权限、生命周期、PDA
+    /// - 需确保amount参数合法，防止溢出与非法操作
+    pub fn buy_rwa(ctx: Context<instructions::rwa::BuyRwa>, amount: u64) -> Result<()> {
+        instructions::rwa::buy_rwa(ctx, amount)
+    }
+    /// RWA资产卖出指令
+    /// # 参数
+    /// - ctx: Context<instructions::rwa::SellRwa>，Anchor账户上下文，自动校验账户权限与生命周期
+    /// - amount: u64，卖出的RWA资产数量，必须为正整数
+    /// # 返回值
+    /// - Result<()>: Anchor标准返回类型，表示指令执行成功或失败
+    /// # 安全性
+    /// - Anchor自动校验账户权限、生命周期、PDA
+    /// - 需确保amount参数合法，防止溢出与非法操作
+    pub fn sell_rwa(ctx: Context<instructions::rwa::SellRwa>, amount: u64) -> Result<()> {
+        instructions::rwa::sell_rwa(ctx, amount)
+    }
+    /// RWA资产转账指令
+    /// # 参数
+    /// - ctx: Context<instructions::rwa::TransferRwa>，Anchor账户上下文，自动校验账户权限与生命周期
+    /// - amount: u64，转账的RWA资产数量，必须为正整数
+    /// # 返回值
+    /// - Result<()>: Anchor标准返回类型，表示指令执行成功或失败
+    /// # 安全性
+    /// - Anchor自动校验账户权限、生命周期、PDA
+    /// - 需确保amount参数合法，防止溢出与非法操作
+    pub fn transfer_rwa(ctx: Context<instructions::rwa::TransferRwa>, amount: u64) -> Result<()> {
+        instructions::rwa::transfer_rwa(ctx, amount)
+    }
+    /// RWA资产swap指令
+    /// # 参数
+    /// - ctx: Context<instructions::rwa::SwapRwa>，Anchor账户上下文，自动校验账户权限与生命周期
+    /// - from_amount: u64，转出的RWA资产数量，必须为正整数
+    /// # 返回值
+    /// - Result<()>: Anchor标准返回类型，表示指令执行成功或失败
+    /// # 安全性
+    /// - Anchor自动校验账户权限、生命周期、PDA
+    /// - 需确保from_amount参数合法，防止溢出与非法操作
+    pub fn swap_rwa(ctx: Context<instructions::rwa::SwapRwa>, from_amount: u64) -> Result<()> {
+        instructions::rwa::swap_rwa(ctx, from_amount)
+    }
+    /// RWA资产合并指令
+    /// # 参数
+    /// - ctx: Context<instructions::rwa::CombineRwa>，Anchor账户上下文，自动校验账户权限与生命周期
+    /// - amount: u64，合并的RWA资产数量，必须为正整数
+    /// # 返回值
+    /// - Result<()>: Anchor标准返回类型，表示指令执行成功或失败
+    /// # 安全性
+    /// - Anchor自动校验账户权限、生命周期、PDA
+    /// - 需确保amount参数合法，防止溢出与非法操作
+    pub fn combine_rwa(ctx: Context<instructions::rwa::CombineRwa>, amount: u64) -> Result<()> {
+        instructions::rwa::combine_rwa(ctx, amount)
+    }
 }

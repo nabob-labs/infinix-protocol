@@ -5,6 +5,93 @@
 use crate::algorithms::traits::{ExecutionStrategy, ExecutionParams, ExecutionResult, AlgorithmError}; // 引入执行策略 trait 及相关类型，便于类型安全和接口统一
 use anchor_lang::prelude::*; // Anchor 预导入，包含 Context、Result、账户等，确保与Anchor兼容
 
+// TwapAlgorithm - 时间加权平均价格（TWAP）算法实现
+// 生产级实现，完整实现TwapAlgorithmTrait，所有方法均逐行专业注释
+
+use anchor_lang::prelude::*;
+
+/// TwapAlgorithmTrait - TWAP算法trait，所有TWAP算法实现均需实现该trait
+pub trait TwapAlgorithmTrait {
+    /// 初始化TWAP算法，window为时间窗口（秒）
+    fn initialize(&mut self, window: u64);
+    /// 更新价格，price为当前价格，timestamp为当前时间戳
+    fn update(&mut self, price: u64, timestamp: i64);
+    /// 计算TWAP，返回当前TWAP值
+    fn compute_twap(&self) -> u64;
+    /// 获取当前价格样本数量
+    fn sample_count(&self) -> usize;
+    /// 清空历史价格样本
+    fn reset(&mut self);
+}
+
+/// TwapAlgorithm结构体，代表TWAP算法实例
+pub struct TwapAlgorithm {
+    /// 时间窗口（秒）
+    window: u64,
+    /// 价格样本（价格, 时间戳）
+    samples: Vec<(u64, i64)>,
+}
+
+impl TwapAlgorithm {
+    /// 构造函数，初始化TwapAlgorithm
+    pub fn new(window: u64) -> Self {
+        Self {
+            window,
+            samples: Vec::new(),
+        }
+    }
+}
+
+impl TwapAlgorithmTrait for TwapAlgorithm {
+    /// 初始化TWAP算法，设置时间窗口
+    fn initialize(&mut self, window: u64) {
+        self.window = window;
+        self.samples.clear();
+    }
+    /// 更新价格，添加新样本并移除过期样本
+    fn update(&mut self, price: u64, timestamp: i64) {
+        self.samples.push((price, timestamp));
+        // 移除超出时间窗口的样本
+        let min_time = timestamp - self.window as i64;
+        self.samples.retain(|&(_, t)| t >= min_time);
+    }
+    /// 计算TWAP，按时间加权平均
+    fn compute_twap(&self) -> u64 {
+        if self.samples.is_empty() {
+            return 0;
+        }
+        let mut weighted_sum = 0u128;
+        let mut total_weight = 0u128;
+        for i in 1..self.samples.len() {
+            let (price_prev, time_prev) = self.samples[i - 1];
+            let (price_curr, time_curr) = self.samples[i];
+            let duration = (time_curr - time_prev).max(1) as u128;
+            weighted_sum += price_prev as u128 * duration;
+            total_weight += duration;
+        }
+        // 最后一个样本到当前时间的权重
+        if let Some(&(last_price, last_time)) = self.samples.last() {
+            let now = Clock::get().map(|c| c.unix_timestamp).unwrap_or(last_time);
+            let duration = (now - last_time).max(1) as u128;
+            weighted_sum += last_price as u128 * duration;
+            total_weight += duration;
+        }
+        if total_weight == 0 {
+            0
+        } else {
+            (weighted_sum / total_weight) as u64
+        }
+    }
+    /// 获取当前价格样本数量
+    fn sample_count(&self) -> usize {
+        self.samples.len()
+    }
+    /// 清空历史价格样本
+    fn reset(&mut self) {
+        self.samples.clear();
+    }
+}
+
 /// TWAP 算法执行器实现结构体
 pub struct TwapImpl; // 主结构体，无状态实现，所有逻辑在trait实现中，提升安全性和可复用性
 

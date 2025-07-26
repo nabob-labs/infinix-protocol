@@ -3,6 +3,9 @@
 //!
 //! 本模块提供核心工具函数集合，包含数学运算、验证、缓存、性能监控、价格计算、简化工具等子模块，为整个系统提供基础功能支持。
 
+use anchor_lang::prelude::*;
+use anchor_lang::msg;
+
 // 导出所有子模块，确保外部可访问。
 pub mod cache;      // 缓存工具模块
 pub mod math;       // 数学运算模块

@@ -157,8 +157,6 @@ pub enum ErrorCode {
     UncleanSyncedStrategyExecutionResult,
     /// 策略执行结果未同步到持久化。
     UnpersistSyncedStrategyExecutionResult,
-    /// 策略执行结果未同步到归档。
-    UnarchiveSyncedStrategyExecutionResult,
     /// 策略执行结果未同步到未定义。
     UnundefinedSyncedStrategyExecutionResult,
 }

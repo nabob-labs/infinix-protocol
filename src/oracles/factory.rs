@@ -10,8 +10,6 @@
  */
 
 use super::chainlink_adapter::ChainlinkOracle; // Chainlink适配器实现
-use super::pyth::PythOracle;                   // Pyth适配器实现
-use super::switchboard::SwitchboardOracle;     // Switchboard适配器实现
 use super::traits::OracleAdapter;              // OracleAdapter trait
 use anchor_lang::prelude::*;                   // Anchor预导入
 use std::collections::HashMap;                 // HashMap用于类型到实例映射

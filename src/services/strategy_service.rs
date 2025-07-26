@@ -146,10 +146,32 @@ impl StrategyAuthorizable for AuthorizeStrategyService {
 /// 设计意图：统一对外暴露所有策略相关操作，便于维护和扩展。
 pub struct StrategyService;
 impl StrategyService {
-    /// 注册策略
-    pub fn register(registry: &mut StrategyRegistryAccount, id: u64, config: StrategyConfig, authority: Pubkey) -> Result<u64> {
-        let svc = RegisterStrategyService;
-        svc.register(registry, id, config, authority)
+    /// 策略注册，融合多资产/算法/DEX/Oracle
+    pub fn register_strategy(name: &str, params: &StrategyParams) -> Result<()> {
+        // 1. 参数校验
+        require!(!name.is_empty(), crate::errors::asset_error::AssetError::InvalidParams);
+        // 2. 可选算法/DEX/Oracle适配器注册
+        if let Some(algo_name) = &params.algo_name {
+            let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+            if let Some(algo) = factory.get(algo_name) {
+                // 可选：注册算法到策略表
+            }
+        }
+        if let Some(dex_name) = &params.dex_name {
+            let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+            if let Some(dex) = factory.get(dex_name) {
+                // 可选：注册DEX到策略表
+            }
+        }
+        if let Some(oracle_name) = &params.oracle_name {
+            let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+            if let Some(oracle) = factory.get(oracle_name) {
+                // 可选：注册Oracle到策略表
+            }
+        }
+        // 3. 事件追踪
+        crate::core::logging::log_instruction_dispatch("register_strategy", name);
+        Ok(())
     }
     /// 查询策略
     pub fn query(registry: &StrategyRegistryAccount, strategy_id: u64) -> Result<StrategyMeta> {

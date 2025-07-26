@@ -3,6 +3,9 @@
 //!
 //! 本模块聚合所有合规性校验工具，包含资产、篮子、指数代币等多维度校验子模块，确保系统输入、状态、参数的安全性与合规性。
 
+use anchor_lang::prelude::*;
+use anchor_lang::msg;
+
 // 导出所有子模块，确保外部可访问。
 pub mod asset_validation;        // 资产校验工具模块
 pub mod basket_validation;       // 篮子校验工具模块

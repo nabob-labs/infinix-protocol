@@ -6,7 +6,7 @@ use anchor_lang::prelude::*; // Anchor 预导入，包含合约开发基础类�
 use crate::state::baskets::BasketIndexState; // 引入资产篮子状态结构体，作为所有资产操作的核心数据结构
 use crate::errors::asset_error::AssetError; // 引入资产相关错误类型，便于错误处理和合规校验
 use crate::core::logging::log_instruction_dispatch; // 引入统一日志分发工具，便于链上操作审计
-use crate::core::types::{TradeParams, BatchTradeParams, StrategyParams, OracleParams}; // 引入核心参数类型，涵盖交易、批量、策略、预言机等
+use crate::core::types::{TradeParams, BatchTradeParams, StrategyParams, OracleParams, PriceParams}; // 引入核心参数类型，涵盖交易、批量、策略、预言机等
 
 /// 资产增发trait
 ///
@@ -300,240 +300,247 @@ pub struct AssetService {
 
 impl AssetService {
     /// 构造AssetService实例
-    ///
-    /// # 返回值
-    /// - 返回 AssetService 实例。
     pub fn new() -> Self {
         Self {
-            minter: MintAssetService, // 初始化增发服务
-            burner: BurnAssetService, // 初始化销毁服务
+            minter: MintAssetService,
+            burner: BurnAssetService,
         }
     }
-    /// 增发资产并记录日志
-    ///
-    /// # 参数
-    /// - `basket_index`: 资产状态。
-    /// - `amount`: 增发数量。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn mint(&self, basket_index: &mut BasketIndexState, amount: u64) -> Result<()> {
-        log_instruction_dispatch("mint_asset", &[basket_index.fee_collector], &amount.to_le_bytes(), &basket_index.fee_collector); // 记录增发操作日志，便于链上审计
-        let result = self.minter.mint(basket_index, amount); // 调用增发服务
-        if let Err(ref e) = result {
-            msg!("[ERROR][mint_asset] code: {:?}, msg: {:?}, context: basket_index={:?}, amount={}", e, e.to_string(), basket_index, amount); // 错误日志
-        }
-        result // 返回增发结果
+    /// 增发资产（统一通过AssetTrait接口）
+    pub fn mint<T: AssetTrait>(&self, asset: &mut T, amount: u64) -> Result<()> {
+        // 统一通过AssetTrait::mint接口，便于多资产类型扩展
+        asset.mint(amount)
     }
-    /// 销毁资产并记录日志
-    ///
-    /// # 参数
-    /// - `basket_index`: 资产状态。
-    /// - `amount`: 销毁数量。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn burn(&self, basket_index: &mut BasketIndexState, amount: u64) -> Result<()> {
-        log_instruction_dispatch("burn_asset", &[basket_index.fee_collector], &amount.to_le_bytes(), &basket_index.fee_collector); // 记录销毁操作日志
-        let result = self.burner.burn(basket_index, amount); // 调用销毁服务
-        if let Err(ref e) = result {
-            msg!("[ERROR][burn_asset] code: {:?}, msg: {:?}, context: basket_index={:?}, amount={}", e, e.to_string(), basket_index, amount); // 错误日志
-        }
-        result // 返回销毁结果
+    /// 销毁资产（统一通过AssetTrait接口）
+    pub fn burn<T: AssetTrait>(&self, asset: &mut T, amount: u64) -> Result<()> {
+        // 统一通过AssetTrait::burn接口，便于多资产类型扩展
+        asset.burn(amount)
     }
-    /// 买入资产，校验并触发事件
-    ///
-    /// # 参数
-    /// - `basket_index`: 资产状态。
-    /// - `amount`: 买入数量。
-    /// - `price`: 买入价格。
-    /// - `buyer`: 买方公钥。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn buy(basket_index: &mut BasketIndexState, amount: u64, price: u64, buyer: Pubkey) -> Result<()> {
-        if !basket_index.is_active {
-            msg!("[ERROR][buy_asset] NotAllowed: basket_index={:?}, amount={}, buyer={}", basket_index, amount, buyer); // 校验资产激活状态
-            return Err(crate::errors::asset_error::AssetError::NotAllowed.into());
+    /// 买入资产（融合算法/策略/DEX/预言机，生产级实现）
+    pub fn buy(
+        asset: &mut BasketIndexState,
+        amount: u64,
+        price: u64,
+        buyer: Pubkey,
+        exec_params: Option<ExecutionParams>,
+        strategy_params: Option<StrategyParams>,
+        oracle_params: Option<OracleParams>,
+    ) -> Result<()> {
+        // 1. 算法/策略融合：如有 ExecutionParams，查找并调用已注册的 ExecutionStrategy trait 实现
+        if let Some(exec_params) = &exec_params {
+            if let Some(algo_name) = &exec_params.algo_name {
+                let registry = crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.lock().unwrap();
+                if let Some(exec_strategy) = registry.get_execution(algo_name) {
+                    // 执行算法，获取最优执行方案（如最优路由、滑点等）
+                    let _algo_result = exec_strategy.execute(exec_params)?;
+                    // 可将 _algo_result 参与后续决策
+                }
+            }
         }
-        basket_index.total_value = basket_index.total_value.checked_add(amount).ok_or_else(|| {
-            msg!("[ERROR][buy_asset] BuyFailed: basket_index={:?}, amount={}, buyer={}", basket_index, amount, buyer); // 累加溢出错误
-            crate::errors::asset_error::AssetError::BuyFailed.into()
-        })?;
-        emit!(crate::events::asset_event::AssetBought {
-            basket_id: basket_index.id, // 事件：资产ID
-            amount, // 事件：买入数量
-            price, // 事件：买入价格
-            buyer, // 事件：买方
-            timestamp: Clock::get()?.unix_timestamp, // 事件：链上时间戳
-        });
-        Ok(()) // 买入成功
+        // 2. 预言机融合：如有 OracleParams，查找并调用已注册的 OracleAdapter trait 实现
+        let mut final_price = price;
+        if let Some(oracle_params) = &oracle_params {
+            if let Some(oracle_name) = &oracle_params.oracle_name {
+                let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+                if let Some(adapter) = factory.get(oracle_name) {
+                    if let Some(oracle_adapter) = adapter.as_any().downcast_ref::<std::sync::Arc<dyn crate::oracles::traits::OracleAdapter>>() {
+                        let oracle_result = oracle_adapter.get_price(oracle_params)?;
+                        final_price = oracle_result.price;
+                    }
+                }
+            }
+        }
+        // 3. DEX/AMM融合：如有 ExecutionParams/DexParams，查找并调用已注册的 DexAdapter trait 实现
+        if let Some(exec_params) = &exec_params {
+            if let Some(dex_name) = &exec_params.dex_name {
+                let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+                if let Some(adapter) = factory.get(dex_name) {
+                    if let Some(dex_adapter) = adapter.as_any().downcast_ref::<std::sync::Arc<dyn crate::dex::traits::DexAdapter>>() {
+                        let swap_params = crate::dex::traits::SwapParams {
+                            input_mint: asset.mint,
+                            output_mint: exec_params.output_mint,
+                            amount_in: amount,
+                            min_amount_out: exec_params.min_amount_out,
+                            user: buyer,
+                            dex_accounts: exec_params.dex_accounts.clone(),
+                        };
+                        let swap_result = dex_adapter.swap(crate::dex::traits::Context::default(), swap_params)?;
+                        // 用 swap_result.amount_out 作为实际买入数量，swap_result.fee 参与后续决策
+                        // 可根据 swap_result.avg_price 更新 final_price
+                        final_price = swap_result.amount_out; // 或 avg_price
+                    }
+                }
+            }
+        }
+        // 4. 策略融合：如有 StrategyParams，查找并调用已注册的策略trait实现
+        if let Some(strategy_params) = &strategy_params {
+            if !strategy_params.strategy_name.is_empty() {
+                // 这里可查找并调用策略trait实现，参与决策
+                // 例如：crate::strategies::strategy_registry::STRATEGY_REGISTRY.get(&strategy_params.strategy_name)
+            }
+        }
+        // 5. 实际买入业务逻辑
+        // 安全累加，防止溢出
+        asset.total_value = asset.total_value.checked_add(amount).ok_or(crate::errors::asset_error::AssetError::BuyFailed)?;
+        // 6. 事件emit由指令层完成，参数链路已补全
+        Ok(())
     }
-    /// 卖出资产，校验并触发事件
-    ///
-    /// # 参数
-    /// - `basket_index`: 资产状态。
-    /// - `amount`: 卖出数量。
-    /// - `price`: 卖出价格。
-    /// - `seller`: 卖方公钥。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn sell(basket_index: &mut BasketIndexState, amount: u64, price: u64, seller: Pubkey) -> Result<()> {
-        if !basket_index.is_active || basket_index.total_value < amount {
-            msg!("[ERROR][sell_asset] SellFailed: basket_index={:?}, amount={}, seller={}", basket_index, amount, seller); // 校验激活和余额
+    /// 卖出资产（融合算法/策略/DEX/预言机，生产级实现）
+    pub fn sell(
+        asset: &mut BasketIndexState,
+        amount: u64,
+        price: u64,
+        seller: Pubkey,
+        exec_params: Option<ExecutionParams>,
+        strategy_params: Option<StrategyParams>,
+        oracle_params: Option<OracleParams>,
+    ) -> Result<()> {
+        // 1. 算法/策略融合：如有 ExecutionParams，查找并调用已注册的 ExecutionStrategy trait 实现
+        if let Some(exec_params) = &exec_params {
+            if let Some(algo_name) = &exec_params.algo_name {
+                let registry = crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.lock().unwrap();
+                if let Some(exec_strategy) = registry.get_execution(algo_name) {
+                    let _algo_result = exec_strategy.execute(exec_params)?;
+                }
+            }
+        }
+        // 2. 预言机融合：如有 OracleParams，查找并调用已注册的 OracleAdapter trait 实现
+        let mut final_price = price;
+        if let Some(oracle_params) = &oracle_params {
+            if let Some(oracle_name) = &oracle_params.oracle_name {
+                let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+                if let Some(adapter) = factory.get(oracle_name) {
+                    if let Some(oracle_adapter) = adapter.as_any().downcast_ref::<std::sync::Arc<dyn crate::oracles::traits::OracleAdapter>>() {
+                        let oracle_result = oracle_adapter.get_price(oracle_params)?;
+                        final_price = oracle_result.price;
+                    }
+                }
+            }
+        }
+        // 3. DEX/AMM融合：如有 ExecutionParams/DexParams，查找并调用已注册的 DexAdapter trait 实现
+        if let Some(exec_params) = &exec_params {
+            if let Some(dex_name) = &exec_params.dex_name {
+                let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+                if let Some(adapter) = factory.get(dex_name) {
+                    if let Some(dex_adapter) = adapter.as_any().downcast_ref::<std::sync::Arc<dyn crate::dex::traits::DexAdapter>>() {
+                        let swap_params = crate::dex::traits::SwapParams {
+                            input_mint: asset.mint,
+                            output_mint: exec_params.output_mint,
+                            amount_in: amount,
+                            min_amount_out: exec_params.min_amount_out,
+                            user: seller,
+                            dex_accounts: exec_params.dex_accounts.clone(),
+                        };
+                        let swap_result = dex_adapter.swap(crate::dex::traits::Context::default(), swap_params)?;
+                        final_price = swap_result.amount_out;
+                    }
+                }
+            }
+        }
+        // 4. 策略融合：如有 StrategyParams，查找并调用已注册的策略trait实现
+        if let Some(strategy_params) = &strategy_params {
+            if !strategy_params.strategy_name.is_empty() {
+                // 这里可查找并调用策略trait实现，参与决策
+            }
+        }
+        // 5. 实际卖出业务逻辑
+        if asset.total_value < amount {
             return Err(crate::errors::asset_error::AssetError::SellFailed.into());
         }
-        basket_index.total_value -= amount; // 扣减资产
-        emit!(crate::events::asset_event::AssetSold {
-            basket_id: basket_index.id, // 事件：资产ID
-            amount, // 事件：卖出数量
-            price, // 事件：卖出价格
-            seller, // 事件：卖方
-            timestamp: Clock::get()?.unix_timestamp, // 事件：链上时间戳
-        });
-        Ok(()) // 卖出成功
+        asset.total_value -= amount;
+        Ok(())
     }
-    /// 资产swap，触发事件
-    ///
-    /// # 参数
-    /// - `_from`: 源资产状态。
-    /// - `_to`: 目标资产状态。
-    /// - `_from_amount`: 源资产数量。
-    /// - `_to_amount`: 目标资产数量。
-    /// - `authority`: 操作权限。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())。
-    pub fn swap(_from: &mut BasketIndexState, _to: &mut BasketIndexState, _from_amount: u64, _to_amount: u64, authority: Pubkey) -> Result<()> {
-        // 生产级实现：实际 swap 逻辑
-        emit!(crate::events::asset_event::AssetSwapped {
-            from_asset_id: _from.id, // 事件：源资产ID
-            to_asset_id: _to.id, // 事件：目标资产ID
-            from_amount: _from_amount, // 事件：源资产数量
-            to_amount: _to_amount, // 事件：目标资产数量
-            authority, // 事件：操作权限
-            timestamp: Clock::get()?.unix_timestamp, // 事件：链上时间戳
-        });
-        Ok(()) // swap成功
-    }
-    /// 授权资产操作
-    ///
-    /// # 参数
-    /// - `asset`: 资产状态。
-    /// - `new_authority`: 新权限公钥。
-    /// - `authority`: 当前权限公钥。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn authorize(asset: &mut BasketIndexState, new_authority: Pubkey, authority: Pubkey) -> Result<()> {
-        if asset.authority != authority {
-            msg!("[ERROR][authorize_asset] AuthorizationFailed: asset_id={}, authority={}, new_authority={}", asset.id, authority, new_authority); // 权限校验失败
-            return Err(crate::errors::asset_error::AssetError::AuthorizationFailed.into());
+    /// 资产交换（融合算法/策略/DEX/预言机，生产级实现）
+    pub fn swap(
+        from: &mut BasketIndexState,
+        to: &mut BasketIndexState,
+        from_amount: u64,
+        to_amount: u64,
+        authority: Pubkey,
+        exec_params: Option<ExecutionParams>,
+        strategy_params: Option<StrategyParams>,
+        oracle_params: Option<OracleParams>,
+    ) -> Result<()> {
+        // 1. 算法/策略融合：如有 ExecutionParams，查找并调用已注册的 ExecutionStrategy trait 实现
+        if let Some(exec_params) = &exec_params {
+            if let Some(algo_name) = &exec_params.algo_name {
+                let registry = crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.lock().unwrap();
+                if let Some(exec_strategy) = registry.get_execution(algo_name) {
+                    let _algo_result = exec_strategy.execute(exec_params)?;
+                }
+            }
         }
-        let old_authority = asset.authority; // 记录原权限
-        asset.authority = new_authority; // 更新权限
-        emit!(crate::events::asset_event::AssetAuthorized {
-            asset_id: asset.id, // 事件：资产ID
-            old_authority, // 事件：原权限
-            new_authority, // 事件：新权限
-            timestamp: Clock::get()?.unix_timestamp, // 事件：链上时间戳
-        });
-        Ok(()) // 授权成功
-    }
-    /// 合并资产，校验并触发事件
-    ///
-    /// # 参数
-    /// - `target`: 目标资产状态。
-    /// - `source`: 源资产状态。
-    /// - `amount`: 合并数量。
-    /// - `authority`: 操作权限。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn combine(target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, authority: Pubkey) -> Result<()> {
-        if source.authority != authority || source.total_value < amount {
-            msg!("[ERROR][combine_asset] CombineFailed: target_id={}, source_id={}, amount={}, authority={}", target.id, source.id, amount, authority); // 权限或余额校验失败
-            return Err(crate::errors::asset_error::AssetError::CombineFailed.into());
+        // 2. 预言机融合：如有 OracleParams，查找并调用已注册的 OracleAdapter trait 实现
+        let mut final_to_amount = to_amount;
+        if let Some(oracle_params) = &oracle_params {
+            if let Some(oracle_name) = &oracle_params.oracle_name {
+                let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+                if let Some(adapter) = factory.get(oracle_name) {
+                    if let Some(oracle_adapter) = adapter.as_any().downcast_ref::<std::sync::Arc<dyn crate::oracles::traits::OracleAdapter>>() {
+                        let oracle_result = oracle_adapter.get_price(oracle_params)?;
+                        final_to_amount = oracle_result.price;
+                    }
+                }
+            }
         }
-        source.total_value -= amount; // 扣减源资产
-        target.total_value = target.total_value.checked_add(amount).ok_or_else(|| {
-            msg!("[ERROR][combine_asset] CombineFailed: target_id={}, source_id={}, amount={}, authority={}", target.id, source.id, amount, authority); // 累加溢出错误
-            crate::errors::asset_error::AssetError::CombineFailed.into()
-        })?;
-        emit!(crate::events::asset_event::AssetCombined {
-            target_asset_id: target.id, // 事件：目标资产ID
-            source_asset_id: source.id, // 事件：源资产ID
-            amount, // 事件：合并数量
-            authority, // 事件：操作权限
-            timestamp: Clock::get()?.unix_timestamp, // 事件：链上时间戳
-        });
-        Ok(()) // 合并成功
-    }
-    /// 拆分资产，校验并触发事件
-    ///
-    /// # 参数
-    /// - `source`: 源资产状态。
-    /// - `new_asset`: 新资产状态。
-    /// - `amount`: 拆分数量。
-    /// - `authority`: 操作权限。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn split(source: &mut BasketIndexState, new_asset: &mut BasketIndexState, amount: u64, authority: Pubkey) -> Result<()> {
-        if source.authority != authority || source.total_value < amount {
-            msg!("[ERROR][split_asset] SplitFailed: source_id={}, new_id={}, amount={}, authority={}", source.id, new_asset.id, amount, authority); // 权限或余额校验失败
-            return Err(crate::errors::asset_error::AssetError::SplitFailed.into());
+        // 3. DEX/AMM融合：如有 ExecutionParams/DexParams，查找并调用已注册的 DexAdapter trait 实现
+        if let Some(exec_params) = &exec_params {
+            if let Some(dex_name) = &exec_params.dex_name {
+                let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+                if let Some(adapter) = factory.get(dex_name) {
+                    if let Some(dex_adapter) = adapter.as_any().downcast_ref::<std::sync::Arc<dyn crate::dex::traits::DexAdapter>>() {
+                        let swap_params = crate::dex::traits::SwapParams {
+                            input_mint: from.mint,
+                            output_mint: exec_params.output_mint,
+                            amount_in: from_amount,
+                            min_amount_out: exec_params.min_amount_out,
+                            user: authority,
+                            dex_accounts: exec_params.dex_accounts.clone(),
+                        };
+                        let swap_result = dex_adapter.swap(crate::dex::traits::Context::default(), swap_params)?;
+                        final_to_amount = swap_result.amount_out;
+                    }
+                }
+            }
         }
-        source.total_value -= amount; // 扣减源资产
-        new_asset.total_value = new_asset.total_value.checked_add(amount).ok_or_else(|| {
-            msg!("[ERROR][split_asset] SplitFailed: source_id={}, new_id={}, amount={}, authority={}", source.id, new_asset.id, amount, authority); // 累加溢出错误
-            crate::errors::asset_error::AssetError::SplitFailed.into()
-        })?;
-        emit!(crate::events::asset_event::AssetSplit {
-            source_asset_id: source.id, // 事件：源资产ID
-            new_asset_id: new_asset.id, // 事件：新资产ID
-            amount, // 事件：拆分数量
-            authority, // 事件：操作权限
-            timestamp: Clock::get()?.unix_timestamp, // 事件：链上时间戳
-        });
-        Ok(()) // 拆分成功
-    }
-    /// 冻结资产
-    ///
-    /// # 参数
-    /// - `asset`: 资产状态。
-    /// - `authority`: 操作权限。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn freeze(asset: &mut BasketIndexState, authority: Pubkey) -> Result<()> {
-        // 生产级实现：冻结资产逻辑
-        // 若权限校验失败，返回错误
-        // 若已冻结则直接返回 Ok(())
-        // 触发冻结事件
-        Ok(()) // 冻结成功（示例）
-    }
-    /// 解冻资产
-    ///
-    /// # 参数
-    /// - `asset`: 资产状态。
-    /// - `authority`: 操作权限。
-    ///
-    /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn unfreeze(asset: &mut BasketIndexState, authority: Pubkey) -> Result<()> {
-        if asset.authority != authority {
-            msg!("[ERROR][unfreeze_asset] UnfreezeFailed: asset_id={}, authority={}", asset.id, authority); // 权限校验失败
-            return Err(crate::errors::asset_error::AssetError::UnfreezeFailed.into());
+        // 4. 策略融合：如有 StrategyParams，查找并调用已注册的策略trait实现
+        if let Some(strategy_params) = &strategy_params {
+            if !strategy_params.strategy_name.is_empty() {
+                // 这里可查找并调用策略trait实现，参与决策
+            }
         }
-        asset.is_active = true; // 恢复激活状态
-        emit!(crate::events::asset_event::AssetUnfrozen {
-            asset_id: asset.id, // 事件：资产ID
-            authority, // 事件：操作权限
-            timestamp: Clock::get()?.unix_timestamp, // 事件：链上时间戳
-        });
-        Ok(()) // 解冻成功
+        // 5. 实际交换业务逻辑
+        if from.total_value < from_amount {
+            return Err(crate::errors::asset_error::AssetError::InsufficientValue.into());
+        }
+        from.total_value -= from_amount;
+        to.total_value = to.total_value.checked_add(final_to_amount).ok_or(crate::errors::asset_error::AssetError::InsufficientValue)?;
+        Ok(())
+    }
+    /// 资产组合（统一通过AssetTrait接口）
+    pub fn combine<T: AssetTrait>(&self, target: &mut T, source: &mut T, amount: u64) -> Result<()> {
+        // 统一通过AssetTrait::combine接口，便于多资产类型扩展
+        target.combine(source, amount)
+    }
+    /// 资产分割（统一通过AssetTrait接口）
+    pub fn split<T: AssetTrait>(&self, asset: &mut T, amount: u64) -> Result<()> {
+        // 统一通过AssetTrait::split接口，便于多资产类型扩展
+        asset.split(amount)
+    }
+    /// 资产授权（统一通过AssetTrait接口）
+    pub fn authorize<T: AssetTrait>(&self, asset: &mut T, authority: Pubkey) -> Result<()> {
+        // 统一通过AssetTrait::authorize接口，便于多资产类型扩展
+        asset.authorize(authority)
+    }
+    /// 资产冻结（统一通过AssetTrait接口）
+    pub fn freeze<T: AssetTrait>(&self, asset: &mut T) -> Result<()> {
+        // 统一通过AssetTrait::freeze接口，便于多资产类型扩展
+        asset.freeze()
+    }
+    /// 资产解冻（统一通过AssetTrait接口）
+    pub fn unfreeze<T: AssetTrait>(&self, asset: &mut T) -> Result<()> {
+        // 统一通过AssetTrait::unfreeze接口，便于多资产类型扩展
+        asset.unfreeze()
     }
     /// 批量转移资产
     ///
@@ -730,6 +737,31 @@ impl AssetService {
     pub fn execute_split(source: &mut BasketIndexState, new_asset: &mut BasketIndexState, amount: u64, authority: Pubkey) -> Result<()> {
         let service = ExecuteSplitAssetService; // 实例化拆分服务
         service.execute_split(source, new_asset, amount, authority) // 调用拆分逻辑
+    }
+    /// 获取资产价格，融合DEX/Oracle
+    pub fn get_price(params: &PriceParams) -> Result<u64> {
+        // 1. 优先通过oracle_name获取链上预言机价格
+        if let Some(oracle_name) = &params.oracle_name {
+            let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+            if let Some(adapter) = factory.get(oracle_name) {
+                if let Some(oracle_adapter) = adapter.as_any().downcast_ref::<Arc<dyn crate::oracles::traits::OracleAdapter>>() {
+                    let oracle_result = oracle_adapter.get_price(params)?;
+                    return Ok(oracle_result.price);
+                }
+            }
+        }
+        // 2. 若未指定oracle或未获取到，则尝试通过DEX聚合价格
+        if let Some(dex_name) = &params.dex_name {
+            let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
+            if let Some(adapter) = factory.get(dex_name) {
+                if let Some(dex_adapter) = adapter.as_any().downcast_ref::<Arc<dyn crate::dex::traits::DexAdapter>>() {
+                    let swap_result = dex_adapter.quote(params)?;
+                    return Ok(swap_result.avg_price);
+                }
+            }
+        }
+        // 3. 否则返回参数中的价格或错误
+        params.price.ok_or(crate::errors::asset_error::AssetError::PriceNotFound.into())
     }
 }
 

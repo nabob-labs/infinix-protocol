@@ -5,6 +5,83 @@
 use crate::algorithms::traits::{ExecutionStrategy, ExecutionParams, ExecutionResult, AlgorithmError}; // 引入执行策略 trait 及相关类型，便于类型安全和接口统一
 use anchor_lang::prelude::*; // Anchor 预导入，包含 Context、Result、账户等，确保与Anchor兼容
 
+// VwapAlgorithm - 成交量加权平均价格（VWAP）算法实现
+// 生产级实现，完整实现VwapAlgorithmTrait，所有方法均逐行专业注释
+
+use anchor_lang::prelude::*;
+
+/// VwapAlgorithmTrait - VWAP算法trait，所有VWAP算法实现均需实现该trait
+pub trait VwapAlgorithmTrait {
+    /// 初始化VWAP算法，window为时间窗口（秒）
+    fn initialize(&mut self, window: u64);
+    /// 更新价格和成交量，price为当前价格，volume为当前成交量，timestamp为当前时间戳
+    fn update(&mut self, price: u64, volume: u64, timestamp: i64);
+    /// 计算VWAP，返回当前VWAP值
+    fn compute_vwap(&self) -> u64;
+    /// 获取当前样本数量
+    fn sample_count(&self) -> usize;
+    /// 清空历史样本
+    fn reset(&mut self);
+}
+
+/// VwapAlgorithm结构体，代表VWAP算法实例
+pub struct VwapAlgorithm {
+    /// 时间窗口（秒）
+    window: u64,
+    /// 价格样本（价格, 成交量, 时间戳）
+    samples: Vec<(u64, u64, i64)>,
+}
+
+impl VwapAlgorithm {
+    /// 构造函数，初始化VwapAlgorithm
+    pub fn new(window: u64) -> Self {
+        Self {
+            window,
+            samples: Vec::new(),
+        }
+    }
+}
+
+impl VwapAlgorithmTrait for VwapAlgorithm {
+    /// 初始化VWAP算法，设置时间窗口
+    fn initialize(&mut self, window: u64) {
+        self.window = window;
+        self.samples.clear();
+    }
+    /// 更新价格和成交量，添加新样本并移除过期样本
+    fn update(&mut self, price: u64, volume: u64, timestamp: i64) {
+        self.samples.push((price, volume, timestamp));
+        // 移除超出时间窗口的样本
+        let min_time = timestamp - self.window as i64;
+        self.samples.retain(|&(_, _, t)| t >= min_time);
+    }
+    /// 计算VWAP，按成交量加权平均
+    fn compute_vwap(&self) -> u64 {
+        if self.samples.is_empty() {
+            return 0;
+        }
+        let mut weighted_sum = 0u128;
+        let mut total_volume = 0u128;
+        for &(price, volume, _) in &self.samples {
+            weighted_sum += price as u128 * volume as u128;
+            total_volume += volume as u128;
+        }
+        if total_volume == 0 {
+            0
+        } else {
+            (weighted_sum / total_volume) as u64
+        }
+    }
+    /// 获取当前样本数量
+    fn sample_count(&self) -> usize {
+        self.samples.len()
+    }
+    /// 清空历史样本
+    fn reset(&mut self) {
+        self.samples.clear();
+    }
+}
+
 /// VWAP 算法执行器实现结构体
 pub struct VwapImpl; // 主结构体，无状态实现，所有逻辑在trait实现中，提升安全性和可复用性
 

@@ -8,26 +8,32 @@ use anchor_lang::prelude::*; // Anchor 预导入，包含 Context、Result、Pub
 /// - 统一所有DEX/AMM的swap、流动性管理、报价等操作
 /// - 便于多DEX集成、策略复用、测试模拟
 pub trait DexAdapter: Send + Sync {
-    /// 执行 swap 操作
+    /// 执行 swap 操作（最小功能单元）
     /// - ctx: Anchor 上下文，包含账户信息
-    /// - params: swap参数
+    /// - params: swap参数（支持多资产、多市场、多DEX）
     /// - 返回：swap结果（SwapResult）
     fn swap(&self, ctx: Context<Swap>, params: SwapParams) -> Result<SwapResult>;
-    /// 添加流动性
+    /// 添加流动性（最小功能单元）
     /// - ctx: Anchor 上下文
     /// - params: 添加流动性参数
     /// - 返回：获得的流动性token数量
     fn add_liquidity(&self, ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> Result<u64>;
-    /// 移除流动性
+    /// 移除流动性（最小功能单元）
     /// - ctx: Anchor 上下文
     /// - params: 移除流动性参数
     /// - 返回：返还的流动性token数量
     fn remove_liquidity(&self, ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> Result<u64>;
-    /// 获取报价
+    /// 获取报价（最小功能单元）
     /// - ctx: Anchor 上下文
     /// - params: 报价参数
     /// - 返回：报价结果（QuoteResult）
     fn get_quote(&self, ctx: Context<GetQuote>, params: QuoteParams) -> Result<QuoteResult>;
+    /// 查询支持的资产类型
+    fn supported_assets(&self) -> Vec<String> { vec![] }
+    /// 查询支持的市场类型
+    fn supported_markets(&self) -> Vec<String> { vec![] }
+    /// DEX适配器类型
+    fn adapter_type(&self) -> DexAdapterType { DexAdapterType::Other }
 }
 
 /// swap 操作参数结构体

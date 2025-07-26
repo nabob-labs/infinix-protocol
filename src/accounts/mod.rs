@@ -7,6 +7,9 @@
 //! - 支持 Anchor #[derive(Accounts)] 宏声明的通用账户参数结构体，便于指令参数扩展和复用。
 //! - 可根据实际业务需求灵活扩展账户参数结构体。
 
+use anchor_lang::prelude::*;
+use anchor_lang::Accounts;
+
 pub mod asset; // 资产账户子模块，统一管理资产相关账户类型，便于资产相关指令复用
 pub mod basket; // 组合篮子账户子模块，统一管理篮子相关账户类型，便于篮子相关指令复用
 pub mod basket_index_state_account; // 通用篮子/资产/指数账户结构体子模块，统一账户模型

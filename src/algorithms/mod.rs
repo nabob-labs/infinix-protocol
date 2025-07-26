@@ -149,7 +149,7 @@ lazy_static::lazy_static! {
 }
 
 /// 自动注册所有算法（可在各算法模块中通过 #[ctor::ctor] 注册）
-#[ctor::ctor]
+// #[ctor::ctor]
 fn register_all_algorithms() {
     use crate::core::registry::ALGORITHM_REGISTRY;
     use std::sync::Arc;

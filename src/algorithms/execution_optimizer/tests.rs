@@ -2,35 +2,66 @@
 //! 覆盖最优执行优化器、极端参数、无效输入等场景。
 
 use super::*;
-use crate::core::MarketConditions;
+use crate::algorithms::execution_optimizer::{GeneticOptimizer, MlOptimizer, OptimizationParams};
 
-/// 测试：最优执行优化器基础流程
+/// 测试：GeneticOptimizer基础功能
 #[test]
-fn test_optimal_execution_optimizer_basic() {
-    let mut optimizer = OptimalExecutionOptimizer { strategy: Box::new(AlmgrenChrissStrategy) };
-    let trades = vec![];
-    let market = MarketConditions::default();
-    let result = optimizer.optimize(&trades, &market);
-    assert!(result.is_ok());
+fn test_genetic_optimizer_basic() {
+    // 构造典型参数
+    let params = OptimizationParams {
+        order_size: 100,
+        market_impact: 5,
+        slippage_tolerance: 2,
+        ..Default::default()
+    };
+    let optimizer = GeneticOptimizer::default();
+    let result = optimizer.optimize(&params);
+    // 断言优化值大于0且不超过order_size*2
+    assert!(result.optimized_value > 0 && result.optimized_value <= 200, "Genetic优化值异常");
 }
 
-/// 测试：Almgren-Chriss 策略极端参数
+/// 测试：GeneticOptimizer极端参数
 #[test]
-fn test_almgren_chriss_strategy_extreme_params() {
-    let strategy = AlmgrenChrissStrategy;
-    let trades = vec![];
-    let mut market = MarketConditions::default();
-    market.volatility = 10_000; // 极端高波动
-    let result = strategy.optimize(&trades, &market);
-    assert!(result.is_err() || result.is_ok());
+fn test_genetic_optimizer_extreme() {
+    // 极端order_size=0
+    let params = OptimizationParams {
+        order_size: 0,
+        market_impact: 0,
+        slippage_tolerance: 0,
+        ..Default::default()
+    };
+    let optimizer = GeneticOptimizer::default();
+    let result = optimizer.optimize(&params);
+    // 断言优化值为1（最小值）
+    assert_eq!(result.optimized_value, 1, "极端参数下Genetic优化值应为1");
 }
 
-/// 测试：优化器无效输入
+/// 测试：MlOptimizer基础功能
 #[test]
-fn test_optimizer_invalid_input() {
-    let mut optimizer = OptimalExecutionOptimizer { strategy: Box::new(AlmgrenChrissStrategy) };
-    let trades = vec![];
-    let market = MarketConditions { volatility: 0, liquidity: 0, spread: 0 };
-    let result = optimizer.optimize(&trades, &market);
-    assert!(result.is_ok() || result.is_err());
+fn test_ml_optimizer_basic() {
+    let params = OptimizationParams {
+        order_size: 100,
+        market_impact: 5,
+        slippage_tolerance: 2,
+        ..Default::default()
+    };
+    let optimizer = MlOptimizer::default();
+    let result = optimizer.optimize(&params);
+    // 断言优化值大于0
+    assert!(result.optimized_value > 0, "ML优化值应大于0");
+}
+
+/// 测试：MlOptimizer极端参数
+#[test]
+fn test_ml_optimizer_extreme() {
+    let params = OptimizationParams {
+        order_size: 0,
+        market_impact: 0,
+        slippage_tolerance: 0,
+        ..Default::default()
+    };
+    let optimizer = MlOptimizer::default();
+    let result = optimizer.optimize(&params);
+    // 断言优化值为1（归一化后预测最小值）
+    assert_eq!(result.optimized_value, 1, "极端参数下ML优化值应为1");
 } 

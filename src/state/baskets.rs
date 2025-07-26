@@ -17,6 +17,8 @@ pub struct BasketIndexState {
     pub base: BaseAccount,
     /// 篮子唯一ID
     pub id: u64,
+    /// 资产类型（如ETF、指数、加密货币、RWA等）
+    pub asset_type: crate::core::types::AssetType, // 新增字段，标识资产类型，便于多资产类型融合与扩展
     /// 资产成分（最大16种）
     pub composition: Vec<BasketConstituent>,
     /// 各资产权重（bps，最大16项）

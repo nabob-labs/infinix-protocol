@@ -2,11 +2,12 @@
 //! 支持 ExecutionStrategy、RiskManagement 等多 trait 算法的注册和查找。
 //! 线程安全，支持动态注册、热插拔、批量操作、状态管理等。
 
-use anchor_lang::prelude::*; // Anchor 预导入，包含事件、时间戳等
-use std::collections::HashMap; // HashMap 用于算法名称到实例/元数据的映射
-use std::sync::{Arc, RwLock}; // Arc+RwLock 实现线程安全的全局注册表
-use once_cell::sync::Lazy; // Lazy 用于全局单例懒加载
-use crate::algorithms::traits::{ExecutionStrategy, RiskManagement}; // 引入算法 trait，便于类型安全注册
+use anchor_lang::prelude::*; // Anchor预导入，包含Result、Context、emit!等
+use anchor_lang::event; // Anchor事件宏
+use std::collections::HashMap; // HashMap用于名称到实例映射
+use std::sync::{Arc, RwLock}; // Arc/RwLock保证线程安全
+use crate::algorithms::traits::{ExecutionStrategy, RiskManagement}; // 算法trait
+use once_cell::sync::Lazy; // Lazy单例
 use log::info; // 日志输出
 
 /// 算法状态枚举
@@ -166,11 +167,15 @@ impl AlgorithmRegistry {
 
 /// 算法注册相关事件（Anchor 事件）
 #[event]
-pub enum AlgorithmEvent {
-    Registered { name: String, version: String },      // 注册事件
-    Removed { name: String },                          // 移除事件
-    StatusChanged { name: String, status: AlgorithmStatus }, // 状态变更事件
-    HotSwapped { name: String, version: String },      // 热插拔事件
+pub struct AlgorithmEvent {
+    /// 注册事件
+    pub registered: Option<(String, String)>, // (name, version)
+    /// 移除事件
+    pub removed: Option<String>, // name
+    /// 状态变更事件
+    pub status_changed: Option<(String, AlgorithmStatus)>, // (name, status)
+    /// 热插拔事件
+    pub hot_swapped: Option<(String, String)>, // (name, version)
 }
 
 /// 全局算法注册表单例（线程安全，模块加载时自动初始化）

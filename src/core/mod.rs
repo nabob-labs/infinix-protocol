@@ -29,8 +29,8 @@
 use crate::error::StrategyError;
 use anchor_lang::prelude::*;
 
-// 引入统一的策略/参数类型定义
-use crate::algorithms::execution_optimizer::types::*;
+// 移除未使用的导入
+// use crate::algorithms::execution_optimizer::types::*;
 
 // ============================================================================
 // 核心类型别名

@@ -1,2 +1,2 @@
 # infinix-protocol
-Index Token Trading Demo，For study only。
+Can only be used for simple learning and communication, not for production-level project construction

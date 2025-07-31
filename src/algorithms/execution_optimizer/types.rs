@@ -1,7 +1,7 @@
 //! 执行优化器参数与类型定义模块
 //! 包含高级策略参数、风险参数、优化配置、市场建模、工厂等类型定义。
 
-use crate::algorithms::traits::ExecutionAlgorithm; // 引入执行算法 trait
+use crate::algorithms::traits::ExecutionStrategy; // 引入执行算法 trait
 use std::collections::HashMap; // HashMap 用于算法注册表
 use std::sync::{Arc, RwLock}; // Arc+RwLock 用于线程安全的算法工厂
 use anchor_lang::prelude::*; // Anchor 预导入，包含序列化、账户等
@@ -198,7 +198,7 @@ pub enum MarketImpactModel {
 
 /// 算法工厂结构体，支持算法注册、获取、默认算法管理
 pub struct AlgorithmFactory {
-    algorithms: RwLock<HashMap<String, Arc<dyn ExecutionAlgorithm + Send + Sync>>>, // 算法注册表
+    algorithms: RwLock<HashMap<String, Arc<dyn ExecutionStrategy + Send + Sync>>>, // 算法注册表
     default: RwLock<Option<String>>, // 默认算法名称
 }
 
@@ -211,11 +211,11 @@ impl AlgorithmFactory {
         }
     }
     /// 注册算法
-    pub fn register(&self, name: &str, algo: Arc<dyn ExecutionAlgorithm + Send + Sync>) {
+    pub fn register(&self, name: &str, algo: Arc<dyn ExecutionStrategy + Send + Sync>) {
         self.algorithms.write().unwrap().insert(name.to_string(), algo); // 注册算法实例
     }
     /// 获取算法
-    pub fn get(&self, name: &str) -> Option<Arc<dyn ExecutionAlgorithm + Send + Sync>> {
+    pub fn get(&self, name: &str) -> Option<Arc<dyn ExecutionStrategy + Send + Sync>> {
         self.algorithms.read().unwrap().get(name).cloned() // 获取算法实例
     }
     /// 列出所有已注册算法名称
@@ -227,7 +227,7 @@ impl AlgorithmFactory {
         *self.default.write().unwrap() = Some(name.to_string()); // 设置默认算法名称
     }
     /// 获取默认算法
-    pub fn get_default(&self) -> Option<Arc<dyn ExecutionAlgorithm + Send + Sync>> {
+    pub fn get_default(&self) -> Option<Arc<dyn ExecutionStrategy + Send + Sync>> {
         let name = self.default.read().unwrap();
         name.as_ref().and_then(|n| self.get(n)) // 获取默认算法实例
     }

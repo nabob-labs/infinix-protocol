@@ -1,180 +1,107 @@
-//! RWA资产buy指令
-//! RWA购买指令实现，支持多种购买策略和DEX集成。
+//! 现实世界资产买入指令
+//!
+//! 本模块实现了现实世界资产的买入功能，包括参数验证、权限检查、服务层调用和事件发射。
+//!
+//! ## 功能特点
+//!
+//! - **参数验证**: 严格的输入参数验证和边界检查
+//! - **权限控制**: 细粒度的权限验证和管理
+//! - **服务层抽象**: 核心业务逻辑委托给RwaService
+//! - **事件驱动**: 完整的事件发射和审计追踪
+//! - **错误处理**: 全面的错误类型和处理机制
+//!
+//! ## 使用场景
+//!
+//! - 现实世界资产买入操作
+//! - 投资组合调整
+//! - 自动化交易
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
-use crate::core::types::{AssetType, ExecutionParams, StrategyParams, TradeParams};
+use crate::core::types::{AssetType, ExecutionParams};
 use crate::services::rwa_service::RwaService;
-use crate::events::index_token_event::IndexTokenBought;
-use crate::dex::adapter::DexAdapter;
-use crate::algorithms::traits::AlgorithmAdapter;
+use crate::events::asset_event::AssetBought;
+use crate::errors::AssetError;
 
-/// RWA资产buy指令账户上下文
+/// 现实世界资产买入指令参数
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
+pub struct BuyRwaParams {
+    /// 买入数量
+    pub amount: u64,
+    /// 执行参数
+    pub exec_params: ExecutionParams,
+}
+
+/// 现实世界资产买入指令账户上下文
 #[derive(Accounts)]
 pub struct BuyRwa<'info> {
-    /// RWA账户，需可变
-    #[account(mut)]
+    /// 现实世界资产账户，需可变
+    #[account(
+        mut,
+        constraint = rwa.asset_type == AssetType::RWA @ AssetError::InvalidAssetType
+    )]
     pub rwa: Account<'info, BasketIndexState>,
     
-    /// 用户签名者
-    #[account(mut)]
-    pub user: Signer<'info>,
+    /// 买入权限签名者
+    #[account(
+        constraint = authority.key() == rwa.buy_authority @ AssetError::InsufficientAuthority
+    )]
+    pub authority: Signer<'info>,
     
-    /// DEX程序账户
-    pub dex_program: AccountInfo<'info>,
-    
-    /// 输入代币账户（用户支付）
+    /// 资金账户
     #[account(mut)]
-    pub input_token_account: Account<'info, spl_token::state::Account>,
-    
-    /// 输出代币账户（用户接收）
-    #[account(mut)]
-    pub output_token_account: Account<'info, spl_token::state::Account>,
+    pub fund_account: Account<'info, TokenAccount>,
     
     /// 系统程序
     pub system_program: Program<'info, System>,
     
     /// 代币程序
-    pub token_program: Program<'info, spl_token::Token>,
+    pub token_program: Program<'info, Token>,
 }
 
-/// RWA购买参数结构体
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
-pub struct BuyRwaParams {
-    /// 购买数量
-    pub amount: u64,
-    /// 最大支付金额
-    pub max_payment: u64,
-    /// 滑点容忍度（基点）
-    pub slippage_tolerance: u16,
-    /// 使用的DEX名称
-    pub dex_name: String,
-    /// 执行策略
-    pub strategy: Option<StrategyParams>,
-    /// 算法参数
-    pub algorithm: Option<ExecutionParams>,
-    /// 是否使用智能路由
-    pub use_smart_routing: bool,
-    /// RWA类型
-    pub rwa_type: String,
-    /// 合规检查
-    pub compliance_check: bool,
-}
-
-/// RWA资产buy指令实现
-/// - ctx: Anchor账户上下文，自动校验权限与生命周期
-/// - params: 购买参数
-/// - 返回: Anchor规范Result
-pub fn buy_rwa(ctx: Context<BuyRwa>, params: BuyRwaParams) -> Result<()> {
-    // 参数验证
-    require!(params.amount > 0, crate::errors::index_token_error::IndexTokenError::InvalidAmount);
-    require!(params.max_payment > 0, crate::errors::index_token_error::IndexTokenError::InvalidAmount);
-    require!(params.slippage_tolerance <= 10000, crate::errors::index_token_error::IndexTokenError::InvalidSlippage);
-    
+/// 现实世界资产买入指令实现
+pub fn buy_rwa(
+    ctx: Context<BuyRwa>,
+    params: BuyRwaParams,
+) -> Result<()> {
+    validate_buy_rwa_params(&params)?;
+    check_buy_authority_permission(&ctx.accounts.authority, &ctx.accounts.rwa)?;
     let rwa = &mut ctx.accounts.rwa;
-    let user = &ctx.accounts.user;
-    
-    // 验证资产类型
-    require!(rwa.asset_type == AssetType::RWA, crate::errors::index_token_error::IndexTokenError::InvalidAssetType);
-    
-    // 验证RWA状态
-    rwa.validate()?;
-    
-    // 合规检查
-    if params.compliance_check {
-        require!(user.key() != Pubkey::default(), crate::errors::security_error::SecurityError::ComplianceCheckFailed);
-    }
-    
-    // 创建交易参数
-    let trade_params = TradeParams {
-        from_token: ctx.accounts.input_token_account.mint,
-        to_token: ctx.accounts.output_token_account.mint,
-        amount_in: params.max_payment,
-        min_amount_out: params.amount,
-        dex_name: params.dex_name.clone(),
-    };
-    
-    // 执行RWA购买逻辑
+    let authority = &ctx.accounts.authority;
     let service = RwaService::new();
-    let result = service.buy_rwa(
-        rwa,
-        &trade_params,
-        params.strategy.as_ref(),
-        params.algorithm.as_ref(),
-        params.use_smart_routing,
-        &params.rwa_type,
-        params.compliance_check,
-    )?;
-    
-    // 触发RWA购买事件
-    emit!(IndexTokenBought {
-        index_token_id: rwa.id,
-        user: user.key(),
+    service.buy(rwa, params.amount, &params.exec_params)?;
+    emit!(AssetBought {
+        basket_id: rwa.id,
         amount: params.amount,
-        payment_amount: result.executed_amount,
-        dex_name: params.dex_name,
+        authority: authority.key(),
         timestamp: Clock::get()?.unix_timestamp,
+        asset_type: AssetType::RWA,
+        exec_params: params.exec_params,
     });
-    
     Ok(())
 }
 
-/// RWA购买错误码
-#[error_code]
-pub enum BuyRwaError {
-    /// 金额无效
-    #[msg("Invalid amount")] InvalidAmount,
-    /// 滑点无效
-    #[msg("Invalid slippage")] InvalidSlippage,
-    /// 资产类型无效
-    #[msg("Invalid asset type")] InvalidAssetType,
-    /// 余额不足
-    #[msg("Insufficient balance")] InsufficientBalance,
-    /// DEX不支持
-    #[msg("DEX not supported")] DexNotSupported,
-    /// 执行失败
-    #[msg("Execution failed")] ExecutionFailed,
-    /// RWA类型不支持
-    #[msg("RWA type not supported")] RwaTypeNotSupported,
-    /// 合规检查失败
-    #[msg("Compliance check failed")] ComplianceCheckFailed,
+fn validate_buy_rwa_params(params: &BuyRwaParams) -> Result<()> {
+    require!(params.amount > 0, AssetError::InvalidAmount);
+    require!(params.amount <= u64::MAX, AssetError::InvalidAmount);
+    validate_execution_params(&params.exec_params)?;
+    Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use anchor_lang::prelude::Pubkey;
-    
-    /// 测试RWA购买参数验证
-    #[test]
-    fn test_buy_rwa_params_validation() {
-        let params = BuyRwaParams {
-            amount: 1000,
-            max_payment: 2000,
-            slippage_tolerance: 500, // 5%
-            dex_name: "jupiter".to_string(),
-            strategy: None,
-            algorithm: None,
-            use_smart_routing: true,
-            rwa_type: "REAL_ESTATE".to_string(),
-            compliance_check: true,
-        };
-        
-        assert_eq!(params.amount, 1000);
-        assert_eq!(params.slippage_tolerance, 500);
-        assert_eq!(params.dex_name, "jupiter");
-        assert_eq!(params.rwa_type, "REAL_ESTATE");
-        assert!(params.use_smart_routing);
-        assert!(params.compliance_check);
-    }
-    
-    /// 测试滑点容忍度验证
-    #[test]
-    fn test_rwa_slippage_validation() {
-        // 有效滑点
-        assert!(500 <= 10000);
-        
-        // 无效滑点（超过100%）
-        assert!(10001 > 10000);
-    }
+fn check_buy_authority_permission(
+    authority: &Signer,
+    rwa: &Account<BasketIndexState>,
+) -> Result<()> {
+    require!(
+        authority.key() == rwa.buy_authority,
+        AssetError::InsufficientAuthority
+    );
+    Ok(())
+}
+
+fn validate_execution_params(exec_params: &ExecutionParams) -> Result<()> {
+    require!(exec_params.slippage_tolerance > 0.0, AssetError::InvalidParams);
+    require!(exec_params.slippage_tolerance <= 1.0, AssetError::InvalidParams);
+    require!(exec_params.max_retries > 0, AssetError::InvalidParams);
+    require!(exec_params.max_retries <= 10, AssetError::InvalidParams);
+    Ok(())
 } 

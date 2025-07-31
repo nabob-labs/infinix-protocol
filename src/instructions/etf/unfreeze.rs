@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::etf_service::EtfService;
 use crate::events::asset_event::AssetUnfrozen;
@@ -17,9 +16,9 @@ pub struct UnfreezeEtf<'info> {
 
 /// ETF资产unfreeze指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
-pub fn unfreeze_etf(ctx: Context<UnfreezeEtf>) -> Result<()> {
+pub fn unfreeze_etf(ctx: Context<UnfreezeEtf>) -> anchor_lang::Result<()> {
     let etf = &mut ctx.accounts.etf;
-    require!(etf.asset_type == AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
+    require!(etf.asset_type == AssetType::ETF, ProgramError::InvalidAssetType);
     let service = EtfService::new();
     service.unfreeze(etf)?;
     emit!(AssetUnfrozen {

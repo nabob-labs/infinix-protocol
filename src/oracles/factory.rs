@@ -9,7 +9,7 @@
  * - 设计意图：便于多预言机动态扩展、统一注册、批量初始化、Anchor集成友好
  */
 
-use super::chainlink_adapter::ChainlinkOracle; // Chainlink适配器实现
+// use super::chainlink_adapter::ChainlinkOracle; // 暂时注释掉
 use super::traits::OracleAdapter;              // OracleAdapter trait
 use anchor_lang::prelude::*;                   // Anchor预导入
 use std::collections::HashMap;                 // HashMap用于类型到实例映射

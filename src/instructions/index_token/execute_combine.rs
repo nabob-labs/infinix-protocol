@@ -5,7 +5,6 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::events::index_token_event::IndexTokenCombineExecuted;
 
 /// 指数代币执行合并指令账户上下文结构体
@@ -30,7 +29,7 @@ pub struct ExecuteCombineIndexToken<'info> {
 pub fn execute_combine_index_token(
     ctx: Context<ExecuteCombineIndexToken>,
     amount: u64,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     // 获取目标和源指数代币账户
     let target = &mut ctx.accounts.target_index_token;
     let source = &mut ctx.accounts.source_index_token;

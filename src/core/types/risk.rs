@@ -62,7 +62,7 @@ impl RiskMetrics {
         concentration_risk: u64,
         overall_risk_score: u32,
         max_drawdown_bps: u64,
-    ) -> Result<Self> {
+    ) -> anchor_lang::Result<Self> {
         Ok(Self {
             var_95,
             var_99,
@@ -125,7 +125,7 @@ impl RiskLimits {
         max_concentration_bps: u64,
         max_drawdown_bps: u64,
         max_risk_score: u32,
-    ) -> Result<Self> {
+    ) -> anchor_lang::Result<Self> {
         Ok(Self {
             max_var_bps: max_var_bps as u32,
             max_concentration_bps: max_concentration_bps as u32,

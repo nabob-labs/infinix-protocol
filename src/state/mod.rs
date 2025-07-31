@@ -1,13 +1,14 @@
-// ========================= State 管理模块主入口 =========================
-// 本模块为链上所有状态结构体、校验工具、事件等提供统一入口，
-// 每个 struct、trait、方法、参数、用途、边界、Anchor 相关点、事件、错误、测试等均有详细注释。
-// - 设计意图：极致可插拔、最小功能单元、统一接口、Anchor集成友好、可观测性、可维护性、可审计性
-/*!
- * State Management Module for Solana AMM Index Token Strategies
- *
- * 本模块将所有链上状态结构体按逻辑子模块组织，便于维护和扩展。
- * 结构层次清晰，基础类型在底层，专用类型在子模块。
- */
+//! State Management Module for Solana AMM Index Token Strategies
+//! 
+//! 本模块将所有链上状态结构体按逻辑子模块组织，便于维护和扩展。
+//! 结构层次清晰，基础类型在底层，专用类型在子模块。
+
+/// 导出子模块
+pub mod baskets;
+pub mod common;
+pub mod strategies;
+pub mod optimizers;
+pub mod factories;
 
 use crate::core::*;         // 引入核心trait、类型、错误等
 use crate::version::*;      // 版本管理相关

@@ -16,7 +16,7 @@ use crate::algorithms::execution_optimizer::{
     ExecutionOptimizerParams, MarketData, OptimizationResult, ExecutionPlan, 
     ExecutionSegment, ExecutionStrategyType, OptimizationMetrics, Optimizer
 };
-use crate::errors::algorithm_error::AlgorithmError;
+// use crate::errors::algorithm_error::AlgorithmError; // 暂时注释掉
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
 
@@ -107,7 +107,7 @@ impl Default for GeneticConfig {
 }
 
 impl Optimizer for GeneticOptimizer {
-    fn optimize(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<OptimizationResult> {
+    fn optimize(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<OptimizationResult> {
         let start_time = self.get_current_timestamp();
         
         // 初始化种群
@@ -180,7 +180,7 @@ impl GeneticOptimizer {
     }
     
     /// 初始化种群
-    fn initialize_population(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<Vec<GeneticIndividual>> {
+    fn initialize_population(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<Vec<GeneticIndividual>> {
         let mut population = Vec::with_capacity(self.config.population_size);
         
         for i in 0..self.config.population_size {
@@ -192,7 +192,7 @@ impl GeneticOptimizer {
     }
     
     /// 创建随机个体
-    fn create_random_individual(&self, params: &ExecutionOptimizerParams, market_data: &MarketData, index: usize) -> Result<GeneticIndividual> {
+    fn create_random_individual(&self, params: &ExecutionOptimizerParams, market_data: &MarketData, index: usize) -> anchor_lang::Result<GeneticIndividual> {
         let segment_count = self.calculate_optimal_segment_count(params, market_data);
         let mut segments = Vec::with_capacity(segment_count);
         
@@ -237,7 +237,7 @@ impl GeneticOptimizer {
         remaining_time: &mut u64,
         params: &ExecutionOptimizerParams,
         market_data: &MarketData,
-    ) -> Result<ExecutionSegment> {
+    ) -> anchor_lang::Result<ExecutionSegment> {
         let amount = if *remaining_amount > 0 {
             let max_amount = (*remaining_amount).min(market_data.liquidity / 10);
             let min_amount = 1u64;
@@ -324,7 +324,7 @@ impl GeneticOptimizer {
     }
     
     /// 计算适应度
-    fn calculate_fitness(&self, population: &mut Vec<GeneticIndividual>, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<()> {
+    fn calculate_fitness(&self, population: &mut Vec<GeneticIndividual>, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<()> {
         for individual in population.iter_mut() {
             let (cost_score, market_impact_score, execution_time_score, risk_score) = 
                 self.evaluate_individual(individual, params, market_data)?;
@@ -348,7 +348,7 @@ impl GeneticOptimizer {
     }
     
     /// 评估个体
-    fn evaluate_individual(&self, individual: &GeneticIndividual, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<(f64, f64, f64, f64)> {
+    fn evaluate_individual(&self, individual: &GeneticIndividual, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<(f64, f64, f64, f64)> {
         let total_amount: u64 = individual.segments.iter().map(|s| s.amount).sum();
         let total_time: u64 = individual.segments.iter().map(|s| s.execution_time).sum();
         let total_cost: u64 = individual.segments.iter().map(|s| s.expected_cost).sum();
@@ -410,7 +410,7 @@ impl GeneticOptimizer {
     }
     
     /// 生成新一代
-    fn generate_next_generation(&self, population: &[GeneticIndividual], params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<Vec<GeneticIndividual>> {
+    fn generate_next_generation(&self, population: &[GeneticIndividual], params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<Vec<GeneticIndividual>> {
         let mut new_population = Vec::with_capacity(self.config.population_size);
         
         // 精英保留
@@ -456,7 +456,7 @@ impl GeneticOptimizer {
     }
     
     /// 交叉操作
-    fn crossover(&self, parent1: &GeneticIndividual, parent2: &GeneticIndividual, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<GeneticIndividual> {
+    fn crossover(&self, parent1: &GeneticIndividual, parent2: &GeneticIndividual, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<GeneticIndividual> {
         let crossover_point = self.rng.gen_range(0..parent1.segments.len().min(parent2.segments.len()));
         
         let mut child_segments = Vec::new();
@@ -498,7 +498,7 @@ impl GeneticOptimizer {
     }
     
     /// 变异操作
-    fn mutate(&self, parent: &GeneticIndividual, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<GeneticIndividual> {
+    fn mutate(&self, parent: &GeneticIndividual, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<GeneticIndividual> {
         let mut child_segments = parent.segments.clone();
         
         // 随机变异一些分段
@@ -538,7 +538,7 @@ impl GeneticOptimizer {
     }
     
     /// 调整分段
-    fn adjust_segments(&self, segments: &mut Vec<ExecutionSegment>, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<()> {
+    fn adjust_segments(&self, segments: &mut Vec<ExecutionSegment>, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<()> {
         let total_amount: u64 = segments.iter().map(|s| s.amount).sum();
         let total_time: u64 = segments.iter().map(|s| s.execution_time).sum();
         
@@ -576,7 +576,7 @@ impl GeneticOptimizer {
         market_data: &MarketData,
         generation: u32,
         start_time: u64,
-    ) -> Result<OptimizationResult> {
+    ) -> anchor_lang::Result<OptimizationResult> {
         let total_amount: u64 = best_individual.segments.iter().map(|s| s.amount).sum();
         let total_time: u64 = best_individual.segments.iter().map(|s| s.execution_time).sum();
         let total_cost: u64 = best_individual.segments.iter().map(|s| s.expected_cost).sum();

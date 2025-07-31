@@ -5,7 +5,6 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::events::index_token_event::IndexTokenSplitExecuted;
 
 /// 指数代币执行拆分指令账户上下文结构体
@@ -30,7 +29,7 @@ pub struct ExecuteSplitIndexToken<'info> {
 pub fn execute_split_index_token(
     ctx: Context<ExecuteSplitIndexToken>,
     amount: u64,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     // 获取源和新生成指数代币账户
     let source = &mut ctx.accounts.source_index_token;
     let new_token = &mut ctx.accounts.new_index_token;

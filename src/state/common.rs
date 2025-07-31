@@ -4,8 +4,7 @@
 
 #![allow(clippy::too_many_arguments)] // 允许函数参数过多的clippy警告，便于复杂业务接口设计
 
-use crate::core::*; // 引入核心模块，便于通用trait、类型、常量等复用
-use crate::error::ProgramError; // 引入自定义错误类型，便于统一错误处理
+use anchor_lang::prelude::ProgramError; // 引入自定义错误类型，便于统一错误处理
 use crate::version::{ProgramVersion, Versioned, CURRENT_VERSION}; // 引入版本管理相关类型和常量
 use anchor_lang::prelude::*; // Anchor 预导入，包含账户、宏、类型、Context、Result等
 
@@ -24,7 +23,7 @@ impl PriceFeed {
     /// 校验价格预言机有效性
     /// - 检查mint地址是否为默认值
     /// - 返回Err表示预言机不可用
-    pub fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> anchor_lang::Result<()> {
         if self.mint == Pubkey::default() { // 检查mint是否为默认空值
             return Err(ProgramError::PriceFeedUnavailable.into()); // 返回预言机不可用错误
         }
@@ -57,7 +56,7 @@ impl BaseAccount {
     /// - authority: 权限公钥
     /// - bump: PDA bump种子
     /// - 返回初始化后的BaseAccount
-    pub fn new(authority: Pubkey, bump: u8) -> Result<Self> {
+    pub fn new(authority: Pubkey, bump: u8) -> anchor_lang::Result<Self> {
         let current_time = Clock::get()?.unix_timestamp; // 获取当前链上时间戳
         Ok(Self {
             version: CURRENT_VERSION, // 当前合约版本
@@ -72,7 +71,7 @@ impl BaseAccount {
 
     /// 更新时间戳
     /// - 更新updated_at为当前链上时间
-    pub fn touch(&mut self) -> Result<()> {
+    pub fn touch(&mut self) -> anchor_lang::Result<()> {
         self.updated_at = Clock::get()?.unix_timestamp; // 设置为当前时间
         Ok(())
     }
@@ -80,7 +79,7 @@ impl BaseAccount {
 
 /// 实现 Validatable trait，统一参数合法性校验
 impl crate::core::traits::Validatable for BaseAccount {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         if self.authority == Pubkey::default() { // 权限公钥不能为默认空值
             return Err(ProgramError::InvalidStrategyParameters.into()); // 返回参数错误
         }
@@ -93,15 +92,15 @@ impl crate::core::traits::Pausable for BaseAccount {
     fn is_paused(&self) -> bool {
         self.is_paused // 返回暂停状态
     }
-    fn pause(&mut self) -> Result<()> {
+    fn pause(&mut self) -> anchor_lang::Result<()> {
         self.is_paused = true; // 设置为暂停
         self.touch() // 更新时间戳
     }
-    fn unpause(&mut self) -> Result<()> {
+    fn unpause(&mut self) -> anchor_lang::Result<()> {
         self.is_paused = false; // 取消暂停
         self.touch() // 更新时间戳
     }
-    fn resume(&mut self) -> Result<()> {
+    fn resume(&mut self) -> anchor_lang::Result<()> {
         self.unpause() // 恢复即为取消暂停
     }
 }
@@ -111,11 +110,11 @@ impl crate::core::traits::Activatable for BaseAccount {
     fn is_active(&self) -> bool {
         self.is_active // 返回激活状态
     }
-    fn activate(&mut self) -> Result<()> {
+    fn activate(&mut self) -> anchor_lang::Result<()> {
         self.is_active = true; // 设置为激活
         self.touch() // 更新时间戳
     }
-    fn deactivate(&mut self) -> Result<()> {
+    fn deactivate(&mut self) -> anchor_lang::Result<()> {
         self.is_active = false; // 设置为失效
         self.touch() // 更新时间戳
     }
@@ -126,7 +125,7 @@ impl crate::core::traits::Authorizable for BaseAccount {
     fn authority(&self) -> Pubkey {
         self.authority // 返回当前权限公钥
     }
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> anchor_lang::Result<()> {
         self.authority = new_authority; // 设置新权限
         self.touch()?; // 更新时间戳
         Ok(())
@@ -168,7 +167,7 @@ impl ExecutionStats {
     /// 记录一次成功执行
     /// - gas_used: 本次消耗gas
     /// - execution_time_ms: 本次耗时
-    pub fn record_success(&mut self, gas_used: u64, execution_time_ms: u64) -> Result<()> {
+    pub fn record_success(&mut self, gas_used: u64, execution_time_ms: u64) -> anchor_lang::Result<()> {
         self.total_executions += 1; // 总次数+1
         self.successful_executions += 1; // 成功次数+1
         self.total_gas_used += gas_used; // 累计gas
@@ -179,7 +178,7 @@ impl ExecutionStats {
         Ok(())
     }
     /// 记录一次失败执行
-    pub fn record_failure(&mut self) -> Result<()> {
+    pub fn record_failure(&mut self) -> anchor_lang::Result<()> {
         self.total_executions += 1; // 总次数+1
         self.failed_executions += 1; // 失败次数+1
         self.last_execution = Clock::get()?.unix_timestamp; // 更新时间戳
@@ -206,11 +205,11 @@ pub struct AccountInitializer; // 工具结构体，无状态
 
 impl AccountInitializer {
     /// 初始化基础账户
-    pub fn init_base_account(authority: Pubkey, bump: u8) -> Result<BaseAccount> {
+    pub fn init_base_account(authority: Pubkey, bump: u8) -> anchor_lang::Result<BaseAccount> {
         BaseAccount::new(authority, bump) // 调用BaseAccount构造
     }
     /// 校验初始化参数
-    pub fn validate_init_params(authority: &Pubkey, bump: u8) -> Result<()> {
+    pub fn validate_init_params(authority: &Pubkey, bump: u8) -> anchor_lang::Result<()> {
         if *authority == Pubkey::default() { // 权限不能为空
             return Err(ProgramError::InvalidStrategyParameters.into());
         }

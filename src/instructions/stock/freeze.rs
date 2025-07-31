@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stock_service::StockService;
 use crate::events::asset_event::AssetFrozen;
@@ -17,9 +16,9 @@ pub struct FreezeStock<'info> {
 
 /// Stock资产freeze指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
-pub fn freeze_stock(ctx: Context<FreezeStock>) -> Result<()> {
+pub fn freeze_stock(ctx: Context<FreezeStock>) -> anchor_lang::Result<()> {
     let stock = &mut ctx.accounts.stock;
-    require!(stock.asset_type == AssetType::Stock, crate::error::ProgramError::InvalidAssetType);
+    require!(stock.asset_type == AssetType::Stock, ProgramError::InvalidAssetType);
     let service = StockService::new();
     service.freeze(stock)?;
     emit!(AssetFrozen {

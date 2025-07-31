@@ -10,21 +10,21 @@
  * - 审计日志
  */
 
-use crate::error::StrategyError;
+use crate::errors::strategy_error::StrategyError;
 use anchor_lang::prelude::*;
 
 /// 权限控制 trait
 /// - 可插拔权限校验，支持多种授权模型
 pub trait AccessControl: Send + Sync {
     /// 校验 provided 是否为 expected 授权者
-    fn verify_authority(&self, expected: &Pubkey, provided: &Pubkey) -> Result<()>;
+    fn verify_authority(&self, expected: &Pubkey, provided: &Pubkey) -> anchor_lang::Result<()>;
 }
 
 /// 限流器 trait
 /// - 支持速率限制、剩余操作数查询
 pub trait RateLimiter: Send + Sync {
     /// 检查当前是否允许操作，超限返回 Err
-    fn check_rate_limit(&mut self, current_timestamp: i64) -> Result<()>;
+    fn check_rate_limit(&mut self, current_timestamp: i64) -> anchor_lang::Result<()>;
     /// 查询剩余可用操作数
     fn remaining_operations(&self) -> u32;
 }
@@ -33,7 +33,7 @@ pub trait RateLimiter: Send + Sync {
 /// - 支持操作熔断、失败计数、恢复等
 pub trait CircuitBreaker: Send + Sync {
     /// 检查当前是否允许操作，熔断时返回 Err
-    fn check_operation_allowed(&mut self, current_timestamp: i64) -> Result<()>;
+    fn check_operation_allowed(&mut self, current_timestamp: i64) -> anchor_lang::Result<()>;
     /// 记录一次失败
     fn record_failure(&mut self, current_timestamp: i64);
     /// 记录一次成功
@@ -44,7 +44,7 @@ pub trait CircuitBreaker: Send + Sync {
 /// - 防止同一账户/操作重入
 pub trait ReentrancyGuard: Send + Sync {
     /// 进入重入保护区，已重入则返回 Err
-    fn enter(&mut self, account: &Pubkey) -> Result<()>;
+    fn enter(&mut self, account: &Pubkey) -> anchor_lang::Result<()>;
     /// 退出重入保护区
     fn exit(&mut self, account: &Pubkey);
 }
@@ -67,7 +67,7 @@ pub trait AuditLogger: Send + Sync {
 /// 默认权限控制实现
 pub struct DefaultAccessControl;
 impl AccessControl for DefaultAccessControl {
-    fn verify_authority(&self, expected: &Pubkey, provided: &Pubkey) -> Result<()> {
+    fn verify_authority(&self, expected: &Pubkey, provided: &Pubkey) -> anchor_lang::Result<()> {
         if expected != provided {
             return Err(crate::error::StrategyError::Unauthorized.into());
         }
@@ -88,7 +88,7 @@ pub struct DefaultRateLimiter {
 }
 impl RateLimiter for DefaultRateLimiter {
     /// 检查当前操作是否超限
-    fn check_rate_limit(&mut self, current_timestamp: i64) -> Result<()> {
+    fn check_rate_limit(&mut self, current_timestamp: i64) -> anchor_lang::Result<()> {
         /// 如果当前时间戳与窗口开始时间戳的差值大于等于时间窗口，则重置计数器和窗口开始时间
         if current_timestamp - self.window_start >= self.time_window as i64 {
             self.current_count = 0;
@@ -122,7 +122,7 @@ pub struct DefaultCircuitBreaker {
 }
 impl CircuitBreaker for DefaultCircuitBreaker {
     /// 检查当前操作是否允许
-    fn check_operation_allowed(&mut self, current_timestamp: i64) -> Result<()> {
+    fn check_operation_allowed(&mut self, current_timestamp: i64) -> anchor_lang::Result<()> {
         /// 如果失败计数超过阈值，且当前时间戳与上次失败时间戳的差值小于恢复超时时间，则返回错误
         if self.failure_count >= self.failure_threshold {
             if current_timestamp - self.last_failure < self.recovery_timeout as i64 {
@@ -156,7 +156,7 @@ pub struct DefaultReentrancyGuard {
 }
 impl ReentrancyGuard for DefaultReentrancyGuard {
     /// 尝试进入重入保护区，如果已重入则返回错误
-    fn enter(&mut self, account: &Pubkey) -> Result<()> {
+    fn enter(&mut self, account: &Pubkey) -> anchor_lang::Result<()> {
         /// 检查当前账户是否已处于重入状态
         if self.active_operations.get(account).unwrap_or(&false) {
             return Err(crate::error::StrategyError::StrategyExecutionFailed.into());
@@ -215,7 +215,7 @@ impl MEVProtection {
         pre_trade_price: u64,
         post_trade_price: u64,
         expected_slippage_bps: u64,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         /// 如果前交易价格为0，则返回错误
         if pre_trade_price == 0 {
             return Err(StrategyError::InvalidMarketData.into());
@@ -237,7 +237,7 @@ impl MEVProtection {
         commitment: &[u8; 32],
         revealed_data: &[u8],
         nonce: &[u8],
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         /// 使用 Solana 的 hash 函数计算组合数据的哈希
         use solana_program::hash::{hash, Hash};
         let mut combined_data = Vec::new();
@@ -270,7 +270,7 @@ impl MEVProtection {
         submission_slot: u64,
         current_slot: u64,
         min_delay_slots: u64,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         /// 如果当前时间戳小于提交时间戳加上最小延迟，则返回错误
         if current_slot < submission_slot + min_delay_slots {
             return Err(StrategyError::InvalidTimeWindow.into());
@@ -284,7 +284,7 @@ pub struct InputSanitizer;
 
 impl InputSanitizer {
     /// 清洗并校验字符串输入
-    pub fn sanitize_string(input: &str, max_length: usize) -> Result<String> {
+    pub fn sanitize_string(input: &str, max_length: usize) -> anchor_lang::Result<String> {
         /// 如果输入长度超过最大长度，则返回错误
         if input.len() > max_length {
             return Err(StrategyError::InvalidStrategyParameters.into());
@@ -301,7 +301,7 @@ impl InputSanitizer {
         Ok(sanitized)
     }
     /// 清洗数值输入
-    pub fn sanitize_numeric(value: u64, min: u64, max: u64) -> Result<u64> {
+    pub fn sanitize_numeric(value: u64, min: u64, max: u64) -> anchor_lang::Result<u64> {
         /// 如果值小于最小值或大于最大值，则返回错误
         if value < min || value > max {
             return Err(StrategyError::InvalidStrategyParameters.into());
@@ -313,7 +313,7 @@ impl InputSanitizer {
         input: &[T],
         min_length: usize,
         max_length: usize,
-    ) -> Result<Vec<T>> {
+    ) -> anchor_lang::Result<Vec<T>> {
         /// 如果输入数组长度小于最小长度或大于最大长度，则返回错误
         if input.len() < min_length || input.len() > max_length {
             return Err(StrategyError::InvalidStrategyParameters.into());
@@ -321,7 +321,7 @@ impl InputSanitizer {
         Ok(input.to_vec())
     }
     /// 清洗 pubkey 输入
-    pub fn sanitize_pubkey(pubkey: &Pubkey) -> Result<Pubkey> {
+    pub fn sanitize_pubkey(pubkey: &Pubkey) -> anchor_lang::Result<Pubkey> {
         /// 如果 pubkey 是默认值，则返回错误
         if *pubkey == Pubkey::default() {
             return Err(StrategyError::InvalidStrategyParameters.into());

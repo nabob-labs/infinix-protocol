@@ -16,9 +16,9 @@ impl CryptoService {
     /// Crypto资产mint最小功能单元
     /// - basket: Crypto资产账户，需可变
     /// - amount: 增发数量，类型安全
-    pub fn mint(&self, basket: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn mint(&self, basket: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 增发操作，防止溢出
@@ -29,9 +29,9 @@ impl CryptoService {
     /// Crypto资产burn最小功能单元
     /// - basket: Crypto资产账户，需可变
     /// - amount: 销毁数量，类型安全
-    pub fn burn(&self, basket: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn burn(&self, basket: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -44,9 +44,9 @@ impl CryptoService {
     /// Crypto资产buy最小功能单元
     /// - basket: Crypto资产账户，需可变
     /// - amount: 购买数量，类型安全
-    pub fn buy(&self, basket: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn buy(&self, basket: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 购买操作，防止溢出
@@ -57,9 +57,9 @@ impl CryptoService {
     /// Crypto资产sell最小功能单元
     /// - basket: Crypto资产账户，需可变
     /// - amount: 卖出数量，类型安全
-    pub fn sell(&self, basket: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn sell(&self, basket: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -73,10 +73,10 @@ impl CryptoService {
     /// - from: 转出账户，需可变
     /// - to: 转入账户，需可变
     /// - amount: 转账数量，类型安全
-    pub fn transfer(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn transfer(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(from.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
-        require!(to.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(from.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
+        require!(to.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(from.is_active && to.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -91,10 +91,10 @@ impl CryptoService {
     /// - from: 转出账户，需可变
     /// - to: 转入账户，需可变
     /// - amount: 兑换数量，类型安全
-    pub fn swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(from.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
-        require!(to.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(from.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
+        require!(to.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(from.is_active && to.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -109,10 +109,10 @@ impl CryptoService {
     /// - from: 被合并账户，需可变
     /// - to: 目标账户，需可变
     /// - amount: 合并数量，类型安全
-    pub fn combine(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn combine(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(from.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
-        require!(to.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(from.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
+        require!(to.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(from.is_active && to.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -127,10 +127,10 @@ impl CryptoService {
     /// - from: 被拆分账户，需可变
     /// - to: 新账户，需可变
     /// - amount: 拆分数量，类型安全
-    pub fn split(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn split(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(from.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
-        require!(to.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(from.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
+        require!(to.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(from.is_active && to.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -143,9 +143,9 @@ impl CryptoService {
 
     /// Crypto资产freeze最小功能单元
     /// - basket: Crypto资产账户，需可变
-    pub fn freeze(&self, basket: &mut BasketIndexState) -> Result<()> {
+    pub fn freeze(&self, basket: &mut BasketIndexState) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 冻结操作
@@ -155,9 +155,9 @@ impl CryptoService {
 
     /// Crypto资产unfreeze最小功能单元
     /// - basket: Crypto资产账户，需可变
-    pub fn unfreeze(&self, basket: &mut BasketIndexState) -> Result<()> {
+    pub fn unfreeze(&self, basket: &mut BasketIndexState) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户冻结状态
         require!(!basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 解冻操作
@@ -168,9 +168,9 @@ impl CryptoService {
     /// Crypto资产authorize最小功能单元
     /// - basket: Crypto资产账户，需可变
     /// - new_authority: 新授权人公钥
-    pub fn authorize(&self, basket: &mut BasketIndexState, new_authority: Pubkey) -> Result<()> {
+    pub fn authorize(&self, basket: &mut BasketIndexState, new_authority: Pubkey) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 授权操作，更新authority字段
         basket.authority = new_authority;
         Ok(())
@@ -179,9 +179,9 @@ impl CryptoService {
     /// Crypto资产query最小功能单元
     /// - basket: Crypto资产账户
     /// 返回: 资产信息结构体
-    pub fn query(&self, basket: &BasketIndexState) -> Result<CryptoInfo> {
+    pub fn query(&self, basket: &BasketIndexState) -> anchor_lang::Result<CryptoInfo> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         Ok(CryptoInfo {
             total_value: basket.total_value,
             is_active: basket.is_active,
@@ -194,9 +194,9 @@ impl CryptoService {
     /// - basket: Crypto资产账户
     /// - amount: 询价数量
     /// 返回: 报价信息结构体
-    pub fn quote(&self, basket: &BasketIndexState, amount: u64) -> Result<CryptoQuote> {
+    pub fn quote(&self, basket: &BasketIndexState, amount: u64) -> anchor_lang::Result<CryptoQuote> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 校验数量
         require!(amount > 0, crate::errors::asset_error::AssetError::InvalidAmount);
         // 这里可集成oracle价格，示例直接返回1:1
@@ -209,9 +209,9 @@ impl CryptoService {
     /// Crypto资产batch最小功能单元
     /// - basket: Crypto资产账户，需可变
     /// - actions: 批量操作类型与参数数组
-    pub fn batch(&self, basket: &mut BasketIndexState, actions: &[CryptoBatchAction]) -> Result<()> {
+    pub fn batch(&self, basket: &mut BasketIndexState, actions: &[CryptoBatchAction]) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::Crypto, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::Crypto, solana_program_error::ProgramError::InvalidAssetType);
         // 遍历批量操作
         for action in actions {
             match action.action_type {

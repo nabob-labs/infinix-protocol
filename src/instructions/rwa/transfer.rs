@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::rwa_service::RwaService;
 use crate::events::asset_event::AssetTransferred;
@@ -20,10 +19,10 @@ pub struct TransferRwa<'info> {
 /// RWA资产transfer指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 转账数量，类型安全
-pub fn transfer_rwa(ctx: Context<TransferRwa>, amount: u64) -> Result<()> {
+pub fn transfer_rwa(ctx: Context<TransferRwa>, amount: u64) -> anchor_lang::Result<()> {
     let from = &mut ctx.accounts.from_rwa;
     let to = &mut ctx.accounts.to_rwa;
-    require!(from.asset_type == AssetType::RWA && to.asset_type == AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+    require!(from.asset_type == AssetType::RWA && to.asset_type == AssetType::RWA, ProgramError::InvalidAssetType);
     let service = RwaService::new();
     service.transfer(from, to, amount)?;
     emit!(AssetTransferred {

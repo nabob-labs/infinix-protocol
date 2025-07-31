@@ -4,15 +4,15 @@
 
 use anchor_lang::prelude::*; // Anchor框架预导入，包含Solana合约开发常用类型、宏、事件、Result等，保证Anchor语法和生命周期安全
 use crate::state::baskets::BasketIndexState; // 引入篮子状态结构体，所有篮子操作的核心链上数据结构，确保类型安全
-use crate::errors::basket_error::BasketError; // 引入篮子相关错误类型，便于错误处理、合规校验和错误码统一
-use crate::core::logging::log_instruction_dispatch; // 引入统一日志分发工具，链上操作审计与可追溯性
+// use crate::errors::basket_error::BasketError; // 引入篮子相关错误类型，便于错误处理、合规校验和错误码统一
+// use crate::core::logging::log_instruction_dispatch; // 引入统一日志分发工具，链上操作审计与可追溯性
 use crate::core::types::{TradeParams, BatchTradeParams, StrategyParams, OracleParams, AlgoParams}; // 引入核心参数类型，涵盖交易、批量、策略、预言机、算法等，跨模块参数传递标准化
 
 /// 篮子再平衡trait
 ///
 /// 定义篮子再平衡的接口，便于不同实现的扩展。
 /// - 设计意图：抽象出再平衡操作，便于后续多种篮子类型的统一处理。
-pub trait BasketRebalancable {
+trait BasketRebalancable {
     /// 执行再平衡
     ///
     /// # 参数
@@ -21,7 +21,7 @@ pub trait BasketRebalancable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn rebalance(&self, basket_index: &mut BasketIndexState, new_weights: Vec<u64>) -> Result<()>; // trait方法签名，生命周期与类型安全由Rust/Anchor保证
+    fn rebalance(&self, basket_index: &mut BasketIndexState, new_weights: Vec<u64>) -> anchor_lang::Result<()>; // trait方法签名，生命周期与类型安全由Rust/Anchor保证
 }
 
 /// 篮子再平衡服务实现
@@ -33,7 +33,7 @@ impl BasketRebalancable for RebalanceBasketService {
     ///
     /// - 若篮子未激活，返回 NotAllowed 错误。
     /// - 若权重和不为10000，返回 InvalidWeightSum 错误。
-    fn rebalance(&self, basket_index: &mut BasketIndexState, new_weights: Vec<u64>) -> Result<()> {
+    fn rebalance(&self, basket_index: &mut BasketIndexState, new_weights: Vec<u64>) -> anchor_lang::Result<()> {
         if !basket_index.is_active { // 校验篮子激活状态，防止未激活篮子被操作，合规性保障
             return Err(BasketError::NotAllowed.into()); // 返回自定义错误，Anchor自动转换为Solana错误码
         }
@@ -50,7 +50,7 @@ impl BasketRebalancable for RebalanceBasketService {
 /// 篮子暂停trait
 ///
 /// 定义篮子暂停的接口。
-pub trait BasketPauseable {
+trait BasketPauseable {
     /// 暂停篮子
     ///
     /// # 参数
@@ -58,7 +58,7 @@ pub trait BasketPauseable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn pause(&self, basket_index: &mut BasketIndexState) -> Result<()>; // trait方法签名，类型安全
+    fn pause(&self, basket_index: &mut BasketIndexState) -> anchor_lang::Result<()>; // trait方法签名，类型安全
 }
 
 /// 篮子暂停服务实现
@@ -69,7 +69,7 @@ impl BasketPauseable for PauseBasketService {
     /// 暂停实现
     ///
     /// - 若已暂停，返回 AlreadyPaused 错误。
-    fn pause(&self, basket_index: &mut BasketIndexState) -> Result<()> {
+    fn pause(&self, basket_index: &mut BasketIndexState) -> anchor_lang::Result<()> {
         if basket_index.is_paused { // 校验是否已暂停，防止重复操作
             return Err(BasketError::AlreadyPaused.into()); // 返回已暂停错误，合规性保障
         }
@@ -81,7 +81,7 @@ impl BasketPauseable for PauseBasketService {
 /// 篮子恢复trait
 ///
 /// 定义篮子恢复的接口。
-pub trait BasketResumeable {
+trait BasketResumeable {
     /// 恢复篮子
     ///
     /// # 参数
@@ -89,7 +89,7 @@ pub trait BasketResumeable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn resume(&self, basket_index: &mut BasketIndexState) -> Result<()>; // trait方法签名，类型安全
+    fn resume(&self, basket_index: &mut BasketIndexState) -> anchor_lang::Result<()>; // trait方法签名，类型安全
 }
 
 /// 篮子恢复服务实现
@@ -100,7 +100,7 @@ impl BasketResumeable for ResumeBasketService {
     /// 恢复实现
     ///
     /// - 若未暂停，返回 NotPaused 错误。
-    fn resume(&self, basket_index: &mut BasketIndexState) -> Result<()> {
+    fn resume(&self, basket_index: &mut BasketIndexState) -> anchor_lang::Result<()> {
         if !basket_index.is_paused { // 校验是否已暂停，防止非法恢复
             return Err(BasketError::NotPaused.into()); // 返回未暂停错误，合规性保障
         }
@@ -110,7 +110,7 @@ impl BasketResumeable for ResumeBasketService {
 }
 
 /// 算法再平衡trait
-pub trait BasketRebalanceWithAlgo {
+trait BasketRebalanceWithAlgo {
     /// 算法再平衡
     fn rebalance_with_algo(
         &self, // trait对象自身引用，SOLID原则
@@ -119,7 +119,7 @@ pub trait BasketRebalanceWithAlgo {
         algo: &dyn crate::algorithms::traits::ExecutionStrategy, // 算法trait对象，支持多态
         ctx: anchor_lang::prelude::Context<crate::algorithms::traits::Execute>, // Anchor上下文，生命周期安全
         params: &crate::algorithms::traits::ExecutionParams, // 算法执行参数，类型安全
-    ) -> Result<()>; // Anchor规范返回类型
+    ) -> anchor_lang::Result<()>; // Anchor规范返回类型
 }
 
 /// 算法再平衡服务实现
@@ -132,7 +132,7 @@ impl BasketRebalanceWithAlgo for RebalanceWithAlgoService {
         algo: &dyn crate::algorithms::traits::ExecutionStrategy, // 算法trait对象
         ctx: anchor_lang::prelude::Context<crate::algorithms::traits::Execute>, // Anchor上下文
         params: &crate::algorithms::traits::ExecutionParams, // 算法执行参数
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         if !basket_index.is_active { // 校验篮子激活状态
             return Err(BasketError::NotAllowed.into()); // 返回未激活错误
         }
@@ -148,7 +148,7 @@ impl BasketRebalanceWithAlgo for RebalanceWithAlgoService {
 }
 
 /// 算法+DEX+Oracle再平衡trait
-pub trait BasketRebalanceWithAlgoAndAdapters {
+trait BasketRebalanceWithAlgoAndAdapters {
     /// 算法+DEX+Oracle再平衡
     fn rebalance_with_algo_and_adapters(
         &self, // trait对象自身引用
@@ -159,7 +159,7 @@ pub trait BasketRebalanceWithAlgoAndAdapters {
         oracle: &dyn crate::oracles::traits::OracleAdapter, // Oracle适配器trait对象
         ctx: anchor_lang::prelude::Context<crate::algorithms::traits::Execute>, // Anchor上下文
         params: &crate::algorithms::traits::ExecutionParams, // 算法执行参数
-    ) -> Result<()>; // Anchor规范返回类型
+    ) -> anchor_lang::Result<()>; // Anchor规范返回类型
 }
 
 /// 算法+DEX+Oracle再平衡服务实现
@@ -174,7 +174,7 @@ impl BasketRebalanceWithAlgoAndAdapters for RebalanceWithAlgoAndAdaptersService 
         oracle: &dyn crate::oracles::traits::OracleAdapter, // Oracle适配器trait对象
         ctx: anchor_lang::prelude::Context<crate::algorithms::traits::Execute>, // Anchor上下文
         params: &crate::algorithms::traits::ExecutionParams, // 算法执行参数
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         if !basket_index.is_active { // 校验篮子激活状态
             return Err(BasketError::NotAllowed.into()); // 返回未激活错误
         }
@@ -194,7 +194,7 @@ impl BasketRebalanceWithAlgoAndAdapters for RebalanceWithAlgoAndAdaptersService 
 ///
 /// 定义篮子报价接口，便于集成报价逻辑。
 /// - 设计意图：统一报价入口，便于扩展。
-pub trait BasketQuotable {
+trait BasketQuotable {
     /// 篮子报价
     ///
     /// # 参数
@@ -204,7 +204,7 @@ pub trait BasketQuotable {
     ///
     /// # 返回值
     /// - 返回报价结果，失败返回 BasketError。
-    fn quote(&self, basket: &BasketIndexState, params: &TradeParams, price_params: &OracleParams) -> Result<u64>; // trait方法签名，类型安全
+    fn quote(&self, basket: &BasketIndexState, params: &TradeParams, price_params: &OracleParams) -> anchor_lang::Result<u64>; // trait方法签名，类型安全
 }
 
 /// 篮子报价服务实现
@@ -215,7 +215,7 @@ impl BasketQuotable for QuoteBasketService {
     /// 报价实现
     ///
     /// - 获取篮子报价，融合DEX/Oracle
-    pub fn quote(params: &TradeParams, price_params: &OracleParams) -> Result<u64> {
+    fn quote(params: &TradeParams, price_params: &OracleParams) -> anchor_lang::Result<u64> {
         // 1. 优先通过oracle_name获取链上预言机价格
         if let Some(oracle_name) = &price_params.oracle_name {
             let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();
@@ -246,7 +246,7 @@ impl BasketQuotable for QuoteBasketService {
 ///
 /// 定义买入接口，便于集成买入逻辑。
 /// - 设计意图：统一买入入口，便于扩展。
-pub trait BasketBuyExecutable {
+trait BasketBuyExecutable {
     /// 执行买入
     ///
     /// # 参数
@@ -257,7 +257,7 @@ pub trait BasketBuyExecutable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn execute_buy(&self, basket: &mut BasketIndexState, params: &TradeParams, price: u64, buyer: Pubkey) -> Result<()>; // trait方法签名，类型安全
+    fn execute_buy(&self, basket: &mut BasketIndexState, params: &TradeParams, price: u64, buyer: Pubkey) -> anchor_lang::Result<()>; // trait方法签名，类型安全
 }
 
 /// 篮子买入服务实现
@@ -266,7 +266,7 @@ pub trait BasketBuyExecutable {
 pub struct ExecuteBuyBasketService; // 无状态结构体，便于多实例和线程安全
 impl BasketBuyExecutable for ExecuteBuyBasketService {
     /// 买入实现（融合算法/策略/DEX/预言机，生产级实现）
-    fn execute_buy(&self, basket: &mut BasketIndexState, params: &TradeParams, price: u64, buyer: Pubkey) -> Result<()> {
+    fn execute_buy(&self, basket: &mut BasketIndexState, params: &TradeParams, price: u64, buyer: Pubkey) -> anchor_lang::Result<()> {
         // 1. 算法/策略融合：如有 ExecutionParams，查找并调用已注册的 ExecutionStrategy trait 实现
         if let Some(exec_params) = &params.exec_params {
             if let Some(algo_name) = &exec_params.algo_name {
@@ -303,7 +303,7 @@ impl BasketBuyExecutable for ExecuteBuyBasketService {
                             user: buyer,
                             dex_accounts: exec_params.dex_accounts.clone(),
                         };
-                        let swap_result = dex_adapter.swap(crate::dex::traits::Context::default(), swap_params)?;
+                        let swap_result = dex_adapter.swap(anchor_lang::prelude::Context::default(), swap_params)?;
                         final_price = swap_result.amount_out;
                     }
                 }
@@ -326,7 +326,7 @@ impl BasketBuyExecutable for ExecuteBuyBasketService {
 ///
 /// 定义卖出接口，便于集成卖出逻辑。
 /// - 设计意图：统一卖出入口，便于扩展。
-pub trait BasketSellExecutable {
+trait BasketSellExecutable {
     /// 执行卖出
     ///
     /// # 参数
@@ -337,7 +337,7 @@ pub trait BasketSellExecutable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn execute_sell(&self, basket: &mut BasketIndexState, params: &TradeParams, price: u64, seller: Pubkey) -> Result<()>; // trait方法签名，类型安全
+    fn execute_sell(&self, basket: &mut BasketIndexState, params: &TradeParams, price: u64, seller: Pubkey) -> anchor_lang::Result<()>; // trait方法签名，类型安全
 }
 
 /// 篮子卖出服务实现
@@ -346,7 +346,7 @@ pub trait BasketSellExecutable {
 pub struct ExecuteSellBasketService; // 无状态结构体，便于多实例和线程安全
 impl BasketSellExecutable for ExecuteSellBasketService {
     /// 卖出实现（融合算法/策略/DEX/预言机，生产级实现）
-    fn execute_sell(&self, basket: &mut BasketIndexState, params: &TradeParams, price: u64, seller: Pubkey) -> Result<()> {
+    fn execute_sell(&self, basket: &mut BasketIndexState, params: &TradeParams, price: u64, seller: Pubkey) -> anchor_lang::Result<()> {
         if let Some(exec_params) = &params.exec_params {
             if let Some(algo_name) = &exec_params.algo_name {
                 let registry = crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.lock().unwrap();
@@ -380,7 +380,7 @@ impl BasketSellExecutable for ExecuteSellBasketService {
                             user: seller,
                             dex_accounts: exec_params.dex_accounts.clone(),
                         };
-                        let swap_result = dex_adapter.swap(crate::dex::traits::Context::default(), swap_params)?;
+                        let swap_result = dex_adapter.swap(anchor_lang::prelude::Context::default(), swap_params)?;
                         final_price = swap_result.amount_out;
                     }
                 }
@@ -404,7 +404,7 @@ impl BasketSellExecutable for ExecuteSellBasketService {
 ///
 /// 定义交换接口，便于集成交换逻辑。
 /// - 设计意图：统一交换入口，便于扩展。
-pub trait BasketSwappable {
+trait BasketSwappable {
     /// 执行篮子交换
     ///
     /// # 参数
@@ -416,7 +416,7 @@ pub trait BasketSwappable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn execute_swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, authority: Pubkey) -> Result<()>; // trait方法签名，类型安全
+    fn execute_swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, authority: Pubkey) -> anchor_lang::Result<()>; // trait方法签名，类型安全
 }
 
 /// 篮子交换服务实现
@@ -425,7 +425,7 @@ pub trait BasketSwappable {
 pub struct ExecuteSwapBasketService; // 无状态结构体，便于多实例和线程安全
 impl BasketSwappable for ExecuteSwapBasketService {
     /// 交换实现（融合算法/策略/DEX/预言机，生产级实现）
-    fn execute_swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, authority: Pubkey) -> Result<()> {
+    fn execute_swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, authority: Pubkey) -> anchor_lang::Result<()> {
         // 1. 算法/策略融合：如有 ExecutionParams，查找并调用已注册的 ExecutionStrategy trait 实现
         if let Some(exec_params) = &from.exec_params {
             if let Some(algo_name) = &exec_params.algo_name {
@@ -462,7 +462,7 @@ impl BasketSwappable for ExecuteSwapBasketService {
                             user: authority,
                             dex_accounts: exec_params.dex_accounts.clone(),
                         };
-                        let swap_result = dex_adapter.swap(crate::dex::traits::Context::default(), swap_params)?;
+                        let swap_result = dex_adapter.swap(anchor_lang::prelude::Context::default(), swap_params)?;
                         final_to_amount = swap_result.amount_out;
                     }
                 }
@@ -489,7 +489,7 @@ impl BasketSwappable for ExecuteSwapBasketService {
 ///
 /// 定义合并接口，便于集成合并逻辑。
 /// - 设计意图：统一合并入口，便于扩展。
-pub trait BasketCombinable {
+trait BasketCombinable {
     /// 执行篮子合并
     ///
     /// # 参数
@@ -500,7 +500,7 @@ pub trait BasketCombinable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn execute_combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, authority: Pubkey) -> Result<()>; // trait方法签名，类型安全
+    fn execute_combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, authority: Pubkey) -> anchor_lang::Result<()>; // trait方法签名，类型安全
 }
 
 /// 篮子合并服务实现
@@ -513,7 +513,7 @@ impl BasketCombinable for ExecuteCombineBasketService {
     /// - 若来源篮子总价值小于合并数量，返回 CombineFailed 错误。
     /// - 从来源篮子扣除合并数量，并累加目标篮子合并数量。
     /// - 若累加溢出，返回 CombineFailed 错误。
-    fn execute_combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, _authority: Pubkey) -> Result<()> {
+    fn execute_combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, _authority: Pubkey) -> anchor_lang::Result<()> {
         if source.total_value < amount { // 校验来源篮子总价值是否足够
             return Err(crate::errors::basket_error::BasketError::CombineFailed.into()); // 返回合并失败错误
         }
@@ -528,7 +528,7 @@ impl BasketCombinable for ExecuteCombineBasketService {
 ///
 /// 定义拆分接口，便于集成拆分逻辑。
 /// - 设计意图：统一拆分入口，便于扩展。
-pub trait BasketSplittable {
+trait BasketSplittable {
     /// 执行篮子拆分
     ///
     /// # 参数
@@ -539,7 +539,7 @@ pub trait BasketSplittable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn execute_split(&self, source: &mut BasketIndexState, new_basket: &mut BasketIndexState, amount: u64, authority: Pubkey) -> Result<()>; // trait方法签名，类型安全
+    fn execute_split(&self, source: &mut BasketIndexState, new_basket: &mut BasketIndexState, amount: u64, authority: Pubkey) -> anchor_lang::Result<()>; // trait方法签名，类型安全
 }
 
 /// 篮子拆分服务实现
@@ -552,7 +552,7 @@ impl BasketSplittable for ExecuteSplitBasketService {
     /// - 若来源篮子总价值小于拆分数量，返回 SplitFailed 错误。
     /// - 从来源篮子扣除拆分数量，并累加新篮子拆分数量。
     /// - 若累加溢出，返回 SplitFailed 错误。
-    fn execute_split(&self, source: &mut BasketIndexState, new_basket: &mut BasketIndexState, amount: u64, _authority: Pubkey) -> Result<()> {
+    fn execute_split(&self, source: &mut BasketIndexState, new_basket: &mut BasketIndexState, amount: u64, _authority: Pubkey) -> anchor_lang::Result<()> {
         if source.total_value < amount { // 校验来源篮子总价值是否足够
             return Err(crate::errors::basket_error::BasketError::SplitFailed.into()); // 返回拆分失败错误
         }
@@ -567,7 +567,7 @@ impl BasketSplittable for ExecuteSplitBasketService {
 ///
 /// 定义批量操作接口，便于批量处理多个篮子。
 /// - 设计意图：统一批量操作入口，便于扩展批量买入、卖出等。
-pub trait BasketBatchOperable {
+trait BasketBatchOperable {
     /// 执行批量操作
     ///
     /// # 参数
@@ -576,7 +576,7 @@ pub trait BasketBatchOperable {
     ///
     /// # 返回值
     /// - 返回批量操作结果集合，失败返回 BasketError。
-    fn batch_operate(&self, baskets: &mut [BasketIndexState], params: &BatchTradeParams) -> Result<Vec<u64>>; // trait方法签名，类型安全
+    fn batch_operate(&self, baskets: &mut [BasketIndexState], params: &BatchTradeParams) -> anchor_lang::Result<Vec<u64>>; // trait方法签名，类型安全
 }
 
 /// 篮子批量操作服务实现
@@ -587,7 +587,7 @@ impl BasketBatchOperable for BatchOperateBasketService {
     /// 批量操作实现
     ///
     /// - 若累加溢出，返回 BatchFailed 错误。
-    fn batch_operate(&self, baskets: &mut [BasketIndexState], params: &BatchTradeParams) -> Result<Vec<u64>> {
+    fn batch_operate(&self, baskets: &mut [BasketIndexState], params: &BatchTradeParams) -> anchor_lang::Result<Vec<u64>> {
         let mut results = Vec::with_capacity(baskets.len()); // 初始化结果集合
         for (i, basket) in baskets.iter_mut().enumerate() { // 遍历篮子集合
             let amount = params.amounts.get(i).copied().unwrap_or(0); // 获取当前篮子的操作数量，若索引越界则使用0
@@ -603,7 +603,7 @@ impl BasketBatchOperable for BatchOperateBasketService {
 ///
 /// 定义策略交易接口，便于集成多种策略。
 /// - 设计意图：统一策略交易入口，便于扩展。
-pub trait BasketStrategyTradable {
+trait BasketStrategyTradable {
     /// 执行策略交易
     ///
     /// # 参数
@@ -612,7 +612,7 @@ pub trait BasketStrategyTradable {
     ///
     /// # 返回值
     /// - 返回交易结果，失败返回 BasketError。
-    fn execute_strategy_trade(&self, basket: &mut BasketIndexState, strategy_params: &StrategyParams) -> Result<u64>; // trait方法签名，类型安全
+    fn execute_strategy_trade(&self, basket: &mut BasketIndexState, strategy_params: &StrategyParams) -> anchor_lang::Result<u64>; // trait方法签名，类型安全
 }
 
 /// 篮子策略交易服务实现
@@ -623,7 +623,7 @@ impl BasketStrategyTradable for ExecuteStrategyTradeBasketService {
     /// 策略交易实现
     ///
     /// - 若权重和不为10000，返回 InvalidWeightSum 错误。
-    fn execute_strategy_trade(&self, basket: &mut BasketIndexState, strategy_params: &StrategyParams) -> Result<u64> {
+    fn execute_strategy_trade(&self, basket: &mut BasketIndexState, strategy_params: &StrategyParams) -> anchor_lang::Result<u64> {
         let total_weight: u64 = strategy_params.weights.iter().sum(); // 计算策略参数中的权重和
         if total_weight != 10_000 { // 校验权重和必须为10000
             return Err(BasketError::InvalidWeightSum.into()); // 返回权重和错误
@@ -638,7 +638,7 @@ impl BasketStrategyTradable for ExecuteStrategyTradeBasketService {
 ///
 /// 定义权限校验接口。
 /// - 设计意图：统一权限校验入口，便于扩展多角色权限。
-pub trait BasketAuthorizable {
+trait BasketAuthorizable {
     /// 校验操作权限
     ///
     /// # 参数
@@ -647,7 +647,7 @@ pub trait BasketAuthorizable {
     ///
     /// # 返回值
     /// - 是否有权限。
-    fn authorize(&self, basket: &BasketIndexState, authority: Pubkey) -> Result<bool>; // trait方法签名，类型安全
+    fn authorize(&self, basket: &BasketIndexState, authority: Pubkey) -> anchor_lang::Result<bool>; // trait方法签名，类型安全
 }
 
 /// 篮子权限校验服务实现
@@ -656,7 +656,7 @@ pub trait BasketAuthorizable {
 pub struct AuthorizeBasketService; // 无状态结构体，便于多实例和线程安全
 impl BasketAuthorizable for AuthorizeBasketService {
     /// 权限校验实现
-    fn authorize(&self, basket: &BasketIndexState, authority: Pubkey) -> Result<bool> {
+    fn authorize(&self, basket: &BasketIndexState, authority: Pubkey) -> anchor_lang::Result<bool> {
         Ok(basket.authority == authority) // 判断篮子管理员权限
     }
 }
@@ -666,7 +666,7 @@ impl BasketAuthorizable for AuthorizeBasketService {
 ///
 /// 定义冻结接口。
 /// - 设计意图：便于统一冻结操作。
-pub trait BasketFreezable {
+trait BasketFreezable {
     /// 冻结篮子
     ///
     /// # 参数
@@ -674,7 +674,7 @@ pub trait BasketFreezable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn freeze(&self, basket: &mut BasketIndexState) -> Result<()>; // trait方法签名，类型安全
+    fn freeze(&self, basket: &mut BasketIndexState) -> anchor_lang::Result<()>; // trait方法签名，类型安全
 }
 
 /// 篮子冻结服务实现
@@ -683,7 +683,7 @@ pub trait BasketFreezable {
 pub struct FreezeBasketService; // 无状态结构体，便于多实例和线程安全
 impl BasketFreezable for FreezeBasketService {
     /// 冻结实现
-    fn freeze(&self, basket: &mut BasketIndexState) -> Result<()> {
+    fn freeze(&self, basket: &mut BasketIndexState) -> anchor_lang::Result<()> {
         if basket.is_frozen { // 校验是否已冻结
             return Err(BasketError::AlreadyFrozen.into()); // 返回已冻结错误
         }
@@ -696,7 +696,7 @@ impl BasketFreezable for FreezeBasketService {
 ///
 /// 定义解冻接口。
 /// - 设计意图：便于统一解冻操作。
-pub trait BasketUnfreezable {
+trait BasketUnfreezable {
     /// 解冻篮子
     ///
     /// # 参数
@@ -704,7 +704,7 @@ pub trait BasketUnfreezable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn unfreeze(&self, basket: &mut BasketIndexState) -> Result<()>; // trait方法签名，类型安全
+    fn unfreeze(&self, basket: &mut BasketIndexState) -> anchor_lang::Result<()>; // trait方法签名，类型安全
 }
 
 /// 篮子解冻服务实现
@@ -713,7 +713,7 @@ pub trait BasketUnfreezable {
 pub struct UnfreezeBasketService; // 无状态结构体，便于多实例和线程安全
 impl BasketUnfreezable for UnfreezeBasketService {
     /// 解冻实现
-    fn unfreeze(&self, basket: &mut BasketIndexState) -> Result<()> {
+    fn unfreeze(&self, basket: &mut BasketIndexState) -> anchor_lang::Result<()> {
         if !basket.is_frozen { // 校验是否已冻结
             return Err(BasketError::NotFrozen.into()); // 返回未冻结错误
         }
@@ -727,7 +727,7 @@ impl BasketUnfreezable for UnfreezeBasketService {
 ///
 /// 定义扩展性接口。
 /// - 设计意图：便于后续扩展更多自定义操作。
-pub trait BasketExtensible {
+trait BasketExtensible {
     /// 扩展操作
     ///
     /// # 参数
@@ -736,7 +736,7 @@ pub trait BasketExtensible {
     ///
     /// # 返回值
     /// - 返回扩展操作结果，失败返回 BasketError。
-    fn extend(&self, basket: &mut BasketIndexState, ext_params: &AlgoParams) -> Result<u64>; // trait方法签名，类型安全
+    fn extend(&self, basket: &mut BasketIndexState, ext_params: &AlgoParams) -> anchor_lang::Result<u64>; // trait方法签名，类型安全
 }
 
 /// 篮子扩展性服务实现
@@ -745,7 +745,7 @@ pub trait BasketExtensible {
 pub struct ExtendBasketService; // 无状态结构体，便于多实例和线程安全
 impl BasketExtensible for ExtendBasketService {
     /// 扩展实现
-    fn extend(&self, basket: &mut BasketIndexState, ext_params: &AlgoParams) -> Result<u64> {
+    fn extend(&self, basket: &mut BasketIndexState, ext_params: &AlgoParams) -> anchor_lang::Result<u64> {
         let ext_value = ext_params.param1.unwrap_or(0); // 获取扩展参数中的值，若为None则使用0
         basket.total_value = basket.total_value.checked_add(ext_value).ok_or(crate::errors::basket_error::BasketError::ExtendFailed)?; // 累加总价值，防止溢出
         Ok(ext_value) // 扩展成功
@@ -801,6 +801,14 @@ impl BasketServiceFacade {
             unfreeze: UnfreezeBasketService,
             extend: ExtendBasketService,
         }
+    }
+}
+
+/// 兼容指令调用的空服务结构体
+pub struct BasketService;
+impl BasketService {
+    pub fn strategy_rebalance() {
+        // TODO: 实现实际逻辑
     }
 }
 
@@ -875,7 +883,7 @@ mod tests {
         let mut basket = BasketIndexState { is_active: true, weights: vec![5000, 5000], ..Default::default() };
         let svc = RebalanceWithAlgoService;
         let algo = MockAlgo;
-        let ctx = anchor_lang::prelude::Context::default();
+        let ctx = anchor_lang::prelude::anchor_lang::prelude::Context::default();
         let params = AlgoParams { order_size: 1000, market_impact: 0, slippage_tolerance: 100 };
         let result = svc.rebalance_with_algo(&mut basket, vec![6000, 4000], &algo, ctx, &params);
         assert!(result.is_ok());
@@ -887,21 +895,21 @@ mod tests {
         let mut basket = BasketIndexState { is_active: true, weights: vec![5000, 5000], ..Default::default() };
         let svc = RebalanceWithAlgoAndAdaptersService;
         let algo = MockAlgo;
-        let ctx = anchor_lang::prelude::Context::default();
+        let ctx = anchor_lang::prelude::anchor_lang::prelude::Context::default();
         let params = AlgoParams { order_size: 1000, market_impact: 0, slippage_tolerance: 100 };
         // mock dex/oracle
         struct DummyDex;
         impl crate::dex::traits::DexAdapter for DummyDex {
-            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
-            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> Result<u64> { Ok(0) }
-            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> Result<u64> { Ok(0) }
-            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
+            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> anchor_lang::Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
+            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> anchor_lang::Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
         }
         struct DummyOracle;
         impl crate::oracles::traits::OracleAdapter for DummyOracle {
-            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
-            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
-            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
+            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> anchor_lang::Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
+            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> anchor_lang::Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
+            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> anchor_lang::Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
         }
         let dex = DummyDex;
         let oracle = DummyOracle;
@@ -919,26 +927,26 @@ mod tests {
                 &self,
                 _ctx: anchor_lang::prelude::Context<crate::algorithms::traits::Execute>,
                 _params: &AlgoParams,
-            ) -> Result<ExecutionResult> {
+            ) -> anchor_lang::Result<ExecutionResult> {
                 Err(anchor_lang::error!(anchor_lang::error::ErrorCode::Custom(9001)))
             }
         }
         let svc = RebalanceWithAlgoAndAdaptersService;
         let algo = FailingAlgo;
-        let ctx = anchor_lang::prelude::Context::default();
+        let ctx = anchor_lang::prelude::anchor_lang::prelude::Context::default();
         let params = AlgoParams { order_size: 1000, market_impact: 0, slippage_tolerance: 100 };
         struct DummyDex;
         impl crate::dex::traits::DexAdapter for DummyDex {
-            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
-            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> Result<u64> { Ok(0) }
-            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> Result<u64> { Ok(0) }
-            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
+            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> anchor_lang::Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
+            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> anchor_lang::Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
         }
         struct DummyOracle;
         impl crate::oracles::traits::OracleAdapter for DummyOracle {
-            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
-            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
-            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
+            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> anchor_lang::Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
+            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> anchor_lang::Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
+            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> anchor_lang::Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
         }
         let dex = DummyDex;
         let oracle = DummyOracle;
@@ -955,28 +963,28 @@ mod tests {
                 &self,
                 _ctx: anchor_lang::prelude::Context<crate::algorithms::traits::Execute>,
                 _params: &AlgoParams,
-            ) -> Result<ExecutionResult> {
+            ) -> anchor_lang::Result<ExecutionResult> {
                 Ok(ExecutionResult { optimized_size: 1000, expected_cost: 100 })
             }
         }
         struct FailingDex;
         impl crate::dex::traits::DexAdapter for FailingDex {
-            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> Result<crate::dex::traits::SwapResult> { Err(anchor_lang::error!(anchor_lang::error::ErrorCode::Custom(9002))) }
-            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> Result<u64> { Ok(0) }
-            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> Result<u64> { Ok(0) }
-            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
+            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> anchor_lang::Result<crate::dex::traits::SwapResult> { Err(anchor_lang::error!(anchor_lang::error::ErrorCode::Custom(9002))) }
+            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> anchor_lang::Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
         }
         struct DummyOracle;
         impl crate::oracles::traits::OracleAdapter for DummyOracle {
-            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
-            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
-            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
+            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> anchor_lang::Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
+            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> anchor_lang::Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
+            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> anchor_lang::Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
         }
         let svc = RebalanceWithAlgoAndAdaptersService;
         let algo = DummyAlgo;
         let dex = FailingDex;
         let oracle = DummyOracle;
-        let ctx = anchor_lang::prelude::Context::default();
+        let ctx = anchor_lang::prelude::anchor_lang::prelude::Context::default();
         let params = AlgoParams { order_size: 1000, market_impact: 0, slippage_tolerance: 100 };
         // 这里假设service内部会调用dex.swap，实际可根据业务流程调整
         let result = svc.rebalance_with_algo_and_adapters(&mut basket, vec![6000, 4000], &algo, &dex, &oracle, ctx, &params);
@@ -994,28 +1002,28 @@ mod tests {
                 &self,
                 _ctx: anchor_lang::prelude::Context<crate::algorithms::traits::Execute>,
                 _params: &AlgoParams,
-            ) -> Result<ExecutionResult> {
+            ) -> anchor_lang::Result<ExecutionResult> {
                 Ok(ExecutionResult { optimized_size: 1000, expected_cost: 100 })
             }
         }
         struct DummyDex;
         impl crate::dex::traits::DexAdapter for DummyDex {
-            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
-            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> Result<u64> { Ok(0) }
-            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> Result<u64> { Ok(0) }
-            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
+            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> anchor_lang::Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
+            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> anchor_lang::Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
         }
         struct FailingOracle;
         impl crate::oracles::traits::OracleAdapter for FailingOracle {
-            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> Result<crate::oracles::traits::PriceResult> { Err(anchor_lang::error!(anchor_lang::error::ErrorCode::Custom(9003))) }
-            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
-            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
+            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> anchor_lang::Result<crate::oracles::traits::PriceResult> { Err(anchor_lang::error!(anchor_lang::error::ErrorCode::Custom(9003))) }
+            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> anchor_lang::Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
+            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> anchor_lang::Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
         }
         let svc = RebalanceWithAlgoAndAdaptersService;
         let algo = DummyAlgo;
         let dex = DummyDex;
         let oracle = FailingOracle;
-        let ctx = anchor_lang::prelude::Context::default();
+        let ctx = anchor_lang::prelude::anchor_lang::prelude::Context::default();
         let params = AlgoParams { order_size: 1000, market_impact: 0, slippage_tolerance: 100 };
         // 当前实现未用到oracle.get_price，若后续集成应改为assert!(result.is_err())
         let result = svc.rebalance_with_algo_and_adapters(&mut basket, vec![6000, 4000], &algo, &dex, &oracle, ctx, &params);
@@ -1031,28 +1039,28 @@ mod tests {
                 &self,
                 _ctx: anchor_lang::prelude::Context<crate::algorithms::traits::Execute>,
                 _params: &AlgoParams,
-            ) -> Result<ExecutionResult> {
+            ) -> anchor_lang::Result<ExecutionResult> {
                 Ok(ExecutionResult { optimized_size: 1000, expected_cost: 100 })
             }
         }
         struct DummyDex;
         impl crate::dex::traits::DexAdapter for DummyDex {
-            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
-            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> Result<u64> { Ok(0) }
-            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> Result<u64> { Ok(0) }
-            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
+            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> anchor_lang::Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
+            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> anchor_lang::Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
         }
         struct DummyOracle;
         impl crate::oracles::traits::OracleAdapter for DummyOracle {
-            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
-            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
-            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
+            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> anchor_lang::Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
+            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> anchor_lang::Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
+            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> anchor_lang::Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
         }
         let svc = RebalanceWithAlgoAndAdaptersService;
         let algo = DummyAlgo;
         let dex = DummyDex;
         let oracle = DummyOracle;
-        let ctx = anchor_lang::prelude::Context::default();
+        let ctx = anchor_lang::prelude::anchor_lang::prelude::Context::default();
         let params = AlgoParams { order_size: 1000, market_impact: 0, slippage_tolerance: 100 };
         let result = svc.rebalance_with_algo_and_adapters(&mut basket, vec![7000, 4000], &algo, &dex, &oracle, ctx, &params);
         assert!(result.is_err());
@@ -1067,28 +1075,28 @@ mod tests {
                 &self,
                 _ctx: anchor_lang::prelude::Context<crate::algorithms::traits::Execute>,
                 _params: &AlgoParams,
-            ) -> Result<ExecutionResult> {
+            ) -> anchor_lang::Result<ExecutionResult> {
                 Ok(ExecutionResult { optimized_size: 1000, expected_cost: 100 })
             }
         }
         struct DummyDex;
         impl crate::dex::traits::DexAdapter for DummyDex {
-            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
-            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> Result<u64> { Ok(0) }
-            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> Result<u64> { Ok(0) }
-            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
+            fn swap(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::Swap>, _params: crate::dex::traits::SwapParams) -> anchor_lang::Result<crate::dex::traits::SwapResult> { Ok(crate::dex::traits::SwapResult { amount_out: 0, fee: 0 }) }
+            fn add_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::AddLiquidity>, _params: crate::dex::traits::AddLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn remove_liquidity(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::RemoveLiquidity>, _params: crate::dex::traits::RemoveLiquidityParams) -> anchor_lang::Result<u64> { Ok(0) }
+            fn get_quote(&self, _ctx: anchor_lang::prelude::Context<crate::dex::traits::GetQuote>, _params: crate::dex::traits::QuoteParams) -> anchor_lang::Result<crate::dex::traits::QuoteResult> { Ok(crate::dex::traits::QuoteResult { amount_out: 0, fee: 0 }) }
         }
         struct DummyOracle;
         impl crate::oracles::traits::OracleAdapter for DummyOracle {
-            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
-            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
-            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
+            fn get_price(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetPrice>, _params: crate::oracles::traits::PriceParams) -> anchor_lang::Result<crate::oracles::traits::PriceResult> { Ok(crate::oracles::traits::PriceResult { price: 0, last_updated: 0 }) }
+            fn get_twap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetTwap>, _params: crate::oracles::traits::TwapParams) -> anchor_lang::Result<crate::oracles::traits::TwapResult> { Ok(crate::oracles::traits::TwapResult { twap: 0, last_updated: 0 }) }
+            fn get_vwap(&self, _ctx: anchor_lang::prelude::Context<crate::oracles::traits::GetVwap>, _params: crate::oracles::traits::VwapParams) -> anchor_lang::Result<crate::oracles::traits::VwapResult> { Ok(crate::oracles::traits::VwapResult { vwap: 0, last_updated: 0 }) }
         }
         let svc = RebalanceWithAlgoAndAdaptersService;
         let algo = DummyAlgo;
         let dex = DummyDex;
         let oracle = DummyOracle;
-        let ctx = anchor_lang::prelude::Context::default();
+        let ctx = anchor_lang::prelude::anchor_lang::prelude::Context::default();
         let params = AlgoParams { order_size: 1000, market_impact: 0, slippage_tolerance: 100 };
         let result = svc.rebalance_with_algo_and_adapters(&mut basket, vec![6000, 4000], &algo, &dex, &oracle, ctx, &params);
         assert!(result.is_err());

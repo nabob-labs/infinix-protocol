@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::etf_service::EtfService;
 use crate::events::asset_event::AssetSplit;
@@ -20,11 +19,11 @@ pub struct SplitEtf<'info> {
 /// ETF资产split指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 拆分数量，类型安全
-pub fn split_etf(ctx: Context<SplitEtf>, amount: u64) -> Result<()> {
+pub fn split_etf(ctx: Context<SplitEtf>, amount: u64) -> anchor_lang::Result<()> {
     let from = &mut ctx.accounts.from;
     let to = &mut ctx.accounts.to;
-    require!(from.asset_type == AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
-    require!(to.asset_type == AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
+    require!(from.asset_type == AssetType::ETF, ProgramError::InvalidAssetType);
+    require!(to.asset_type == AssetType::ETF, ProgramError::InvalidAssetType);
     let service = EtfService::new();
     service.split(from, to, amount)?;
     emit!(AssetSplit {

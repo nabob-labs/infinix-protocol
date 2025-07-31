@@ -199,3 +199,51 @@ pub struct AssetStrategyTraded {
     /// 事件发生时间戳
     pub timestamp: i64,
 }
+
+#[event]
+/// 资产转移事件
+/// 表示资产转移操作的链上事件。
+pub struct AssetTransferred {
+    /// 源资产ID
+    pub from_asset_id: u64,
+    /// 目标资产ID
+    pub to_asset_id: u64,
+    /// 转移数量
+    pub amount: u64,
+    /// 操作人
+    pub authority: Pubkey,
+    /// 事件发生时间戳
+    pub timestamp: i64,
+}
+
+#[event]
+/// 资产报价事件
+/// 表示资产报价查询的链上事件。
+pub struct AssetQuoted {
+    /// 资产ID
+    pub asset_id: u64,
+    /// 报价数量
+    pub amount: u64,
+    /// 报价价格
+    pub price: u64,
+    /// 报价人
+    pub quoter: Pubkey,
+    /// 事件发生时间戳
+    pub timestamp: i64,
+}
+
+#[event]
+/// 批量资产转移事件
+/// 表示批量资产转移操作的链上事件。
+pub struct BatchAssetTransferred {
+    /// 源资产ID
+    pub from_asset_id: u64,
+    /// 目标资产ID列表
+    pub to_asset_ids: Vec<u64>,
+    /// 各目标资产的转移数量
+    pub amounts: Vec<u64>,
+    /// 操作人
+    pub authority: Pubkey,
+    /// 事件发生时间戳
+    pub timestamp: i64,
+}

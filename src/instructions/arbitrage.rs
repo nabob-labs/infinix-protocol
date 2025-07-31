@@ -4,8 +4,7 @@
 //! 严格遵循Anchor规范，逐行注释，生产级代码质量
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
-use crate::core::types::{TradeParams, AssetType};
+use crate::core::types::*;
 
 #[derive(Accounts)]
 pub struct ArbitrageTrade<'info> {
@@ -14,7 +13,7 @@ pub struct ArbitrageTrade<'info> {
     pub authority: Signer<'info>,
 }
 
-pub fn arbitrage_trade(ctx: Context<ArbitrageTrade>, params: Vec<TradeParams>, min_profit: u64) -> Result<()> {
+pub fn arbitrage_trade(ctx: Context<ArbitrageTrade>, params: Vec<TradeParams>, min_profit: u64) -> anchor_lang::Result<()> {
     let mut asset = ctx.accounts.asset;
     // 业务逻辑：多DEX路径发现与套利执行（示例：遍历所有路径，取最大利润）
     let mut best_profit = 0u64;
@@ -38,8 +37,7 @@ pub fn arbitrage_trade(ctx: Context<ArbitrageTrade>, params: Vec<TradeParams>, m
 mod tests {
     use super::*;
     use anchor_lang::prelude::*;
-    use crate::core::types::{TradeParams, AssetType};
-    use crate::state::baskets::BasketIndexState;
+    use crate::core::types::*;
 
     fn default_asset() -> BasketIndexState {
         BasketIndexState {

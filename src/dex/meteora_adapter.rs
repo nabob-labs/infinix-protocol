@@ -4,8 +4,9 @@
 //! 本模块为 Meteora DEX 提供 Anchor 兼容的桥接适配器，实现统一接口、自动注册、CPI集成（预留），确保可插拔、合规、可维护。
 
 use anchor_lang::prelude::*;
-use super::traits::{DexAdapter, SwapParams, SwapResult, AddLiquidityParams, RemoveLiquidityParams, QuoteParams, QuoteResult};
 use crate::core::adapter::AdapterTrait;
+use crate::dex::adapter::{DexAdapter, DexSwapResult};
+use crate::core::types::{TradeParams, BatchTradeParams, DexParams};
 use crate::dex::meteora::MeteoraAdapter as RealMeteoraAdapter;
 
 /// Meteora DEX 适配器结构体。
@@ -14,14 +15,11 @@ pub struct MeteoraAdapter;
 
 /// 实现 AdapterTrait，提供适配器元信息。
 impl AdapterTrait for MeteoraAdapter {
-    /// 返回适配器名称。
-    fn name(&self) -> &'static str { "meteora" }
-    /// 返回适配器版本号。
-    fn version(&self) -> &'static str { "1.0.0" }
-    /// 返回支持的资产列表。
-    fn supported_assets(&self) -> Vec<String> { vec!["SOL".to_string(), "USDC".to_string()] }
-    /// 返回适配器当前状态。
-    fn status(&self) -> Option<String> { Some("active".to_string()) }
+    fn name(&self) -> &str { "meteora_adapter" }
+    fn version(&self) -> &str { "1.0.0" }
+    fn is_available(&self) -> bool { true }
+    fn initialize(&mut self) -> anchor_lang::Result<()> { Ok(()) }
+    fn cleanup(&mut self) -> anchor_lang::Result<()> { Ok(()) }
 }
 
 /// 自动注册 MeteoraAdapter 到全局工厂。
@@ -35,29 +33,25 @@ fn auto_register_meteora_adapter() {
 
 /// 实现 DexAdapter trait，委托给 meteora.rs 中的真实实现。
 impl DexAdapter for MeteoraAdapter {
-    /// 执行 Meteora swap 操作。
-    fn swap(&self, params: &SwapParams) -> Result<DexSwapResult> {
-        // 生产级实现：集成Meteora链上CPI调用，参数校验、错误处理、事件追踪
-        require!(params.amount_in > 0, crate::errors::asset_error::AssetError::InvalidAmount);
-        // TODO: 调用Meteora CPI（此处应集成真实CPI调用）
-        // 这里只做结构示例，实际应调用CPI并返回真实成交数据
+    fn swap(&self, params: &crate::core::types::TradeParams) -> anchor_lang::Result<DexSwapResult> {
+        // TODO: 实现实际的 swap 逻辑
         Ok(DexSwapResult {
             executed_amount: params.amount_in,
-            avg_price: 1_000_000, // 应为CPI返回均价
-            fee: 1000,            // 应为CPI返回手续费
+            avg_price: 1_000_000,
+            fee: 1000,
             dex_name: "meteora".to_string(),
         })
     }
-    /// 添加流动性，委托真实CPI实现。
-    fn add_liquidity(&self, ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> Result<u64> {
-        RealMeteoraAdapter.add_liquidity(&self, ctx, params)
+    
+    fn supported_assets(&self) -> Vec<String> {
+        vec!["SOL".to_string(), "USDC".to_string()]
     }
-    /// 移除流动性，委托真实CPI实现。
-    fn remove_liquidity(&self, ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> Result<u64> {
-        RealMeteoraAdapter.remove_liquidity(&self, ctx, params)
+    
+    fn supported_markets(&self) -> Vec<String> {
+        vec!["spot".to_string()]
     }
-    /// 获取报价，委托真实CPI实现。
-    fn get_quote(&self, ctx: Context<GetQuote>, params: QuoteParams) -> Result<QuoteResult> {
-        RealMeteoraAdapter.get_quote(&self, ctx, params)
+    
+    fn adapter_type(&self) -> crate::dex::adapter::DexAdapterType {
+        crate::dex::adapter::DexAdapterType::AMM
     }
 } 

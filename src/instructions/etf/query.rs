@@ -2,8 +2,7 @@
 //! ETF查询指令实现，支持多种查询功能和数据聚合。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
-use crate::core::types::{AssetType, QueryParams};
+use crate::core::types::*;
 use crate::services::etf_service::EtfService;
 use crate::oracles::traits::{OracleAdapter, OracleParams};
 use crate::dex::adapter::DexAdapter;
@@ -82,7 +81,7 @@ pub struct EtfQueryResult {
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - params: 查询参数
 /// - 返回: 查询结果
-pub fn query_etf(ctx: Context<QueryEtf>, params: QueryEtfParams) -> Result<EtfQueryResult> {
+pub fn query_etf(ctx: Context<QueryEtf>, params: QueryEtfParams) -> anchor_lang::Result<EtfQueryResult> {
     let etf = &ctx.accounts.etf;
     
     // 验证资产类型

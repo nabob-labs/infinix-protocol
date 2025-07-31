@@ -3,7 +3,6 @@
 //! RWA资产批量合并指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::BatchTradeParams;
 
 /// RWA资产批量合并指令账户上下文
@@ -18,18 +17,18 @@ pub struct BatchCombineRwa<'info> {
 }
 
 /// RWA资产批量合并指令实现
-pub fn batch_combine_rwa(ctx: Context<BatchCombineRwa>, params: BatchTradeParams) -> Result<()> {
+pub fn batch_combine_rwa(ctx: Context<BatchCombineRwa>, params: BatchTradeParams) -> anchor_lang::Result<()> {
     let target = &mut ctx.accounts.target;
     let source_rwas = &mut ctx.accounts.source_rwas;
     target.validate()?;
     for source in source_rwas.iter_mut() {
         source.validate()?;
     }
-    require!(target.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+    require!(target.asset_type == crate::core::types::AssetType::RWA, ProgramError::InvalidAssetType);
     for source in source_rwas.iter() {
-        require!(source.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(source.asset_type == crate::core::types::AssetType::RWA, ProgramError::InvalidAssetType);
     }
-    require_keys_eq!(ctx.accounts.authority.key(), target.authority, crate::error::ProgramError::InvalidAuthority);
+    require_keys_eq!(ctx.accounts.authority.key(), target.authority, ProgramError::InvalidAuthority);
     let mut source_refs: Vec<&mut BasketIndexState> = source_rwas.iter_mut().map(|a| a.as_mut()).collect();
     // 业务逻辑：批量合并
     // TODO: 调用RwaService::batch_combine(target, &mut source_refs, &params, ctx.accounts.authority.key())

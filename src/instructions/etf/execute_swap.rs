@@ -3,8 +3,7 @@
 //! ETF资产执行swap指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
-use crate::core::types::{TradeParams, OracleParams};
+use crate::core::types::*;
 use crate::services::portfolio_service::PortfolioServiceFacade;
 
 /// ETF资产执行swap指令账户上下文
@@ -19,14 +18,14 @@ pub struct ExecuteSwapEtf<'info> {
 }
 
 /// ETF资产执行swap指令实现
-pub fn execute_swap_etf(ctx: Context<ExecuteSwapEtf>, from_amount: u64, to_amount: u64, params: TradeParams, price_params: OracleParams) -> Result<()> {
+pub fn execute_swap_etf(ctx: Context<ExecuteSwapEtf>, from_amount: u64, to_amount: u64, params: TradeParams, price_params: OracleParams) -> anchor_lang::Result<()> {
     let from = &mut ctx.accounts.from;
     let to = &mut ctx.accounts.to;
     from.validate()?;
     to.validate()?;
-    require!(from.asset_type == crate::core::types::AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
-    require!(to.asset_type == crate::core::types::AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
-    require_keys_eq!(from.authority, ctx.accounts.authority.key(), crate::error::ProgramError::InvalidAuthority);
+    require!(from.asset_type == crate::core::types::AssetType::ETF, ProgramError::InvalidAssetType);
+    require!(to.asset_type == crate::core::types::AssetType::ETF, ProgramError::InvalidAssetType);
+    require_keys_eq!(from.authority, ctx.accounts.authority.key(), ProgramError::InvalidAuthority);
     // 业务逻辑：调用服务层执行swap
     let facade = PortfolioServiceFacade::new();
     facade.asset_manage.execute_swap(from, to, from_amount, to_amount, &params, &price_params, ctx.accounts.authority.key())?;

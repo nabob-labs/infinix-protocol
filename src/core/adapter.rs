@@ -15,9 +15,9 @@ pub trait AdapterTrait {
     /// 检查适配器是否可用。
     fn is_available(&self) -> bool;
     /// 执行适配器初始化逻辑。
-    fn initialize(&mut self) -> Result<()>;
+    fn initialize(&mut self) -> anchor_lang::Result<()>;
     /// 执行适配器清理逻辑。
-    fn cleanup(&mut self) -> Result<()>;
+    fn cleanup(&mut self) -> anchor_lang::Result<()>;
 }
 
 /// 适配器元信息结构体。

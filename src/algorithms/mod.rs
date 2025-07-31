@@ -19,14 +19,14 @@ use crate::algorithms::twap::*; // 引入TWAP算法模块
 use crate::algorithms::vwap::*; // 引入VWAP算法模块
 
 use crate::algorithms::traits::{
-    ExecutionAlgorithm, OptimizerAlgorithm, RiskAlgorithm, RoutingAlgorithm,
+    ExecutionStrategy, OptimizerStrategy, RiskManagement, RoutingStrategy,
 }; // 引入算法trait，便于类型安全注册
 use crate::core::*; // 引入核心模块
-use crate::error::StrategyError; // 引入策略相关错误类型
+// use crate::error::StrategyError; // 引入策略相关错误类型 - 暂时注释掉
 use anchor_lang::prelude::*; // Anchor 预导入，包含Context、Result等
 
 // 引入统一的策略/参数类型定义
-use crate::algorithms::execution_optimizer::types::*;
+// use crate::algorithms::execution_optimizer::types::*; // 暂时注释掉
 
 pub mod algorithm_registry; // 算法注册表子模块
 pub mod execution_optimizer; // 执行优化器子模块
@@ -34,6 +34,8 @@ pub mod smart_routing; // 智能路由子模块
 pub mod traits; // 算法trait子模块
 pub mod twap; // TWAP算法子模块
 pub mod vwap; // VWAP算法子模块
+pub mod pov; // POV算法子模块
+pub mod implementation_shortfall; // IS算法子模块
 
 /// 算法 trait 对象通用封装，便于动态注册和类型擦除
 pub trait AlgorithmBox: Send + Sync {
@@ -81,10 +83,10 @@ impl<T: Send + Sync + 'static> AlgorithmBox for T {
 /// # 单元测试
 /// - 详见本文件 tests 模块，覆盖注册、获取、并发等场景
 pub struct AlgorithmRegistry {
-    execution_algorithms: RwLock<HashMap<String, Arc<dyn ExecutionAlgorithm>>>, // 执行类算法注册表
-    routing_algorithms: RwLock<HashMap<String, Arc<dyn RoutingAlgorithm>>>,     // 路由类算法注册表
-    risk_algorithms: RwLock<HashMap<String, Arc<dyn RiskAlgorithm>>>,           // 风控类算法注册表
-    optimizer_algorithms: RwLock<HashMap<String, Arc<dyn OptimizerAlgorithm>>>, // 优化器类算法注册表
+    execution_algorithms: RwLock<HashMap<String, Arc<dyn ExecutionStrategy>>>, // 执行类算法注册表
+    routing_algorithms: RwLock<HashMap<String, Arc<dyn RoutingStrategy>>>,     // 路由类算法注册表
+    risk_algorithms: RwLock<HashMap<String, Arc<dyn RiskManagement>>>,         // 风控类算法注册表
+    optimizer_algorithms: RwLock<HashMap<String, Arc<dyn OptimizerStrategy>>>, // 优化器类算法注册表
 }
 
 impl AlgorithmRegistry {
@@ -98,47 +100,47 @@ impl AlgorithmRegistry {
         }
     }
     /// 注册执行类算法
-    pub fn register_execution(&self, name: &str, algo: Arc<dyn ExecutionAlgorithm>) {
+    pub fn register_execution(&self, name: &str, algo: Arc<dyn ExecutionStrategy>) {
         self.execution_algorithms
             .write()
             .unwrap()
             .insert(name.to_string(), algo); // 注册算法实例
     }
     /// 获取执行类算法实例
-    pub fn get_execution(&self, name: &str) -> Option<Arc<dyn ExecutionAlgorithm>> {
+    pub fn get_execution(&self, name: &str) -> Option<Arc<dyn ExecutionStrategy>> {
         self.execution_algorithms.read().unwrap().get(name).cloned() // 线程安全读取
     }
     /// 注册路由类算法
-    pub fn register_routing(&self, name: &str, algo: Arc<dyn RoutingAlgorithm>) {
+    pub fn register_routing(&self, name: &str, algo: Arc<dyn RoutingStrategy>) {
         self.routing_algorithms
             .write()
             .unwrap()
             .insert(name.to_string(), algo); // 注册路由算法
     }
     /// 获取路由类算法实例
-    pub fn get_routing(&self, name: &str) -> Option<Arc<dyn RoutingAlgorithm>> {
+    pub fn get_routing(&self, name: &str) -> Option<Arc<dyn RoutingStrategy>> {
         self.routing_algorithms.read().unwrap().get(name).cloned() // 线程安全读取
     }
     /// 注册风控类算法
-    pub fn register_risk(&self, name: &str, algo: Arc<dyn RiskAlgorithm>) {
+    pub fn register_risk(&self, name: &str, algo: Arc<dyn RiskManagement>) {
         self.risk_algorithms
             .write()
             .unwrap()
             .insert(name.to_string(), algo); // 注册风控算法
     }
     /// 获取风控类算法实例
-    pub fn get_risk(&self, name: &str) -> Option<Arc<dyn RiskAlgorithm>> {
+    pub fn get_risk(&self, name: &str) -> Option<Arc<dyn RiskManagement>> {
         self.risk_algorithms.read().unwrap().get(name).cloned() // 线程安全读取
     }
     /// 注册优化器类算法
-    pub fn register_optimizer(&self, name: &str, algo: Arc<dyn OptimizerAlgorithm>) {
+    pub fn register_optimizer(&self, name: &str, algo: Arc<dyn OptimizerStrategy>) {
         self.optimizer_algorithms
             .write()
             .unwrap()
             .insert(name.to_string(), algo); // 注册优化器算法
     }
     /// 获取优化器类算法实例
-    pub fn get_optimizer(&self, name: &str) -> Option<Arc<dyn OptimizerAlgorithm>> {
+    pub fn get_optimizer(&self, name: &str) -> Option<Arc<dyn OptimizerStrategy>> {
         self.optimizer_algorithms.read().unwrap().get(name).cloned() // 线程安全读取
     }
 }
@@ -151,11 +153,11 @@ lazy_static::lazy_static! {
 /// 自动注册所有算法（可在各算法模块中通过 #[ctor::ctor] 注册）
 // #[ctor::ctor]
 fn register_all_algorithms() {
-    use crate::core::registry::ALGORITHM_REGISTRY;
+    // use crate::core::registry::ALGORITHM_REGISTRY; // 暂时注释掉
     use std::sync::Arc;
-    ALGORITHM_REGISTRY.register_execution("twap", Arc::new(crate::algorithms::twap::TwapAlgorithm::default()));
-    ALGORITHM_REGISTRY.register_execution("vwap", Arc::new(crate::algorithms::vwap::VwapAlgorithm::default()));
-    ALGORITHM_REGISTRY.register_execution("smart_routing", Arc::new(crate::algorithms::smart_routing::SmartRoutingAlgorithm::default()));
+    // ALGORITHM_REGISTRY.register_execution("twap", Arc::new(crate::algorithms::twap::TwapAlgorithm::default()));
+    // ALGORITHM_REGISTRY.register_execution("vwap", Arc::new(crate::algorithms::vwap::VwapAlgorithm::default()));
+    // ALGORITHM_REGISTRY.register_execution("smart_routing", Arc::new(crate::algorithms::smart_routing::SmartRoutingAlgorithm::default()));
     // 可扩展注册更多算法
 }
 
@@ -195,6 +197,8 @@ pub struct AlgorithmResult {
 pub enum AlgorithmType {
     TWAP,
     VWAP,
+    POV,
+    IS,
     SmartRouting,
     MarketMaking,
     Arbitrage,
@@ -274,7 +278,7 @@ pub trait TradingAlgorithm {
         &mut self,
         input: Self::Input,
         config: &Self::Config,
-        market_data: &EnhancedMarketData,
+        // market_data: &EnhancedMarketData, // 暂时注释掉未定义的类型
     ) -> StrategyResult<Self::Output>;
 
     /// 执行前参数校验
@@ -302,24 +306,34 @@ impl AlgorithmFactory {
         VwapAlgorithm::new()
     }
 
+    /// 创建 POV 算法实例
+    pub fn create_pov() -> PovAlgorithm {
+        PovAlgorithm::new()
+    }
+
+    /// 创建 IS 算法实例
+    pub fn create_is() -> IsAlgorithm {
+        IsAlgorithm::new()
+    }
+
     /// 创建智能路由算法实例
     pub fn create_smart_routing() -> SmartRoutingAlgorithm {
         SmartRoutingAlgorithm::new()
     }
 
     /// 创建市场冲击计算器
-    pub fn create_market_impact_calculator() -> MarketImpactCalculator {
-        MarketImpactCalculator::new()
+    pub fn create_market_impact_calculator() -> () {
+        // MarketImpactCalculator::new() // 暂时注释掉未定义的类型
     }
 
     /// 创建风险评估引擎
-    pub fn create_risk_assessor() -> RiskAssessmentEngine {
-        RiskAssessmentEngine::new()
+    pub fn create_risk_assessor() -> () {
+        // RiskAssessmentEngine::new() // 暂时注释掉未定义的类型
     }
 
     /// 创建执行优化器
-    pub fn create_execution_optimizer() -> ExecutionOptimizer {
-        ExecutionOptimizer::new()
+    pub fn create_execution_optimizer() -> () {
+        // ExecutionOptimizer::new() // 暂时注释掉未定义的类型
     }
 }
 

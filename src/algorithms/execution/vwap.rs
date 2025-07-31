@@ -91,7 +91,7 @@ impl ExecutionStrategy for VwapImpl {
     /// - 参数 ctx: Anchor 上下文，包含账户、权限等
     /// - 参数 params: 执行参数（订单量、滑点等）
     /// - 返回 ExecutionResult，包含优化后成交量、预期成本等
-    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &ExecutionParams) -> Result<ExecutionResult> {
+    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &ExecutionParams) -> anchor_lang::Result<ExecutionResult> {
         if params.order_size == 0 || params.slippage_tolerance == 0 {
             return Err(AlgorithmError::InvalidInput.into()); // 输入参数校验，订单量和滑点必须大于0，防止无效或恶意调用
         }
@@ -135,7 +135,7 @@ mod tests {
     fn test_vwap_basic() {
         let algo = VwapImpl; // 创建VWAP算法实例
         let params = ExecutionParams { order_size: 100, slippage_tolerance: 100 }; // 有效参数
-        let result = algo.execute(Context::default(), &params).unwrap(); // 执行算法，校验无错误
+        let result = algo.execute(anchor_lang::prelude::Context::default(), &params).unwrap(); // 执行算法，校验无错误
         assert_eq!(result.optimized_size, 100); // 校验成交量，确保算法正确
         assert_eq!(result.expected_cost, 100 * 1_000_000); // 校验成本，确保算法正确
     }
@@ -144,6 +144,6 @@ mod tests {
     fn test_vwap_empty() {
         let algo = VwapImpl; // 创建VWAP算法实例
         let params = ExecutionParams { order_size: 0, slippage_tolerance: 0 }; // 无效参数
-        assert!(algo.execute(Context::default(), &params).is_err()); // 应返回错误，防止无效输入
+        assert!(algo.execute(anchor_lang::prelude::Context::default(), &params).is_err()); // 应返回错误，防止无效输入
     }
 } 

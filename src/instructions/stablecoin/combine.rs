@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stablecoin_service::StablecoinService;
 use crate::events::asset_event::AssetCombined;
@@ -20,10 +19,10 @@ pub struct CombineStablecoin<'info> {
 /// Stablecoin资产combine指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 合并数量，类型安全
-pub fn combine_stablecoin(ctx: Context<CombineStablecoin>, amount: u64) -> Result<()> {
+pub fn combine_stablecoin(ctx: Context<CombineStablecoin>, amount: u64) -> anchor_lang::Result<()> {
     let target = &mut ctx.accounts.target_stablecoin;
     let source = &mut ctx.accounts.source_stablecoin;
-    require!(target.asset_type == AssetType::Stablecoin && source.asset_type == AssetType::Stablecoin, crate::error::ProgramError::InvalidAssetType);
+    require!(target.asset_type == AssetType::Stablecoin && source.asset_type == AssetType::Stablecoin, ProgramError::InvalidAssetType);
     let service = StablecoinService::new();
     service.combine(target, source, amount)?;
     emit!(AssetCombined {

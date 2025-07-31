@@ -2,13 +2,10 @@
 //! Basket Sell Instruction
 //! 篮子卖出指令最小功能单元实现，严格遵循Anchor规范、SOLID原则、分层设计、接口清晰、类型安全、事件追踪、权限校验、生命周期管理、错误处理、逐行注释，生产级代码质量。
 
-use crate::accounts::BasketIndexStateAccount; // 引入资产篮子账户状态账户定义
 use crate::events::basket_event::*; // 引入所有篮子相关事件定义，便于emit!宏调用
-use crate::services::basket_service::BasketService; // 引入篮子服务层，封装核心业务逻辑
-use crate::state::baskets::BasketIndexState; // 引入资产篮子状态结构体，类型安全
-use crate::validation::basket_validation::BasketValidatable; // 引入篮子校验trait，便于状态校验
-use crate::core::types::{TradeParams, StrategyParams, OracleParams, AlgoParams}; // 引入核心参数类型
-use crate::core::registry::ADAPTER_FACTORY; // 引入全局适配器工厂
+use crate::services::basket_service::BasketServiceFacade; // 引入篮子服务层，封装核心业务逻辑
+use crate::core::types::*; // 引入核心参数类型
+use crate::state::baskets::BasketIndexState; // 篮子状态类型
 use anchor_lang::prelude::*; // Anchor预导出内容，包含Context、Account、Signer、Result等
 
 /// 篮子卖出指令账户上下文
@@ -35,40 +32,40 @@ pub fn sell_basket(
     price_params: OracleParams,
     exec_params: Option<AlgoParams>,
     strategy_params: Option<StrategyParams>,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     let basket_index = &mut ctx.accounts.basket_index;
     basket_index.validate()?;
     // 1. 算法执行（如有）
     let mut exec_result = None;
     if let Some(exec_params) = &exec_params {
         if let Some(algo_name) = &exec_params.algo_name {
-            let factory = ADAPTER_FACTORY.lock().unwrap();
-            if let Some(algo) = factory.get(algo_name) {
-                if let Some(exec_strategy) = algo.as_any().downcast_ref::<Arc<dyn crate::algorithms::traits::ExecutionStrategy>>() {
-                    // exec_result = Some(exec_strategy.execute(ctx, &exec_params.algo_params)?);
-                }
-            }
+            // let factory = ADAPTER_FACTORY.lock().unwrap();
+            // if let Some(algo) = factory.get(algo_name) {
+            //     if let Some(exec_strategy) = algo.as_any().downcast_ref::<Arc<dyn crate::algorithms::traits::ExecutionStrategy>>() {
+            //         // exec_result = Some(exec_strategy.execute(ctx, &exec_params.algo_params)?);
+            //     }
+            // }
         }
     }
     // 2. 预言机价格（如有）
     let mut price = price_params.price;
     if let Some(oracle_name) = &price_params.oracle_name {
-        let factory = ADAPTER_FACTORY.lock().unwrap();
-        if let Some(adapter) = factory.get(oracle_name) {
-            if let Some(oracle_adapter) = adapter.as_any().downcast_ref::<Arc<dyn crate::oracles::traits::OracleAdapter>>() {
-                // let oracle_result = oracle_adapter.get_price(&price_params)?;
-                // price = oracle_result.price;
-            }
-        }
+        // let factory = ADAPTER_FACTORY.lock().unwrap();
+        // if let Some(adapter) = factory.get(oracle_name) {
+        //     if let Some(oracle_adapter) = adapter.as_any().downcast_ref::<Arc<dyn crate::oracles::traits::OracleAdapter>>() {
+        //         // let oracle_result = oracle_adapter.get_price(&price_params)?;
+        //         // price = oracle_result.price;
+        //     }
+        // }
     }
     // 3. DEX/AMM swap（如有）
     if let Some(dex_name) = &params.dex_name {
-        let factory = ADAPTER_FACTORY.lock().unwrap();
-        if let Some(adapter) = factory.get(dex_name) {
-            if let Some(dex_adapter) = adapter.as_any().downcast_ref::<Arc<dyn crate::dex::traits::DexAdapter>>() {
-                // let swap_result = dex_adapter.swap(&params)?;
-            }
-        }
+        // let factory = ADAPTER_FACTORY.lock().unwrap();
+        // if let Some(adapter) = factory.get(dex_name) {
+        //     if let Some(dex_adapter) = adapter.as_any().downcast_ref::<Arc<dyn crate::dex::traits::DexAdapter>>() {
+        //         // let swap_result = dex_adapter.swap(&params)?;
+        //     }
+        // }
     }
     // 4. 策略融合（如有）
     if let Some(strategy_params) = &strategy_params {

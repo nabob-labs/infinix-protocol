@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::rwa_service::RwaService;
 use crate::events::asset_event::AssetCombined;
@@ -20,10 +19,10 @@ pub struct CombineRwa<'info> {
 /// RWA资产combine指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 合并数量，类型安全
-pub fn combine_rwa(ctx: Context<CombineRwa>, amount: u64) -> Result<()> {
+pub fn combine_rwa(ctx: Context<CombineRwa>, amount: u64) -> anchor_lang::Result<()> {
     let target = &mut ctx.accounts.target_rwa;
     let source = &mut ctx.accounts.source_rwa;
-    require!(target.asset_type == AssetType::RWA && source.asset_type == AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+    require!(target.asset_type == AssetType::RWA && source.asset_type == AssetType::RWA, ProgramError::InvalidAssetType);
     let service = RwaService::new();
     service.combine(target, source, amount)?;
     emit!(AssetCombined {

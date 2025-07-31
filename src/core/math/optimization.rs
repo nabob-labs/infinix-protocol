@@ -4,7 +4,7 @@
 //! 本文件实现Optimization结构体及其所有数值优化方法，严格遵循Rust、Anchor、SOLID最佳实践，
 //! 并逐行专业注释，便于审计、维护、扩展。
 
-use crate::error::StrategyError;
+use crate::errors::strategy_error::StrategyError;
 use anchor_lang::prelude::*;
 
 /// 数值优化工具结构体
@@ -13,9 +13,9 @@ pub struct Optimization;
 
 impl Optimization {
     /// 黄金分割法一维极值搜索
-    pub fn golden_section_search<F>(f: F, a: Decimal, b: Decimal, tolerance: Decimal) -> Result<Decimal>
+    pub fn golden_section_search<F>(f: F, a: Decimal, b: Decimal, tolerance: Decimal) -> anchor_lang::Result<Decimal>
     where
-        F: Fn(Decimal) -> Result<Decimal>,
+        F: Fn(Decimal) -> anchor_lang::Result<Decimal>,
     {
         let phi = (1.0 + 5.0_f64.sqrt()) / 2.0;
         let mut a = a;
@@ -37,10 +37,10 @@ impl Optimization {
     }
 
     /// 牛顿法一维极值搜索
-    pub fn newton_method<F, G>(f: F, df: G, initial_guess: Decimal, tolerance: Decimal, max_iterations: u32) -> Result<Decimal>
+    pub fn newton_method<F, G>(f: F, df: G, initial_guess: Decimal, tolerance: Decimal, max_iterations: u32) -> anchor_lang::Result<Decimal>
     where
-        F: Fn(Decimal) -> Result<Decimal>,
-        G: Fn(Decimal) -> Result<Decimal>,
+        F: Fn(Decimal) -> anchor_lang::Result<Decimal>,
+        G: Fn(Decimal) -> anchor_lang::Result<Decimal>,
     {
         let mut x = initial_guess;
         for _ in 0..max_iterations {
@@ -59,9 +59,9 @@ impl Optimization {
     }
 
     /// 二分法一维极值搜索
-    pub fn bisection_method<F>(f: F, a: Decimal, b: Decimal, tolerance: Decimal) -> Result<Decimal>
+    pub fn bisection_method<F>(f: F, a: Decimal, b: Decimal, tolerance: Decimal) -> anchor_lang::Result<Decimal>
     where
-        F: Fn(Decimal) -> Result<Decimal>,
+        F: Fn(Decimal) -> anchor_lang::Result<Decimal>,
     {
         let mut a = a;
         let mut b = b;

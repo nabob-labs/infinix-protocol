@@ -16,9 +16,9 @@ impl RwaService {
     /// RWA资产mint最小功能单元
     /// - basket: RWA资产账户，需可变
     /// - amount: 增发数量，类型安全
-    pub fn mint(&self, basket: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn mint(&self, basket: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 增发操作，防止溢出
@@ -29,9 +29,9 @@ impl RwaService {
     /// RWA资产burn最小功能单元
     /// - basket: RWA资产账户，需可变
     /// - amount: 销毁数量，类型安全
-    pub fn burn(&self, basket: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn burn(&self, basket: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -44,9 +44,9 @@ impl RwaService {
     /// RWA资产buy最小功能单元
     /// - basket: RWA资产账户，需可变
     /// - amount: 买入数量，类型安全
-    pub fn buy(&self, basket: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn buy(&self, basket: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 买入操作，防止溢出
@@ -57,9 +57,9 @@ impl RwaService {
     /// RWA资产sell最小功能单元
     /// - basket: RWA资产账户，需可变
     /// - amount: 卖出数量，类型安全
-    pub fn sell(&self, basket: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn sell(&self, basket: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -73,9 +73,9 @@ impl RwaService {
     /// - from: 转出RWA资产账户，需可变
     /// - to: 转入RWA资产账户，需可变
     /// - amount: 转账数量，类型安全
-    pub fn transfer(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn transfer(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(from.asset_type == crate::core::types::AssetType::RWA && to.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(from.asset_type == crate::core::types::AssetType::RWA && to.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(from.is_active && to.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -90,9 +90,9 @@ impl RwaService {
     /// - from: 转出RWA资产账户，需可变
     /// - to: 转入RWA资产账户，需可变
     /// - from_amount: 转出数量，类型安全
-    pub fn swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64) -> Result<()> {
+    pub fn swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(from.asset_type == crate::core::types::AssetType::RWA && to.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(from.asset_type == crate::core::types::AssetType::RWA && to.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(from.is_active && to.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验余额充足
@@ -107,9 +107,9 @@ impl RwaService {
     /// - target: 目标RWA资产账户，需可变
     /// - source: 源RWA资产账户，需可变
     /// - amount: 合并数量，类型安全
-    pub fn combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(target.asset_type == crate::core::types::AssetType::RWA && source.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(target.asset_type == crate::core::types::AssetType::RWA && source.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(target.is_active && source.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验源账户余额充足
@@ -124,9 +124,9 @@ impl RwaService {
     /// - source: 源RWA资产账户，需可变
     /// - new: 新RWA资产账户，需可变
     /// - amount: 拆分数量，类型安全
-    pub fn split(&self, source: &mut BasketIndexState, new: &mut BasketIndexState, amount: u64) -> Result<()> {
+    pub fn split(&self, source: &mut BasketIndexState, new: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(source.asset_type == crate::core::types::AssetType::RWA && new.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(source.asset_type == crate::core::types::AssetType::RWA && new.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(source.is_active && new.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 校验源账户余额充足
@@ -139,9 +139,9 @@ impl RwaService {
 
     /// RWA资产freeze最小功能单元
     /// - basket: RWA资产账户，需可变
-    pub fn freeze(&self, basket: &mut BasketIndexState) -> Result<()> {
+    pub fn freeze(&self, basket: &mut BasketIndexState) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户激活状态
         require!(basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 冻结操作
@@ -151,9 +151,9 @@ impl RwaService {
 
     /// RWA资产unfreeze最小功能单元
     /// - basket: RWA资产账户，需可变
-    pub fn unfreeze(&self, basket: &mut BasketIndexState) -> Result<()> {
+    pub fn unfreeze(&self, basket: &mut BasketIndexState) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 校验账户冻结状态
         require!(!basket.is_active, crate::errors::asset_error::AssetError::NotAllowed);
         // 解冻操作
@@ -164,9 +164,9 @@ impl RwaService {
     /// RWA资产authorize最小功能单元
     /// - basket: RWA资产账户，需可变
     /// - new_authority: 新授权人公钥
-    pub fn authorize(&self, basket: &mut BasketIndexState, new_authority: Pubkey) -> Result<()> {
+    pub fn authorize(&self, basket: &mut BasketIndexState, new_authority: Pubkey) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 授权操作
         basket.authority = new_authority;
         Ok(())
@@ -174,18 +174,18 @@ impl RwaService {
 
     /// RWA资产query最小功能单元
     /// - basket: RWA资产账户，只读
-    pub fn query(&self, basket: &BasketIndexState) -> Result<u64> {
+    pub fn query(&self, basket: &BasketIndexState) -> anchor_lang::Result<u64> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         Ok(basket.total_value)
     }
 
     /// RWA资产quote最小功能单元
     /// - basket: RWA资产账户，只读
     /// - price_params: 价格参数
-    pub fn quote(&self, basket: &BasketIndexState, price_params: crate::core::types::PriceParams) -> Result<u64> {
+    pub fn quote(&self, basket: &BasketIndexState, price_params: crate::core::types::PriceParams) -> anchor_lang::Result<u64> {
         // 校验资产类型
-        require!(basket.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(basket.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         // 这里可集成预言机/外部价格逻辑，当前直接返回price_params.price
         Ok(price_params.price)
     }
@@ -195,14 +195,14 @@ impl RwaService {
     /// - to_rwas: 批量转入RWA资产账户，需可变
     /// - params: 批量参数
     /// - authority: 操作人公钥
-    pub fn batch_transfer(&self, from: &mut BasketIndexState, to_rwas: &mut [BasketIndexState], params: &crate::core::types::BatchSwapParams, authority: Pubkey) -> Result<()> {
+    pub fn batch_transfer(&self, from: &mut BasketIndexState, to_rwas: &mut [BasketIndexState], params: &crate::core::types::BatchSwapParams, authority: Pubkey) -> anchor_lang::Result<()> {
         // 校验资产类型
-        require!(from.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+        require!(from.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         for to in to_rwas.iter() {
-            require!(to.asset_type == crate::core::types::AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+            require!(to.asset_type == crate::core::types::AssetType::RWA, solana_program_error::ProgramError::InvalidAssetType);
         }
         // 校验批量参数长度
-        require!(params.amounts.len() == to_rwas.len(), crate::error::ProgramError::InvalidArgument);
+        require!(params.amounts.len() == to_rwas.len(), solana_program_error::ProgramError::InvalidArgument);
         // 校验余额充足
         let total: u64 = params.amounts.iter().sum();
         require!(from.total_value >= total, crate::errors::asset_error::AssetError::InsufficientValue);

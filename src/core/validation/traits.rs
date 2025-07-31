@@ -5,13 +5,13 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::error::StrategyError;
+use crate::errors::strategy_error::StrategyError;
 
 /// 通用校验 trait
 /// - 支持参数/状态/业务等多场景可插拔校验器
 pub trait Validator<T>: Send + Sync {
     /// 校验 value 是否满足约束，失败返回 Err
-    fn validate(&self, value: &T) -> Result<()>;
+    fn validate(&self, value: &T) -> anchor_lang::Result<()>;
 }
 
 /// 校验器注册表
@@ -32,7 +32,7 @@ impl<T> ValidatorRegistry<T> {
         self.validators.push(validator);
     }
     /// 依次校验所有注册校验器
-    pub fn validate_all(&self, value: &T) -> Result<()> {
+    pub fn validate_all(&self, value: &T) -> anchor_lang::Result<()> {
         for v in &self.validators {
             v.validate(value)?;
         }
@@ -43,7 +43,7 @@ impl<T> ValidatorRegistry<T> {
 /// 非空校验器
 pub struct NotEmptyValidator;
 impl<T: AsRef<[U]>, U> Validator<T> for NotEmptyValidator {
-    fn validate(&self, value: &T) -> Result<()> {
+    fn validate(&self, value: &T) -> anchor_lang::Result<()> {
         if value.as_ref().is_empty() {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
@@ -57,7 +57,7 @@ pub struct RangeValidator {
     pub max: u64,
 }
 impl Validator<u64> for RangeValidator {
-    fn validate(&self, value: &u64) -> Result<()> {
+    fn validate(&self, value: &u64) -> anchor_lang::Result<()> {
         if *value < self.min || *value > self.max {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
@@ -68,7 +68,7 @@ impl Validator<u64> for RangeValidator {
 /// 权重和校验器（业务约束）
 pub struct WeightsSumValidator;
 impl Validator<Vec<u64>> for WeightsSumValidator {
-    fn validate(&self, value: &Vec<u64>) -> Result<()> {
+    fn validate(&self, value: &Vec<u64>) -> anchor_lang::Result<()> {
         if value.iter().sum::<u64>() != 10_000 {
             return Err(StrategyError::InvalidWeightSum.into());
         }

@@ -2,7 +2,7 @@
 // 生产级实现，完整实现DexAdapterTrait，所有方法均逐行专业注释
 
 use anchor_lang::prelude::*;
-use crate::core::types::{AssetType, DexAdapterTrait};
+// use crate::core::types: // 暂时注释掉:{AssetType, DexAdapterTrait};
 use crate::dex::traits::*;
 
 /// RaydiumAdapter结构体，代表Raydium DEX/AMM适配器
@@ -25,20 +25,20 @@ impl RaydiumAdapter {
 
 impl DexAdapter for RaydiumAdapter {
     /// 执行swap（mock实现，实际应调用Raydium CPI）
-    fn swap(&self, _ctx: Context<Swap>, params: SwapParams) -> Result<SwapResult> {
+    fn swap(&self, _ctx: Context<Swap>, params: SwapParams) -> anchor_lang::Result<SwapResult> {
         let amount_out = params.amount_in; // 假定1:1兑换
         Ok(SwapResult { amount_out, fee: 0 })
     }
     /// 添加流动性（mock实现）
-    fn add_liquidity(&self, _ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> Result<u64> {
+    fn add_liquidity(&self, _ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> anchor_lang::Result<u64> {
         Ok(params.amount)
     }
     /// 移除流动性（mock实现）
-    fn remove_liquidity(&self, _ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> Result<u64> {
+    fn remove_liquidity(&self, _ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> anchor_lang::Result<u64> {
         Ok(params.amount)
     }
     /// 获取报价（mock实现）
-    fn get_quote(&self, _ctx: Context<GetQuote>, params: QuoteParams) -> Result<QuoteResult> {
+    fn get_quote(&self, _ctx: Context<GetQuote>, params: QuoteParams) -> anchor_lang::Result<QuoteResult> {
         Ok(QuoteResult { amount_out: params.amount_in, fee: 0 })
     }
     /// 查询支持的资产类型

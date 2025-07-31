@@ -5,8 +5,8 @@
 //! 并实现注册表、自动注册宏、Mock 适配器等，确保生产级集成、测试与合规。
 
 use anchor_lang::prelude::*; // Anchor 预导入，包含 Result、msg!、账户声明等
-use crate::core::adapter::AdapterTrait; // AdapterTrait：所有适配器的基础 trait，统一元信息接口
-use crate::core::types::{TradeParams, BatchTradeParams, DexParams}; // 交易参数、批量参数、配置参数类型
+use crate::core::adapter::AdapterTrait;
+use crate::core::types::{TradeParams, BatchTradeParams, DexParams};
 use std::collections::HashMap; // HashMap：适配器名称到实例的映射
 use std::sync::{Arc, RwLock}; // Arc/RwLock：线程安全全局注册表
 
@@ -111,10 +111,11 @@ macro_rules! auto_register_dex_adapter {
 /// Mock DEX 适配器示例，实现 AdapterTrait 与 DexAdapter。
 pub struct MockDexAdapter;
 impl AdapterTrait for MockDexAdapter {
-    fn name(&self) -> &'static str { "mock_dex" }
-    fn version(&self) -> &'static str { "1.0.0" }
-    fn supported_assets(&self) -> Vec<String> { vec!["SOL".to_string(), "USDC".to_string()] }
-    fn status(&self) -> Option<String> { Some("active".to_string()) }
+    fn name(&self) -> &str { "mock_dex" }
+    fn version(&self) -> &str { "1.0.0" }
+    fn is_available(&self) -> bool { true }
+    fn initialize(&mut self) -> anchor_lang::Result<()> { Ok(()) }
+    fn cleanup(&mut self) -> anchor_lang::Result<()> { Ok(()) }
 }
 impl DexAdapter for MockDexAdapter {
     fn swap(&self, params: &TradeParams) -> anchor_lang::Result<DexSwapResult> {

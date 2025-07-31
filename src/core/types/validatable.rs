@@ -12,32 +12,32 @@ use crate::core::types::token::{TokenInfo, WeightAllocation};
 /// 类型校验trait
 pub trait Validatable {
     /// 验证类型并返回 Result
-    fn validate(&self) -> Result<()>;
+    fn validate(&self) -> anchor_lang::Result<()>;
 }
 
 impl Validatable for RiskMetrics {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         require!(self.var_95 <= 10000 && self.var_99 <= 10000, crate::error::ErrorCode::InvalidParams);
         Ok(())
     }
 }
 
 impl Validatable for MarketData {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         require!(self.price > 0, crate::error::ErrorCode::InvalidParams);
         Ok(())
     }
 }
 
 impl Validatable for TokenInfo {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         require!(!self.symbol.is_empty(), crate::error::ErrorCode::InvalidParams);
         Ok(())
     }
 }
 
 impl Validatable for WeightAllocation {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         require!(self.weight_bps <= 10000, crate::error::ErrorCode::InvalidParams);
         Ok(())
     }

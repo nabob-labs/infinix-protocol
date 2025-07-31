@@ -3,15 +3,14 @@
 // 每个 struct、trait、impl、方法、参数、用途、边界、Anchor 相关点、事件、错误、测试等均有详细注释。
 
 use anchor_lang::prelude::*;
-use crate::core::*;
 use crate::state::common::*;
-use crate::errors::basket_error::BasketError;
+// use crate::errors::basket_error::BasketError;
 
 /// 篮子/指数代币统一状态结构体
 /// - 记录篮子资产、权重、供应、权限、费用、状态、统计、风险等
 /// - 适用于所有 Anchor 账户，支持升级、权限、激活/暂停、再平衡等
 #[account]
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, InitSpace, PartialEq, Eq)]
+#[derive(Debug, InitSpace, PartialEq, Eq)]
 pub struct BasketIndexState {
     /// 通用账户基础信息
     pub base: BaseAccount,
@@ -20,8 +19,10 @@ pub struct BasketIndexState {
     /// 资产类型（如ETF、指数、加密货币、RWA等）
     pub asset_type: crate::core::types::AssetType, // 新增字段，标识资产类型，便于多资产类型融合与扩展
     /// 资产成分（最大16种）
+    #[max_len(16)]
     pub composition: Vec<BasketConstituent>,
     /// 各资产权重（bps，最大16项）
+    #[max_len(16)]
     pub weights: Vec<u64>,
     /// 当前总价值（USDC计价）
     pub total_value: u64,
@@ -56,8 +57,10 @@ pub struct BasketIndexState {
     /// 风险指标
     pub risk_metrics: Option<RiskMetrics>,
     /// AI信号
+    #[max_len(16)]
     pub ai_signals: Option<Vec<u64>>,
     /// 外部信号
+    #[max_len(16)]
     pub external_signals: Option<Vec<u64>>,
     /// PDA bump
     pub bump: u8,
@@ -103,12 +106,12 @@ impl BasketIndexState {
         self.bump = bump;
     }
     /// 铸造新代币
-    pub fn mint_tokens(&mut self, amount: u64) -> Result<()> {
+    pub fn mint_tokens(&mut self, amount: u64) -> anchor_lang::Result<()> {
         self.total_supply = self.total_supply.checked_add(amount).ok_or(BasketError::Overflow)?;
         Ok(())
     }
     /// 销毁代币
-    pub fn burn_tokens(&mut self, amount: u64) -> Result<()> {
+    pub fn burn_tokens(&mut self, amount: u64) -> anchor_lang::Result<()> {
         require!(self.total_supply >= amount, BasketError::InsufficientValue);
         self.total_supply -= amount;
         Ok(())
@@ -117,7 +120,7 @@ impl BasketIndexState {
 
 /// 实现 NAV 计算 trait
 impl NavCalculable for BasketIndexState {
-    fn calculate_nav(&self, price_feeds: &[PriceFeed]) -> Result<u64> {
+    fn calculate_nav(&self, price_feeds: &[PriceFeed]) -> anchor_lang::Result<u64> {
         let mut total_value = 0u64;
         for constituent in &self.composition {
             if let Some(price_feed) = price_feeds.iter().find(|pf| pf.mint == constituent.token_mint) {
@@ -133,7 +136,7 @@ impl NavCalculable for BasketIndexState {
 
 /// 实现费用管理 trait
 impl FeeManageable for BasketIndexState {
-    fn collect_fees(&mut self, amount: u64) -> Result<()> {
+    fn collect_fees(&mut self, amount: u64) -> anchor_lang::Result<()> {
         self.total_value = self.total_value.checked_add(amount).ok_or(BasketError::Overflow)?;
         Ok(())
     }
@@ -141,7 +144,7 @@ impl FeeManageable for BasketIndexState {
 
 /// 实现再平衡 trait
 impl Rebalancable for BasketIndexState {
-    fn rebalance(&mut self, new_weights: Vec<u64>) -> Result<()> {
+    fn rebalance(&mut self, new_weights: Vec<u64>) -> anchor_lang::Result<()> {
         if new_weights.len() != self.weights.len() {
             return Err(BasketError::InvalidTokenCount.into());
         }
@@ -166,18 +169,18 @@ impl OperationStats for BasketIndexState {
 /// 实现激活/暂停/权限/版本 trait
 impl crate::core::traits::Activatable for BasketIndexState {
     fn is_active(&self) -> bool { self.is_active }
-    fn activate(&mut self) -> Result<()> { self.is_active = true; self.base.touch() }
-    fn deactivate(&mut self) -> Result<()> { self.is_active = false; self.base.touch() }
+    fn activate(&mut self) -> anchor_lang::Result<()> { self.is_active = true; self.base.touch() }
+    fn deactivate(&mut self) -> anchor_lang::Result<()> { self.is_active = false; self.base.touch() }
 }
 impl crate::core::traits::Pausable for BasketIndexState {
     fn is_paused(&self) -> bool { self.is_paused }
-    fn pause(&mut self) -> Result<()> { self.is_paused = true; self.base.touch() }
-    fn unpause(&mut self) -> Result<()> { self.is_paused = false; self.base.touch() }
-    fn resume(&mut self) -> Result<()> { self.unpause() }
+    fn pause(&mut self) -> anchor_lang::Result<()> { self.is_paused = true; self.base.touch() }
+    fn unpause(&mut self) -> anchor_lang::Result<()> { self.is_paused = false; self.base.touch() }
+    fn resume(&mut self) -> anchor_lang::Result<()> { self.unpause() }
 }
 impl crate::core::traits::Authorizable for BasketIndexState {
     fn authority(&self) -> Pubkey { self.authority }
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> anchor_lang::Result<()> {
         self.authority = new_authority;
         self.base.touch()?;
         Ok(())
@@ -190,7 +193,7 @@ impl crate::version::Versioned for BasketIndexState {
 
 /// 实现统一校验 trait
 impl crate::core::traits::Validatable for BasketIndexState {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         self.base.validate()?;
         if self.fee_collector == Pubkey::default() {
             return Err(BasketError::InvalidAssets.into());

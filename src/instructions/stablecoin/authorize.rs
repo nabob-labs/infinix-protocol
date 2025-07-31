@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stablecoin_service::StablecoinService;
 use crate::events::asset_event::AssetAuthorized;
@@ -18,9 +17,9 @@ pub struct AuthorizeStablecoin<'info> {
 /// Stablecoin资产authorize指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - new_authority: 新授权人公钥
-pub fn authorize_stablecoin(ctx: Context<AuthorizeStablecoin>, new_authority: Pubkey) -> Result<()> {
+pub fn authorize_stablecoin(ctx: Context<AuthorizeStablecoin>, new_authority: Pubkey) -> anchor_lang::Result<()> {
     let stablecoin = &mut ctx.accounts.stablecoin;
-    require!(stablecoin.asset_type == AssetType::Stablecoin, crate::error::ProgramError::InvalidAssetType);
+    require!(stablecoin.asset_type == AssetType::Stablecoin, ProgramError::InvalidAssetType);
     let service = StablecoinService::new();
     service.authorize(stablecoin, new_authority)?;
     emit!(AssetAuthorized {

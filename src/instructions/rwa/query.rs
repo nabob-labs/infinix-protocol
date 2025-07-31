@@ -2,11 +2,8 @@
 //! RWA查询指令实现，支持多种查询功能和数据聚合。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
-use crate::core::types::{AssetType, QueryParams};
+use crate::core::types::*;
 use crate::services::rwa_service::RwaService;
-use crate::oracles::traits::{OracleAdapter, OracleParams};
-use crate::dex::adapter::DexAdapter;
 
 /// RWA资产query指令账户上下文
 #[derive(Accounts)]
@@ -88,7 +85,7 @@ pub struct RwaQueryResult {
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - params: 查询参数
 /// - 返回: 查询结果
-pub fn query_rwa(ctx: Context<QueryRwa>, params: QueryRwaParams) -> Result<RwaQueryResult> {
+pub fn query_rwa(ctx: Context<QueryRwa>, params: QueryRwaParams) -> anchor_lang::Result<RwaQueryResult> {
     let rwa = &ctx.accounts.rwa;
     
     // 验证资产类型

@@ -1,11 +1,19 @@
-//!
-//! Performance Monitoring and Optimization Utilities
-//!
-//! 本模块实现程序性能监控与优化工具，支持执行时间、Gas、命中率、批量优化、执行策略等度量与分析，提升系统可观测性与运行效率。
+//! Performance模块 - 性能监控工具
+//! 
+//! 本模块提供性能监控功能，包含：
+//! - 性能指标收集
+//! - 性能分析
+//! - 性能优化建议
+//! - 性能报告生成
+//! 
+//! 设计理念：
+//! - 低开销：最小化监控对性能的影响
+//! - 准确性：提供准确的性能数据
+//! - 实时性：支持实时性能监控
+//! - 可操作性：提供可操作的优化建议
+//! - 设计意图：极致性能、最小开销、最大价值
 
-// 引入核心模块和 Anchor 依赖。
-use crate::core::*;
-use anchor_lang::prelude::*;
+use anchor_lang::prelude::*;             // Anchor 预导入，包含Pubkey、Result等
 
 /// 性能监控工具结构体。
 pub struct PerformanceMonitor;

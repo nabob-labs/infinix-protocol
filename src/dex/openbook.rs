@@ -4,7 +4,8 @@
 //! 本模块实现 OpenBook DEX 适配器，集成 Anchor CPI 调用，支持流动性管理、报价、异常处理等，确保链上集成合规、可维护。
 
 use anchor_lang::prelude::*;
-use crate::dex::adapter::DexAdapter;
+use crate::core::types::{TradeParams, BatchTradeParams, DexParams};
+use crate::dex::adapter::{DexAdapter, DexSwapResult};
 
 /// OpenBook DEX 适配器结构体。
 /// 用于对接 Solana 链上的 OpenBook DEX，实现统一的 DEX 适配接口，集成流动性管理、报价等功能。
@@ -14,7 +15,7 @@ pub struct OpenBookAdapter;
 /// 实现 DexAdapter trait，集成 OpenBook 链上 CPI 调用。
 impl DexAdapter for OpenBookAdapter {
     /// 执行 OpenBook swap 操作。
-    fn swap(&self, params: &SwapParams) -> Result<DexSwapResult> {
+    fn swap(&self, params: &TradeParams) -> anchor_lang::Result<DexSwapResult> {
         // 生产级实现：集成OpenBook链上CPI调用，参数校验、错误处理、事件追踪
         require!(params.amount_in > 0, crate::errors::asset_error::AssetError::InvalidAmount);
         // TODO: 调用OpenBook CPI（此处应集成真实CPI调用）
@@ -26,29 +27,7 @@ impl DexAdapter for OpenBookAdapter {
             dex_name: "openbook".to_string(),
         })
     }
-    /// 添加流动性。
-    fn add_liquidity(
-        &self,
-        _ctx: Context<AddLiquidity>,
-        amount_a: u64,
-        amount_b: u64,
-    ) -> Result<u64> {
-        // 校验资产数量必须大于 0。
-        require!(amount_a > 0 && amount_b > 0, ErrorCode::InvalidAmount);
-        // TODO: 集成 OpenBook CPI。
-        Ok(amount_a + amount_b) // 示例返回
-    }
-    /// 移除流动性。
-    fn remove_liquidity(
-        &self,
-        _ctx: Context<RemoveLiquidity>,
-        liquidity: u64,
-    ) -> Result<(u64, u64)> {
-        // 校验 LP token 数量必须大于 0。
-        require!(liquidity > 0, ErrorCode::InvalidAmount);
-        // TODO: 集成 OpenBook CPI。
-        Ok((liquidity / 2, liquidity / 2)) // 示例返回
-    }
+    // 其他 trait 方法如 batch_swap、configure 可按需实现
 }
 
 /// OpenBook 适配器错误码（Anchor 错误）。
@@ -81,7 +60,7 @@ mod tests {
             _output_mint: Pubkey,
             amount_in: u64,
             _min_amount_out: u64,
-        ) -> Result<u64> {
+        ) -> anchor_lang::Result<u64> {
             Ok(amount_in * 96 / 100) // 模拟 4% 滑点
         }
         /// 模拟报价操作，返回输入数量的 96% 作为预期输出。
@@ -90,7 +69,7 @@ mod tests {
             _input_mint: Pubkey,
             _output_mint: Pubkey,
             amount_in: u64,
-        ) -> Result<u64> {
+        ) -> anchor_lang::Result<u64> {
             Ok(amount_in * 96 / 100)
         }
     }

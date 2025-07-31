@@ -5,13 +5,13 @@
 use anchor_lang::prelude::*;
 use crate::state::common::*;
 use crate::core::traits::*;
-use crate::error::ProgramError;
+use anchor_lang::prelude::ProgramError;
 use crate::version::{ProgramVersion, Versioned};
 use crate::strategies::{WeightStrategyType, RebalancingStrategyType};
 
 /// 权重策略账户
 #[account]
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace, PartialEq, Eq)]
+#[derive(Debug, InitSpace, PartialEq, Eq)]
 pub struct WeightStrategy {
     /// 通用账户基础信息
     pub base: BaseAccount,
@@ -20,24 +20,29 @@ pub struct WeightStrategy {
     /// 策略类型
     pub strategy_type: WeightStrategyType,
     /// 策略参数（序列化）
+    #[max_len(256)]
     pub parameters: Vec<u8>,
     /// 资产mint列表
+    #[max_len(16)]
     pub token_mints: Vec<Pubkey>,
     /// 当前权重
+    #[max_len(16)]
     pub current_weights: Vec<u64>,
     /// 上次计算时间
     pub last_calculated: i64,
     /// 执行统计
     pub execution_stats: ExecutionStats,
     /// AI权重建议
+    #[max_len(16)]
     pub ai_weights: Option<Vec<u64>>,
     /// 外部信号
+    #[max_len(16)]
     pub external_signals: Option<Vec<u64>>,
 }
 
 impl WeightStrategy {
     /// 初始化策略
-    pub fn initialize(&mut self, authority: Pubkey, factory: Pubkey, strategy_type: WeightStrategyType, parameters: Vec<u8>, token_mints: Vec<Pubkey>, bump: u8) -> Result<()> {
+    pub fn initialize(&mut self, authority: Pubkey, factory: Pubkey, strategy_type: WeightStrategyType, parameters: Vec<u8>, token_mints: Vec<Pubkey>, bump: u8) -> anchor_lang::Result<()> {
         self.base = BaseAccount::new(authority, bump)?;
         self.factory = factory;
         self.strategy_type = strategy_type;
@@ -51,14 +56,14 @@ impl WeightStrategy {
         Ok(())
     }
     /// 校验是否可执行
-    pub fn validate_can_execute(&self) -> Result<()> {
+    pub fn validate_can_execute(&self) -> anchor_lang::Result<()> {
         if !self.base.is_active { return Err(ProgramError::StrategyPaused.into()); }
         if self.base.is_paused { return Err(ProgramError::StrategyPaused.into()); }
         if self.token_mints.is_empty() { return Err(ProgramError::InvalidTokenCount.into()); }
         Ok(())
     }
     /// 更新权重（多因子聚合）
-    pub fn update_weights(&mut self, new_weights: Vec<u64>, ai_weights: Option<Vec<u64>>, external_signals: Option<Vec<u64>>) -> Result<()> {
+    pub fn update_weights(&mut self, new_weights: Vec<u64>, ai_weights: Option<Vec<u64>>, external_signals: Option<Vec<u64>>) -> anchor_lang::Result<()> {
         if new_weights.len() != self.token_mints.len() {
             return Err(ProgramError::InvalidTokenCount.into());
         }
@@ -82,7 +87,7 @@ impl WeightStrategy {
 
 /// 校验 trait 实现
 impl Validatable for WeightStrategy {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         self.base.validate()?;
         if self.factory == Pubkey::default() {
             return Err(ProgramError::InvalidStrategyParameters.into());
@@ -106,7 +111,7 @@ impl Validatable for WeightStrategy {
 /// 权限 trait 实现
 impl Authorizable for WeightStrategy {
     fn authority(&self) -> Pubkey { self.base.authority }
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> anchor_lang::Result<()> {
         self.base.authority = new_authority;
         self.base.touch()?;
         Ok(())
@@ -116,16 +121,16 @@ impl Authorizable for WeightStrategy {
 /// 暂停 trait 实现
 impl Pausable for WeightStrategy {
     fn is_paused(&self) -> bool { self.base.is_paused }
-    fn pause(&mut self) -> Result<()> { self.base.pause() }
-    fn unpause(&mut self) -> Result<()> { self.base.unpause() }
-    fn resume(&mut self) -> Result<()> { self.unpause() }
+    fn pause(&mut self) -> anchor_lang::Result<()> { self.base.pause() }
+    fn unpause(&mut self) -> anchor_lang::Result<()> { self.base.unpause() }
+    fn resume(&mut self) -> anchor_lang::Result<()> { self.unpause() }
 }
 
 /// 激活 trait 实现
 impl Activatable for WeightStrategy {
     fn is_active(&self) -> bool { self.base.is_active }
-    fn activate(&mut self) -> Result<()> { self.base.activate() }
-    fn deactivate(&mut self) -> Result<()> { self.base.deactivate() }
+    fn activate(&mut self) -> anchor_lang::Result<()> { self.base.activate() }
+    fn deactivate(&mut self) -> anchor_lang::Result<()> { self.base.deactivate() }
 }
 
 /// 版本 trait 实现
@@ -138,7 +143,7 @@ impl Versioned for WeightStrategy {
 
 /// 再平衡策略账户
 #[account]
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace, PartialEq, Eq)]
+#[derive(Debug, InitSpace, PartialEq, Eq)]
 pub struct RebalancingStrategy {
     /// 通用账户基础信息
     pub base: BaseAccount,
@@ -149,6 +154,7 @@ pub struct RebalancingStrategy {
     /// 策略类型
     pub strategy_type: RebalancingStrategyType,
     /// 策略参数（序列化）
+    #[max_len(256)]
     pub parameters: Vec<u8>,
     /// 再平衡阈值（bps）
     pub rebalancing_threshold: u64,
@@ -161,14 +167,16 @@ pub struct RebalancingStrategy {
     /// 执行统计
     pub execution_stats: ExecutionStats,
     /// AI信号
+    #[max_len(16)]
     pub ai_signals: Option<Vec<u64>>,
     /// 外部信号
+    #[max_len(16)]
     pub external_signals: Option<Vec<u64>>,
 }
 
 impl RebalancingStrategy {
     /// 初始化策略
-    pub fn initialize(&mut self, authority: Pubkey, factory: Pubkey, weight_strategy: Pubkey, strategy_type: RebalancingStrategyType, parameters: Vec<u8>, rebalancing_threshold: u64, min_rebalance_interval: u64, max_slippage: u64, bump: u8) -> Result<()> {
+    pub fn initialize(&mut self, authority: Pubkey, factory: Pubkey, weight_strategy: Pubkey, strategy_type: RebalancingStrategyType, parameters: Vec<u8>, rebalancing_threshold: u64, min_rebalance_interval: u64, max_slippage: u64, bump: u8) -> anchor_lang::Result<()> {
         self.base = BaseAccount::new(authority, bump)?;
         self.factory = factory;
         self.weight_strategy = weight_strategy;
@@ -184,7 +192,7 @@ impl RebalancingStrategy {
         Ok(())
     }
     /// 校验是否可再平衡（多因子聚合）
-    pub fn can_rebalance(&self, ai_signals: Option<Vec<u64>>, external_signals: Option<Vec<u64>>) -> Result<bool> {
+    pub fn can_rebalance(&self, ai_signals: Option<Vec<u64>>, external_signals: Option<Vec<u64>>) -> anchor_lang::Result<bool> {
         if !self.base.is_active || self.base.is_paused { return Ok(false); }
         let current_time = Clock::get()?.unix_timestamp;
         let time_since_last = current_time - self.last_rebalanced;
@@ -203,7 +211,7 @@ impl RebalancingStrategy {
         false
     }
     /// 更新再平衡时间
-    pub fn update_rebalancing(&mut self) -> Result<()> {
+    pub fn update_rebalancing(&mut self) -> anchor_lang::Result<()> {
         self.last_rebalanced = Clock::get()?.unix_timestamp;
         self.base.touch()?;
         Ok(())
@@ -212,7 +220,7 @@ impl RebalancingStrategy {
 
 /// 校验 trait 实现
 impl Validatable for RebalancingStrategy {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         self.base.validate()?;
         if self.factory == Pubkey::default() {
             return Err(ProgramError::InvalidStrategyParameters.into());
@@ -239,7 +247,7 @@ impl Validatable for RebalancingStrategy {
 /// 权限 trait 实现
 impl Authorizable for RebalancingStrategy {
     fn authority(&self) -> Pubkey { self.base.authority }
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> anchor_lang::Result<()> {
         self.base.authority = new_authority;
         self.base.touch()?;
         Ok(())
@@ -249,16 +257,16 @@ impl Authorizable for RebalancingStrategy {
 /// 暂停 trait 实现
 impl Pausable for RebalancingStrategy {
     fn is_paused(&self) -> bool { self.base.is_paused }
-    fn pause(&mut self) -> Result<()> { self.base.pause() }
-    fn unpause(&mut self) -> Result<()> { self.base.unpause() }
-    fn resume(&mut self) -> Result<()> { self.unpause() }
+    fn pause(&mut self) -> anchor_lang::Result<()> { self.base.pause() }
+    fn unpause(&mut self) -> anchor_lang::Result<()> { self.base.unpause() }
+    fn resume(&mut self) -> anchor_lang::Result<()> { self.unpause() }
 }
 
 /// 激活 trait 实现
 impl Activatable for RebalancingStrategy {
     fn is_active(&self) -> bool { self.base.is_active }
-    fn activate(&mut self) -> Result<()> { self.base.activate() }
-    fn deactivate(&mut self) -> Result<()> { self.base.deactivate() }
+    fn activate(&mut self) -> anchor_lang::Result<()> { self.base.activate() }
+    fn deactivate(&mut self) -> anchor_lang::Result<()> { self.base.deactivate() }
 }
 
 /// 版本 trait 实现

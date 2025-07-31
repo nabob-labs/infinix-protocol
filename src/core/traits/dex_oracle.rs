@@ -11,23 +11,23 @@ use std::fmt::Debug;
 /// 价格预言机接口Trait
 pub trait PriceOracle: Send + Sync {
     /// 获取指定token的最新价格（单位：最小计价单位）
-    fn get_price(&self, token_mint: Pubkey) -> Result<u64>;
+    fn get_price(&self, token_mint: Pubkey) -> anchor_lang::Result<u64>;
 }
 
 /// DEX客户端接口Trait
 pub trait DexClient: Send + Sync {
     /// 市价单撮合
-    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult>;
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult>;
     /// 限价单撮合
-    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult>;
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult>;
 }
 
 /// 流动性源接口Trait
 pub trait LiquiditySource: Send + Sync {
     /// 查询指定token的可用流动性
-    fn get_liquidity(&self, token_mint: Pubkey) -> Result<u64>;
+    fn get_liquidity(&self, token_mint: Pubkey) -> anchor_lang::Result<u64>;
     /// 查询所有支持token的流动性
-    fn get_all_liquidity(&self) -> Result<Vec<(Pubkey, u64)>>;
+    fn get_all_liquidity(&self) -> anchor_lang::Result<Vec<(Pubkey, u64)>>;
 }
 
 /// 滑点模型接口Trait

@@ -5,10 +5,9 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::events::index_token_event::IndexTokenStrategyRedeemed;
-use crate::validation::index_token_validation::IndexTokenValidatable;
-use crate::core::types::{AlgoParams};
+// IndexTokenValidatable trait not found, removing import
+use crate::core::types::*;
 
 /// 指数代币策略赎回指令账户上下文结构体
 /// - 管理策略赎回操作所需的链上账户
@@ -33,7 +32,7 @@ pub fn strategy_redeem_index_token(
     strategy: String,
     params: Vec<u8>,
     exec_params: Option<AlgoParams>,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     // 获取指数代币账户
     let index_token = &mut ctx.accounts.index_token;
     // 校验账户状态

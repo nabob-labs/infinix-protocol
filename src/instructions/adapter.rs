@@ -4,14 +4,13 @@
 //! 严格遵循Anchor规范，逐行注释，生产级代码质量
 
 use anchor_lang::prelude::*;
-use crate::core::types::AssetType;
 
 #[derive(Accounts)]
 pub struct RegisterAdapter<'info> {
     pub authority: Signer<'info>,
 }
 
-pub fn register_adapter(ctx: Context<RegisterAdapter>, name: String, adapter_type: String, version: String, supported_assets: Vec<String>) -> Result<()> {
+pub fn register_adapter(ctx: Context<RegisterAdapter>, name: String, adapter_type: String, version: String, supported_assets: Vec<String>) -> anchor_lang::Result<()> {
     // 业务逻辑：链上动态注册适配器（示例：仅触发事件，实际注册需链下配合）
     emit!(AdapterRegistered { name, adapter_type, version, supported_assets });
     Ok(())
@@ -22,7 +21,7 @@ pub struct UnregisterAdapter<'info> {
     pub authority: Signer<'info>,
 }
 
-pub fn unregister_adapter(ctx: Context<UnregisterAdapter>, name: String) -> Result<()> {
+pub fn unregister_adapter(ctx: Context<UnregisterAdapter>, name: String) -> anchor_lang::Result<()> {
     // 业务逻辑：链上动态注销适配器（示例：仅触发事件，实际注销需链下配合）
     emit!(AdapterUnregistered { name });
     Ok(())
@@ -33,7 +32,7 @@ pub struct HotSwapAdapter<'info> {
     pub authority: Signer<'info>,
 }
 
-pub fn hot_swap_adapter(ctx: Context<HotSwapAdapter>, name: String, new_version: String) -> Result<()> {
+pub fn hot_swap_adapter(ctx: Context<HotSwapAdapter>, name: String, new_version: String) -> anchor_lang::Result<()> {
     // 业务逻辑：链上热插拔适配器（示例：仅触发事件，实际热插拔需链下配合）
     emit!(AdapterHotSwapped { name, new_version });
     Ok(())

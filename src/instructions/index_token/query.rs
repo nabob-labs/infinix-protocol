@@ -2,8 +2,7 @@
 //! 指数代币查询指令实现，支持多种查询功能和数据聚合。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
-use crate::core::types::{AssetType, QueryParams};
+use crate::core::types::*;
 use crate::services::index_token_service::IndexTokenService;
 use crate::oracles::traits::{OracleAdapter, OracleParams};
 use crate::dex::adapter::DexAdapter;
@@ -78,7 +77,7 @@ pub struct IndexTokenQueryResult {
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - params: 查询参数
 /// - 返回: 查询结果
-pub fn query_index_token(ctx: Context<QueryIndexToken>, params: QueryIndexTokenParams) -> Result<IndexTokenQueryResult> {
+pub fn query_index_token(ctx: Context<QueryIndexToken>, params: QueryIndexTokenParams) -> anchor_lang::Result<IndexTokenQueryResult> {
     let index_token = &ctx.accounts.index_token;
     
     // 验证资产类型

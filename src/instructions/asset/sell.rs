@@ -2,12 +2,10 @@
 //! Asset Sell Instruction
 //! 资产卖出指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
-use crate::accounts::BasketIndexStateAccount; // 账户状态结构体定义
 use crate::events::asset_event::*; // 资产相关事件定义（Anchor事件）
 use crate::services::asset_service::AssetService; // 资产业务逻辑服务层
-use crate::state::baskets::BasketIndexState; // 资产篮子状态
-use crate::validation::asset_validation::AssetValidatable; // 资产校验trait
-use crate::core::types::{ExecutionParams, StrategyParams, OracleParams}; // 引入算法、策略、预言机参数类型
+use crate::core::types::*; // 引入算法、策略、预言机参数类型
+use crate::state::baskets::BasketIndexState; // 篮子状态类型
 use anchor_lang::prelude::*; // Anchor预导入，提供Solana合约开发的基础类型和宏
 
 /// 资产卖出指令账户上下文
@@ -38,7 +36,7 @@ pub fn sell_asset(
     exec_params: Option<ExecutionParams>,
     strategy_params: Option<StrategyParams>,
     oracle_params: Option<OracleParams>,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     // 获取可变资产篮子账户，生命周期由Anchor自动管理
     let basket_index = &mut ctx.accounts.basket_index;
     // 校验资产篮子状态（如活跃、合法等），防止非法操作

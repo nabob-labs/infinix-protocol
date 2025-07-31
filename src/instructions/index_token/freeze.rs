@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::index_token_service::IndexTokenService;
 use crate::events::asset_event::AssetFrozen;
@@ -17,9 +16,9 @@ pub struct FreezeIndexToken<'info> {
 
 /// IndexToken资产freeze指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
-pub fn freeze_index_token(ctx: Context<FreezeIndexToken>) -> Result<()> {
+pub fn freeze_index_token(ctx: Context<FreezeIndexToken>) -> anchor_lang::Result<()> {
     let index_token = &mut ctx.accounts.index_token;
-    require!(index_token.asset_type == AssetType::IndexToken, crate::error::ProgramError::InvalidAssetType);
+    require!(index_token.asset_type == AssetType::IndexToken, ProgramError::InvalidAssetType);
     let service = IndexTokenService::new();
     service.freeze(index_token)?;
     emit!(AssetFrozen {

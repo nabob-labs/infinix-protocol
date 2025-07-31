@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stock_service::StockService;
 use crate::events::asset_event::AssetBurned;
@@ -18,9 +17,9 @@ pub struct BurnStock<'info> {
 /// Stock资产burn指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 销毁数量，类型安全
-pub fn burn_stock(ctx: Context<BurnStock>, amount: u64) -> Result<()> {
+pub fn burn_stock(ctx: Context<BurnStock>, amount: u64) -> anchor_lang::Result<()> {
     let stock = &mut ctx.accounts.stock;
-    require!(stock.asset_type == AssetType::Stock, crate::error::ProgramError::InvalidAssetType);
+    require!(stock.asset_type == AssetType::Stock, ProgramError::InvalidAssetType);
     let service = StockService::new();
     service.burn(stock, amount)?;
     emit!(AssetBurned {

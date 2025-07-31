@@ -2,14 +2,12 @@
 //! Asset Buy Instruction
 //! 资产购买指令实现，支持多种购买策略和DEX集成。
 
-use crate::accounts::BasketIndexStateAccount;
 use crate::events::asset_event::*;
 use crate::services::asset_service::AssetService;
-use crate::state::baskets::BasketIndexState;
-use crate::validation::asset_validation::AssetValidatable;
-use crate::core::types::{ExecutionParams, StrategyParams, TradeParams};
+use crate::core::types::*;
 use crate::dex::adapter::DexAdapter;
-use crate::algorithms::traits::AlgorithmAdapter;
+use crate::state::baskets::BasketIndexState;
+// // use crate::algorithms::traits::AlgorithmAdapter; // 暂时注释掉 // 暂时注释掉
 use anchor_lang::prelude::*;
 
 /// 资产购买指令账户上下文
@@ -67,7 +65,7 @@ pub struct BuyAssetParams {
 /// - ctx: Anchor账户上下文
 /// - params: 购买参数
 /// - 返回: Anchor规范Result
-pub fn buy_asset(ctx: Context<BuyAsset>, params: BuyAssetParams) -> Result<()> {
+pub fn buy_asset(ctx: Context<BuyAsset>, params: BuyAssetParams) -> anchor_lang::Result<()> {
     // 参数验证
     require!(params.amount > 0, crate::errors::asset_error::AssetError::InvalidAmount);
     require!(params.max_payment > 0, crate::errors::asset_error::AssetError::InvalidAmount);

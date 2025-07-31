@@ -4,7 +4,7 @@
 //! 本模块聚合所有合规性校验工具，包含资产、篮子、指数代币等多维度校验子模块，确保系统输入、状态、参数的安全性与合规性。
 
 use anchor_lang::prelude::*;
-use anchor_lang::msg;
+// anchor_lang::msg not available, removing import
 
 // 导出所有子模块，确保外部可访问。
 pub mod asset_validation;        // 资产校验工具模块
@@ -23,14 +23,14 @@ pub const VALIDATION_VERSION: &str = "1.0.0";
 pub const VALIDATION_MODULE_NAME: &str = "validation";
 
 /// 校验模块初始化函数。
-pub fn initialize_validation() -> Result<()> {
+pub fn initialize_validation() -> anchor_lang::Result<()> {
     // 初始化所有子模块
     msg!("Initializing validation module v{}", VALIDATION_VERSION);
     Ok(())
 }
 
 /// 校验模块清理函数。
-pub fn cleanup_validation() -> Result<()> {
+pub fn cleanup_validation() -> anchor_lang::Result<()> {
     // 清理所有子模块资源
     msg!("Cleaning up validation module");
     Ok(())

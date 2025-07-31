@@ -3,12 +3,11 @@
 //!
 //! 统一re-export所有最小功能单元，便于主模块融合调用。
 
-pub mod behavior;
-pub mod types;
-pub mod dex_oracle;
 pub mod anchor_impl;
-
+pub mod behavior;
+pub mod dex_oracle;
+pub mod types;
+pub use anchor_impl::*;
 pub use behavior::*;
-pub use types::*;
 pub use dex_oracle::*;
-pub use anchor_impl::*; 
+pub use types::*; 

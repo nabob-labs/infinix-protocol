@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::etf_service::EtfService;
 use crate::events::asset_event::AssetAuthorized;
@@ -18,9 +17,9 @@ pub struct AuthorizeEtf<'info> {
 /// ETF资产authorize指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - new_authority: 新授权人公钥
-pub fn authorize_etf(ctx: Context<AuthorizeEtf>, new_authority: Pubkey) -> Result<()> {
+pub fn authorize_etf(ctx: Context<AuthorizeEtf>, new_authority: Pubkey) -> anchor_lang::Result<()> {
     let etf = &mut ctx.accounts.etf;
-    require!(etf.asset_type == AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
+    require!(etf.asset_type == AssetType::ETF, ProgramError::InvalidAssetType);
     let service = EtfService::new();
     service.authorize(etf, new_authority)?;
     emit!(AssetAuthorized {

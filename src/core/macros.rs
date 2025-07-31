@@ -136,7 +136,7 @@ macro_rules! assess_risk {
 ///
 /// # 参数
 /// - $items: 数据集合（实现chunks方法的集合）
-/// - $processor: 处理函数（Fn(&T) -> Result<U>）
+/// - $processor: 处理函数（Fn(&T) -> anchor_lang::Result<U>）
 /// - $batch_size: 每批处理数量
 ///
 /// # 返回

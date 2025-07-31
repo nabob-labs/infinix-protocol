@@ -2,12 +2,11 @@
 //! ETF购买指令实现，支持多种购买策略和DEX集成。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
-use crate::core::types::{AssetType, ExecutionParams, StrategyParams, TradeParams};
+use crate::core::types::*;
 use crate::services::etf_service::EtfService;
 use crate::events::index_token_event::IndexTokenBought;
 use crate::dex::adapter::DexAdapter;
-use crate::algorithms::traits::AlgorithmAdapter;
+// use crate::algorithms::traits::AlgorithmAdapter; // 暂时注释掉
 
 /// ETF资产buy指令账户上下文
 #[derive(Accounts)]
@@ -63,7 +62,7 @@ pub struct BuyEtfParams {
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - params: 购买参数
 /// - 返回: Anchor规范Result
-pub fn buy_etf(ctx: Context<BuyEtf>, params: BuyEtfParams) -> Result<()> {
+pub fn buy_etf(ctx: Context<BuyEtf>, params: BuyEtfParams) -> anchor_lang::Result<()> {
     // 参数验证
     require!(params.amount > 0, crate::errors::index_token_error::IndexTokenError::InvalidAmount);
     require!(params.max_payment > 0, crate::errors::index_token_error::IndexTokenError::InvalidAmount);

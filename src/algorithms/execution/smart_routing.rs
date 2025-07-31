@@ -93,7 +93,7 @@ impl RoutingStrategy for SmartRoutingImpl {
     /// - 参数 ctx: Anchor 上下文
     /// - 参数 params: 路由参数（包含 DEX 备选列表、输入金额等）
     /// - 返回 RoutingResult，包含最优 DEX、预期输出等
-    fn route(&self, _ctx: Context<crate::algorithms::traits::Route>, params: &RoutingParams) -> Result<RoutingResult> {
+    fn route(&self, _ctx: Context<crate::algorithms::traits::Route>, params: &RoutingParams) -> anchor_lang::Result<RoutingResult> {
         if params.dex_candidates.is_empty() {
             return Err(AlgorithmError::InvalidInput.into()); // 输入参数校验
         }
@@ -136,7 +136,7 @@ mod tests {
             amount_in: 100,
             dex_candidates: vec!["Jupiter".to_string(), "Orca".to_string()],
         };
-        let result = algo.route(Context::default(), &params).unwrap();
+        let result = algo.route(anchor_lang::prelude::Context::default(), &params).unwrap();
         assert_eq!(result.best_dex, "Jupiter");
     }
     /// 测试：空 DEX 备选列表
@@ -149,6 +149,6 @@ mod tests {
             amount_in: 100,
             dex_candidates: vec![],
         };
-        assert!(algo.route(Context::default(), &params).is_err());
+        assert!(algo.route(anchor_lang::prelude::Context::default(), &params).is_err());
     }
 } 

@@ -333,10 +333,6 @@ impl DexError {
 }
 
 impl ErrorConvertible for DexError {
-    fn into_program_error(self) -> crate::errors::ProgramError {
-        crate::errors::ProgramError::Dex(self)
-    }
-    
     fn error_code(&self) -> u32 {
         let base_code = match self {
             DexError::InvalidSwapParams { .. } => DEX_ERROR_BASE + 1,

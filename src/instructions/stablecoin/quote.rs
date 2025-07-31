@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stablecoin_service::StablecoinService;
 use crate::events::asset_event::AssetQuoted;
@@ -16,9 +15,9 @@ pub struct QuoteStablecoin<'info> {
 /// Stablecoin资产quote指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 询价数量
-pub fn quote_stablecoin(ctx: Context<QuoteStablecoin>, amount: u64) -> Result<()> {
+pub fn quote_stablecoin(ctx: Context<QuoteStablecoin>, amount: u64) -> anchor_lang::Result<()> {
     let stablecoin = &ctx.accounts.stablecoin;
-    require!(stablecoin.asset_type == AssetType::Stablecoin, crate::error::ProgramError::InvalidAssetType);
+    require!(stablecoin.asset_type == AssetType::Stablecoin, ProgramError::InvalidAssetType);
     let service = StablecoinService::new();
     let quote = service.quote(stablecoin, amount)?;
     emit!(AssetQuoted {

@@ -3,8 +3,8 @@
 //!
 //! 本模块实现 Raydium DEX 适配器，提供与 Raydium AMM 的链上集成接口，确保交易路由与聚合合规、可维护。
 
-use crate::core::adapter::AdapterTrait;
-use crate::core::types::{TradeParams, BatchTradeParams, DexParams};
+// use crate::core::adapter: // 暂时注释掉:AdapterTrait;
+// use crate::core::types: // 暂时注释掉:{TradeParams, BatchTradeParams, DexParams};
 use crate::dex::adapter::{DexAdapter, DexSwapResult, DexAdapterType};
 use anchor_lang::prelude::*;
 
@@ -26,7 +26,7 @@ impl AdapterTrait for RaydiumAdapter {
 
 impl DexAdapter for RaydiumAdapter {
     /// 执行 Raydium swap 操作。
-    fn swap(&self, params: &TradeParams) -> Result<DexSwapResult> {
+    fn swap(&self, params: &TradeParams) -> anchor_lang::Result<DexSwapResult> {
         // 生产级实现：集成Raydium链上CPI调用，参数校验、错误处理、事件追踪
         require!(params.amount_in > 0, crate::errors::asset_error::AssetError::InvalidAmount);
         require!(params.from_token != params.to_token, crate::errors::dex_error::DexError::InvalidTokens);

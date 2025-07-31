@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::rwa_service::RwaService;
 use crate::events::asset_event::AssetSplit;
@@ -20,10 +19,10 @@ pub struct SplitRwa<'info> {
 /// RWA资产split指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 拆分数量，类型安全
-pub fn split_rwa(ctx: Context<SplitRwa>, amount: u64) -> Result<()> {
+pub fn split_rwa(ctx: Context<SplitRwa>, amount: u64) -> anchor_lang::Result<()> {
     let source = &mut ctx.accounts.source_rwa;
     let new = &mut ctx.accounts.new_rwa;
-    require!(source.asset_type == AssetType::RWA && new.asset_type == AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+    require!(source.asset_type == AssetType::RWA && new.asset_type == AssetType::RWA, ProgramError::InvalidAssetType);
     let service = RwaService::new();
     service.split(source, new, amount)?;
     emit!(AssetSplit {

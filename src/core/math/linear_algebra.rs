@@ -4,7 +4,7 @@
 //! 本文件实现LinearAlgebra结构体及其所有线性代数方法，严格遵循Rust、Anchor、SOLID最佳实践，
 //! 并逐行专业注释，便于审计、维护、扩展。
 
-use crate::error::StrategyError;
+use crate::errors::strategy_error::StrategyError;
 use anchor_lang::prelude::*;
 
 /// 线性代数工具结构体
@@ -13,7 +13,7 @@ pub struct LinearAlgebra;
 
 impl LinearAlgebra {
     /// 矩阵乘法
-    pub fn matrix_multiply(a: &[Vec<Decimal>], b: &[Vec<Decimal>]) -> Result<Vec<Vec<Decimal>>> {
+    pub fn matrix_multiply(a: &[Vec<Decimal>], b: &[Vec<Decimal>]) -> anchor_lang::Result<Vec<Vec<Decimal>>> {
         let n = a.len();
         let m = b[0].len();
         let p = b.len();
@@ -32,7 +32,7 @@ impl LinearAlgebra {
     }
 
     /// 2x2矩阵行列式
-    pub fn determinant(matrix: &[Vec<Decimal>]) -> Result<Decimal> {
+    pub fn determinant(matrix: &[Vec<Decimal>]) -> anchor_lang::Result<Decimal> {
         if matrix.len() != 2 || matrix[0].len() != 2 {
             return Err(StrategyError::InvalidStrategyParameters);
         }
@@ -40,7 +40,7 @@ impl LinearAlgebra {
     }
 
     /// 2x2矩阵求逆
-    pub fn inverse_2x2(matrix: &[Vec<Decimal>]) -> Result<Vec<Vec<Decimal>>> {
+    pub fn inverse_2x2(matrix: &[Vec<Decimal>]) -> anchor_lang::Result<Vec<Vec<Decimal>>> {
         let det = Self::determinant(matrix)?;
         if det == Decimal::ZERO {
             return Err(StrategyError::MathOverflow);
@@ -53,7 +53,7 @@ impl LinearAlgebra {
     }
 
     /// 2x2矩阵特征值
-    pub fn eigenvalues_2x2(matrix: &[Vec<Decimal>]) -> Result<(Decimal, Decimal)> {
+    pub fn eigenvalues_2x2(matrix: &[Vec<Decimal>]) -> anchor_lang::Result<(Decimal, Decimal)> {
         if matrix.len() != 2 || matrix[0].len() != 2 {
             return Err(StrategyError::InvalidStrategyParameters);
         }

@@ -5,7 +5,6 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::events::index_token_event::IndexTokenSwapExecuted;
 
 /// 指数代币执行交换指令账户上下文结构体
@@ -32,7 +31,7 @@ pub fn execute_swap_index_token(
     ctx: Context<ExecuteSwapIndexToken>,
     from_amount: u64,
     to_amount: u64,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     // 获取转出方和转入方账户
     let from = &mut ctx.accounts.from_index_token;
     let to = &mut ctx.accounts.to_index_token;

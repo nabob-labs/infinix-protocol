@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stock_service::StockService;
 use crate::events::asset_event::AssetQueried;
@@ -15,9 +14,9 @@ pub struct QueryStock<'info> {
 
 /// Stock资产query指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
-pub fn query_stock(ctx: Context<QueryStock>) -> Result<()> {
+pub fn query_stock(ctx: Context<QueryStock>) -> anchor_lang::Result<()> {
     let stock = &ctx.accounts.stock;
-    require!(stock.asset_type == AssetType::Stock, crate::error::ProgramError::InvalidAssetType);
+    require!(stock.asset_type == AssetType::Stock, ProgramError::InvalidAssetType);
     let service = StockService::new();
     let info = service.query(stock)?;
     emit!(AssetQueried {

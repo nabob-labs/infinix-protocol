@@ -207,20 +207,20 @@ pub trait ErrorConvertible {
 /// 提供统一的错误处理接口，支持错误日志、错误追踪、错误恢复等功能。
 pub trait ErrorHandler {
     /// 处理错误
-    fn handle_error(&self, error: &ProgramError) -> Result<()>;
+    fn handle_error(&self, error: &ProgramError) -> anchor_lang::Result<()>;
     
     /// 记录错误日志
     fn log_error(&self, error: &ProgramError);
     
     /// 错误恢复
-    fn recover_from_error(&self, error: &ProgramError) -> Result<()>;
+    fn recover_from_error(&self, error: &ProgramError) -> anchor_lang::Result<()>;
 }
 
 /// 默认错误处理器
 pub struct DefaultErrorHandler;
 
 impl ErrorHandler for DefaultErrorHandler {
-    fn handle_error(&self, error: &ProgramError) -> Result<()> {
+    fn handle_error(&self, error: &ProgramError) -> anchor_lang::Result<()> {
         // 记录错误到全局统计
         utils::record_global_error(error);
         
@@ -253,7 +253,7 @@ impl ErrorHandler for DefaultErrorHandler {
         );
     }
     
-    fn recover_from_error(&self, error: &ProgramError) -> Result<()> {
+    fn recover_from_error(&self, error: &ProgramError) -> anchor_lang::Result<()> {
         // 默认恢复策略：记录恢复尝试
         msg!("Attempting to recover from error in module: {}", error.module_name());
         

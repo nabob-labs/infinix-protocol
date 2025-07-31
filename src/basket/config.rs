@@ -5,6 +5,7 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
+use crate::algorithms::execution_optimizer::types::ExecutionMethod;
 
 /// 优化配置
 /// - 控制篮子操作的优化算法、并行度等
@@ -41,9 +42,9 @@ pub struct ArbitrageConfig {
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct RebalancingConfig {
     /// 再平衡执行方法
-    pub execution_method: crate::basket::strategy::ExecutionMethod,
+    pub execution_method: crate::algorithms::execution_optimizer::types::ExecutionMethod,
     /// 风险限制
-    pub risk_limits: crate::basket::strategy::RiskLimits,
+    pub risk_limits: crate::core::types::RiskLimits,
     /// 启用渐进再平衡
     pub enable_gradual: bool,
     /// 再平衡频率限制

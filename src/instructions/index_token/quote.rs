@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::index_token_service::IndexTokenService;
 use crate::events::asset_event::AssetQuoted;
@@ -16,9 +15,9 @@ pub struct QuoteIndexToken<'info> {
 /// IndexToken资产quote指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 询价数量
-pub fn quote_index_token(ctx: Context<QuoteIndexToken>, amount: u64) -> Result<()> {
+pub fn quote_index_token(ctx: Context<QuoteIndexToken>, amount: u64) -> anchor_lang::Result<()> {
     let index_token = &ctx.accounts.index_token;
-    require!(index_token.asset_type == AssetType::IndexToken, crate::error::ProgramError::InvalidAssetType);
+    require!(index_token.asset_type == AssetType::IndexToken, ProgramError::InvalidAssetType);
     let service = IndexTokenService::new();
     let quote = service.quote(index_token, amount)?;
     emit!(AssetQuoted {

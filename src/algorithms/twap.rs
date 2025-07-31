@@ -17,11 +17,17 @@
 use anchor_lang::prelude::*;
 use crate::algorithms::traits::{Algorithm, ExecutionStrategy, AlgorithmType, ExecutionResult};
 use crate::core::adapter::AdapterTrait;
-use crate::core::types::algo::AlgoParams;
-use crate::errors::algorithm_error::AlgorithmError;
-use crate::core::constants::*;
+use crate::core::types::AlgoParams;
+// use crate::core::types::algo::AlgoParams; // 暂时注释掉
+use crate::algorithms::traits::AlgorithmError;
+// use crate::core::constants::*; // 暂时注释掉
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// 最大再平衡间隔（秒）
+const MAX_REBALANCE_INTERVAL: u64 = 86400; // 24小时
+/// 最大滑点容忍度（基点）
+const MAX_SLIPPAGE_BPS: u64 = 1000; // 10%
 
 /// TWAP算法参数结构体
 /// - 定义TWAP算法的所有可配置参数
@@ -189,32 +195,24 @@ impl Default for TwapConfig {
 
 /// AdapterTrait 实现，便于统一管理和注册
 impl AdapterTrait for TwapAlgorithm {
-    /// 获取算法名称
-    fn name(&self) -> &'static str { 
-        "twap" 
+    fn name(&self) -> &str {
+        "Twap"
     }
     
-    /// 获取算法版本
-    fn version(&self) -> &'static str { 
-        "2.0.0" 
+    fn version(&self) -> &str {
+        "1.0.0"
     }
     
-    /// 支持的资产类型
-    fn supported_assets(&self) -> Vec<String> { 
-        vec![
-            "SOL".to_string(), 
-            "USDC".to_string(),
-            "USDT".to_string(),
-            "ETH".to_string(),
-            "BTC".to_string(),
-            "RAY".to_string(),
-            "SRM".to_string(),
-        ] 
+    fn is_available(&self) -> bool {
+        true
     }
     
-    /// 算法状态
-    fn status(&self) -> Option<String> { 
-        Some("active".to_string()) 
+    fn initialize(&mut self) -> anchor_lang::Result<()> {
+        Ok(())
+    }
+    
+    fn cleanup(&mut self) -> anchor_lang::Result<()> {
+        Ok(())
     }
 }
 
@@ -260,7 +258,7 @@ impl Algorithm for TwapAlgorithm {
 /// ExecutionStrategy trait 实现
 impl ExecutionStrategy for TwapAlgorithm {
     /// 执行算法主入口
-    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &AlgoParams) -> Result<ExecutionResult> {
+    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &AlgoParams) -> anchor_lang::Result<ExecutionResult> {
         self.execute(params)
     }
 }
@@ -283,7 +281,7 @@ impl TwapAlgorithm {
     }
     
     /// 解析TWAP参数
-    fn parse_twap_params(&self, params: &AlgoParams) -> Result<TwapParams> {
+    fn parse_twap_params(&self, params: &AlgoParams) -> anchor_lang::Result<TwapParams> {
         if params.params.is_empty() {
             return Err(AlgorithmError::InvalidParameters {
                 reason: "Empty parameters".to_string(),
@@ -299,7 +297,7 @@ impl TwapAlgorithm {
     }
     
     /// 验证TWAP参数
-    fn validate_twap_params(&self, params: &TwapParams) -> Result<()> {
+    fn validate_twap_params(&self, params: &TwapParams) -> anchor_lang::Result<()> {
         // 验证总订单数量
         require!(
             params.total_amount > 0,
@@ -352,7 +350,7 @@ impl TwapAlgorithm {
     }
     
     /// 计算执行计划
-    fn calculate_execution_plan(&self, params: &TwapParams) -> Result<TwapExecutionPlan> {
+    fn calculate_execution_plan(&self, params: &TwapParams) -> anchor_lang::Result<TwapExecutionPlan> {
         let interval_size = params.total_amount / params.num_intervals as u64;
         let remainder = params.total_amount % params.num_intervals as u64;
         let interval_duration = params.time_window / params.num_intervals as u64;
@@ -391,7 +389,7 @@ impl TwapAlgorithm {
     }
     
     /// 执行TWAP算法
-    fn execute_twap_algorithm(&self, params: &TwapParams, plan: &TwapExecutionPlan) -> Result<ExecutionResult> {
+    fn execute_twap_algorithm(&self, params: &TwapParams, plan: &TwapExecutionPlan) -> anchor_lang::Result<ExecutionResult> {
         let mut total_executed = 0u64;
         let mut total_cost = 0u64;
         let mut total_slippage = 0u32;
@@ -473,7 +471,7 @@ impl TwapAlgorithm {
     }
     
     /// 执行单个分段
-    fn execute_interval(&self, interval: &TwapInterval, target_price: u64, params: &TwapParams) -> Result<TwapIntervalResult> {
+    fn execute_interval(&self, interval: &TwapInterval, target_price: u64, params: &TwapParams) -> anchor_lang::Result<TwapIntervalResult> {
         let start_time = self.get_current_timestamp();
         
         // 模拟市场执行（实际应调用DEX接口）
@@ -509,20 +507,20 @@ impl TwapAlgorithm {
     }
     
     /// 获取市场价格（模拟实现）
-    fn get_market_price(&self) -> Result<u64> {
+    fn get_market_price(&self) -> anchor_lang::Result<u64> {
         // 实际实现应调用Oracle接口
         Ok(1_000_000) // 模拟价格：1 SOL = 1,000,000 lamports
     }
     
     /// 计算目标价格
-    fn calculate_target_price(&self, current_price: u64, slippage_tolerance_bps: u32) -> Result<u64> {
+    fn calculate_target_price(&self, current_price: u64, slippage_tolerance_bps: u32) -> anchor_lang::Result<u64> {
         let slippage_factor = 1.0 + (slippage_tolerance_bps as f64 / 10000.0);
         let target_price = (current_price as f64 * slippage_factor) as u64;
         Ok(target_price)
     }
     
     /// 模拟市场执行
-    fn simulate_market_execution(&self, size: u64, target_price: u64) -> Result<u64> {
+    fn simulate_market_execution(&self, size: u64, target_price: u64) -> anchor_lang::Result<u64> {
         // 实际实现应调用DEX接口
         // 这里模拟执行价格，包含一些随机性
         let base_price = target_price;
@@ -552,7 +550,7 @@ impl TwapAlgorithm {
     }
     
     /// 检查风险限制
-    fn check_risk_limits(&self, params: &TwapParams, result: &TwapIntervalResult) -> Result<()> {
+    fn check_risk_limits(&self, params: &TwapParams, result: &TwapIntervalResult) -> anchor_lang::Result<()> {
         // 检查单次执行比例
         let execution_ratio = (result.executed_amount as f64 / params.total_amount as f64) * 10000.0;
         if execution_ratio > params.risk_params.max_single_execution_bps as f64 {
@@ -589,7 +587,7 @@ impl TwapAlgorithm {
     }
     
     /// 更新执行缓存
-    fn update_execution_cache(&self, plan: &TwapExecutionPlan, result: &TwapIntervalResult) -> Result<()> {
+    fn update_execution_cache(&self, plan: &TwapExecutionPlan, result: &TwapIntervalResult) -> anchor_lang::Result<()> {
         let cache_key = format!("twap_{}", plan.start_time);
         
         // 这里应该更新缓存，但由于self是不可变的，实际实现中需要内部可变性
@@ -605,7 +603,7 @@ impl TwapAlgorithm {
         price_deviations: Vec<u32>,
         total_execution_time: u64,
         total_intervals: usize,
-    ) -> Result<TwapMetrics> {
+    ) -> anchor_lang::Result<TwapMetrics> {
         if execution_times.is_empty() {
             return Err(AlgorithmError::InvalidResult {
                 reason: "No execution times available for metrics calculation".to_string(),
@@ -667,7 +665,7 @@ impl TwapAlgorithm {
     }
     
     /// 记录性能指标
-    fn record_performance_metrics(&self, metrics: &TwapMetrics) -> Result<()> {
+    fn record_performance_metrics(&self, metrics: &TwapMetrics) -> anchor_lang::Result<()> {
         // 实际实现应记录到监控系统
         msg!("TWAP Performance Metrics:");
         msg!("  Total Execution Time: {} ms", metrics.total_execution_time_ms);

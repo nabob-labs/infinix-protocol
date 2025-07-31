@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::etf_service::EtfService;
 use crate::events::asset_event::AssetSold;
@@ -18,9 +17,9 @@ pub struct SellEtf<'info> {
 /// ETF资产sell指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 卖出数量，类型安全
-pub fn sell_etf(ctx: Context<SellEtf>, amount: u64) -> Result<()> {
+pub fn sell_etf(ctx: Context<SellEtf>, amount: u64) -> anchor_lang::Result<()> {
     let etf = &mut ctx.accounts.etf;
-    require!(etf.asset_type == AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
+    require!(etf.asset_type == AssetType::ETF, ProgramError::InvalidAssetType);
     let service = EtfService::new();
     service.sell(etf, amount)?;
     emit!(AssetSold {

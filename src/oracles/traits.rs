@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::core::adapter::AdapterTrait;
+// use crate::core::adapter: // 暂时注释掉:AdapterTrait;
 
 /// Oracle参数结构体
 /// - 用于Oracle价格查询的统一参数接口
@@ -64,6 +64,10 @@ pub enum OracleAdapterType {
     Switchboard,
     /// Chainlink预言机
     Chainlink,
+    /// Band Protocol预言机
+    BandProtocol,
+    /// API3预言机
+    API3,
     /// 其他类型
     Other,
 }
@@ -98,6 +102,10 @@ pub trait OracleAdapter: AdapterTrait {
     /// 返回适配器类型
     /// - 返回：OracleAdapterType枚举
     fn adapter_type(&self) -> OracleAdapterType { OracleAdapterType::Other }
+    /// 返回适配器名称
+    fn name(&self) -> &'static str;
+    /// 事件触发
+    fn emit_event(&self, _event: crate::oracles::traits::OracleEvent) {}
 }
 
 /// Oracle价格查询上下文结构体

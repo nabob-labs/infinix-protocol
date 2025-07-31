@@ -13,6 +13,7 @@ pub struct TokenInfo {
     /// 代币 mint 地址
     pub mint: Pubkey,
     /// 代币符号（如 "SOL", "USDC"）
+    #[max_len(10)]
     pub symbol: String,
     /// 代币小数位数（如 9 位 for SOL, 6 位 for USDC）
     pub decimals: u8,
@@ -42,7 +43,7 @@ impl TokenInfo {
         decimals: u8,
         price: u64,
         is_active: bool,
-    ) -> Result<Self> {
+    ) -> anchor_lang::Result<Self> {
         Ok(Self {
             mint,
             symbol,
@@ -64,68 +65,68 @@ impl TokenInfo {
         self.price.saturating_mul(amount)
     }
     /// 预览买入操作，返回预期获得的资产数量（此处为mock实现，实际应接入DEX/AMM报价）
-    pub fn preview_buy(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, amount: u64) -> anchor_lang::prelude::Result<u64> {
+    pub fn preview_buy(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, amount: u64) -> anchor_lang::Result<u64> {
         // 直接返回输入数量，实际应根据市场价格计算
         Ok(amount)
     }
     /// 预览卖出操作，返回预期获得的资产数量（mock实现）
-    pub fn preview_sell(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, amount: u64) -> anchor_lang::prelude::Result<u64> {
+    pub fn preview_sell(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, amount: u64) -> anchor_lang::Result<u64> {
         Ok(amount)
     }
     /// 预览兑换操作，返回预期获得的目标资产数量（mock实现）
-    pub fn preview_swap(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _target_asset: &TokenInfo, amount: u64) -> anchor_lang::prelude::Result<u64> {
+    pub fn preview_swap(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _target_asset: &TokenInfo, amount: u64) -> anchor_lang::Result<u64> {
         Ok(amount)
     }
     /// 预览组合操作，返回预期组合后获得的资产数量（mock实现）
-    pub fn preview_combine(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _target_asset: &TokenInfo, amount: u64) -> anchor_lang::prelude::Result<u64> {
+    pub fn preview_combine(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _target_asset: &TokenInfo, amount: u64) -> anchor_lang::Result<u64> {
         Ok(amount)
     }
     /// 预览分割操作，返回预期分割后获得的资产数量（mock实现）
-    pub fn preview_split(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, amount: u64) -> anchor_lang::prelude::Result<u64> {
+    pub fn preview_split(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, amount: u64) -> anchor_lang::Result<u64> {
         Ok(amount)
     }
     /// 预览授权操作，返回预期结果（mock实现，返回0）
-    pub fn preview_authorize(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _authority: &anchor_lang::prelude::Pubkey) -> anchor_lang::prelude::Result<u64> {
+    pub fn preview_authorize(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _authority: &anchor_lang::prelude::Pubkey) -> anchor_lang::Result<u64> {
         Ok(0)
     }
     /// 预览冻结操作，返回预期结果（mock实现，返回0）
-    pub fn preview_freeze(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo) -> anchor_lang::prelude::Result<u64> {
+    pub fn preview_freeze(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo) -> anchor_lang::Result<u64> {
         Ok(0)
     }
     /// 预览解冻操作，返回预期结果（mock实现，返回0）
-    pub fn preview_unfreeze(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo) -> anchor_lang::prelude::Result<u64> {
+    pub fn preview_unfreeze(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo) -> anchor_lang::Result<u64> {
         Ok(0)
     }
     /// 验证买入操作的有效性（mock实现，始终通过）
-    pub fn validate_buy(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _amount: u64) -> anchor_lang::prelude::Result<()> {
+    pub fn validate_buy(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _amount: u64) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 验证卖出操作的有效性（mock实现，始终通过）
-    pub fn validate_sell(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _amount: u64) -> anchor_lang::prelude::Result<()> {
+    pub fn validate_sell(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _amount: u64) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 验证兑换操作的有效性（mock实现，始终通过）
-    pub fn validate_swap(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _target_asset: &TokenInfo, _amount: u64) -> anchor_lang::prelude::Result<()> {
+    pub fn validate_swap(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _target_asset: &TokenInfo, _amount: u64) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 验证组合操作的有效性（mock实现，始终通过）
-    pub fn validate_combine(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _target_asset: &TokenInfo, _amount: u64) -> anchor_lang::prelude::Result<()> {
+    pub fn validate_combine(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _target_asset: &TokenInfo, _amount: u64) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 验证分割操作的有效性（mock实现，始终通过）
-    pub fn validate_split(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _amount: u64) -> anchor_lang::prelude::Result<()> {
+    pub fn validate_split(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _amount: u64) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 验证授权操作的有效性（mock实现，始终通过）
-    pub fn validate_authorize(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _authority: &anchor_lang::prelude::Pubkey) -> anchor_lang::prelude::Result<()> {
+    pub fn validate_authorize(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo, _authority: &anchor_lang::prelude::Pubkey) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 验证冻结操作的有效性（mock实现，始终通过）
-    pub fn validate_freeze(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo) -> anchor_lang::prelude::Result<()> {
+    pub fn validate_freeze(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 验证解冻操作的有效性（mock实现，始终通过）
-    pub fn validate_unfreeze(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo) -> anchor_lang::prelude::Result<()> {
+    pub fn validate_unfreeze(_ctx: &anchor_lang::prelude::Context<crate::instructions::batch_trade::BatchTrade>, _asset: &TokenInfo) -> anchor_lang::Result<()> {
         Ok(())
     }
 }
@@ -154,55 +155,55 @@ impl AssetTrait for TokenInfo {
         }
     }
     /// mint操作，最小功能单元，逐行注释
-    fn mint(&mut self, amount: u64) -> Result<()> {
+    fn mint(&mut self, amount: u64) -> anchor_lang::Result<()> {
         // 资产mint操作，增加当前价格（示例，实际应为供应量等）
         self.price = self.price.saturating_add(amount);
         Ok(())
     }
     /// burn操作，最小功能单元，逐行注释
-    fn burn(&mut self, amount: u64) -> Result<()> {
+    fn burn(&mut self, amount: u64) -> anchor_lang::Result<()> {
         // 资产burn操作，减少当前价格（示例，实际应为供应量等）
         require!(self.price >= amount, crate::error::ErrorCode::InvalidParams);
         self.price -= amount;
         Ok(())
     }
     /// 买入操作，最小功能单元，逐行注释
-    fn buy(&mut self, _amount: u64) -> Result<()> {
+    fn buy(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         // 资产买入操作，实际应对接DEX/AMM，示例直接返回Ok
         Ok(())
     }
     /// 卖出操作，最小功能单元，逐行注释
-    fn sell(&mut self, _amount: u64) -> Result<()> {
+    fn sell(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         // 资产卖出操作，实际应对接DEX/AMM，示例直接返回Ok
         Ok(())
     }
     /// 资产兑换操作，最小功能单元，逐行注释
-    fn swap(&mut self, _from_amount: u64, _to_asset: &mut dyn AssetTrait) -> Result<()> {
+    fn swap(&mut self, _from_amount: u64, _to_asset: &mut dyn AssetTrait) -> anchor_lang::Result<()> {
         // 资产兑换操作，实际应对接DEX/AMM，示例直接返回Ok
         Ok(())
     }
     /// 资产组合操作，最小功能单元，逐行注释
-    fn combine(&mut self, _other: &mut dyn AssetTrait, _amount: u64) -> Result<()> {
+    fn combine(&mut self, _other: &mut dyn AssetTrait, _amount: u64) -> anchor_lang::Result<()> {
         // 资产组合操作，实际应对接组合逻辑，示例直接返回Ok
         Ok(())
     }
     /// 资产分割操作，最小功能单元，逐行注释
-    fn split(&mut self, _amount: u64) -> Result<()> {
+    fn split(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         // 资产分割操作，实际应对接分割逻辑，示例直接返回Ok
         Ok(())
     }
     /// 授权操作，最小功能单元，逐行注释
-    fn authorize(&mut self, _authority: Pubkey) -> Result<()> {
+    fn authorize(&mut self, _authority: Pubkey) -> anchor_lang::Result<()> {
         // 资产授权操作，实际应对接权限管理，示例直接返回Ok
         Ok(())
     }
     /// 冻结操作，最小功能单元，逐行注释
-    fn freeze(&mut self) -> Result<()> {
+    fn freeze(&mut self) -> anchor_lang::Result<()> {
         // 资产冻结操作，实际应对接冻结逻辑，示例直接返回Ok
         Ok(())
     }
     /// 解冻操作，最小功能单元，逐行注释
-    fn unfreeze(&mut self) -> Result<()> {
+    fn unfreeze(&mut self) -> anchor_lang::Result<()> {
         // 资产解冻操作，实际应对接解冻逻辑，示例直接返回Ok
         Ok(())
     }
@@ -228,7 +229,7 @@ impl Default for WeightAllocation {
 
 impl WeightAllocation {
     /// 构造函数
-    pub fn new(token_mint: Pubkey, weight_bps: u64) -> Result<Self> {
+    pub fn new(token_mint: Pubkey, weight_bps: u64) -> anchor_lang::Result<Self> {
         Ok(Self { token_mint, weight_bps })
     }
     /// 获取权重百分比
@@ -236,7 +237,7 @@ impl WeightAllocation {
         self.weight_bps as f64 / 10000.0
     }
     /// 设置权重百分比
-    pub fn set_weight_percentage(&mut self, percentage: f64) -> Result<()> {
+    pub fn set_weight_percentage(&mut self, percentage: f64) -> anchor_lang::Result<()> {
         require!(percentage >= 0.0 && percentage <= 1.0, crate::error::ErrorCode::InvalidParams);
         self.weight_bps = (percentage * 10000.0).round() as u64;
         Ok(())
@@ -271,25 +272,25 @@ pub trait AssetTrait {
     /// 获取资产类型枚举
     fn asset_type(&self) -> AssetType;
     /// mint操作，最小功能单元，逐行注释
-    fn mint(&mut self, _amount: u64) -> Result<()>;
+    fn mint(&mut self, _amount: u64) -> anchor_lang::Result<()>;
     /// burn操作，最小功能单元，逐行注释
-    fn burn(&mut self, _amount: u64) -> Result<()>;
+    fn burn(&mut self, _amount: u64) -> anchor_lang::Result<()>;
     /// 买入操作，最小功能单元，逐行注释
-    fn buy(&mut self, _amount: u64) -> Result<()>;
+    fn buy(&mut self, _amount: u64) -> anchor_lang::Result<()>;
     /// 卖出操作，最小功能单元，逐行注释
-    fn sell(&mut self, _amount: u64) -> Result<()>;
+    fn sell(&mut self, _amount: u64) -> anchor_lang::Result<()>;
     /// 资产兑换操作，最小功能单元，逐行注释
-    fn swap(&mut self, _from_amount: u64, _to_asset: &mut dyn AssetTrait) -> Result<()>;
+    fn swap(&mut self, _from_amount: u64, _to_asset: &mut dyn AssetTrait) -> anchor_lang::Result<()>;
     /// 资产组合操作，最小功能单元，逐行注释
-    fn combine(&mut self, _other: &mut dyn AssetTrait, _amount: u64) -> Result<()>;
+    fn combine(&mut self, _other: &mut dyn AssetTrait, _amount: u64) -> anchor_lang::Result<()>;
     /// 资产分割操作，最小功能单元，逐行注释
-    fn split(&mut self, _amount: u64) -> Result<()>;
+    fn split(&mut self, _amount: u64) -> anchor_lang::Result<()>;
     /// 授权操作，最小功能单元，逐行注释
-    fn authorize(&mut self, _authority: Pubkey) -> Result<()>;
+    fn authorize(&mut self, _authority: Pubkey) -> anchor_lang::Result<()>;
     /// 冻结操作，最小功能单元，逐行注释
-    fn freeze(&mut self) -> Result<()>;
+    fn freeze(&mut self) -> anchor_lang::Result<()>;
     /// 解冻操作，最小功能单元，逐行注释
-    fn unfreeze(&mut self) -> Result<()>;
+    fn unfreeze(&mut self) -> anchor_lang::Result<()>;
 }
 
 // 为每个AssetType实现AssetTrait，便于统一多资产类型操作和未来扩展
@@ -318,7 +319,7 @@ impl AssetTrait for AssetType {
         self.clone()
     }
     /// mint操作，最小功能单元，逐行注释
-    fn mint(&mut self, _amount: u64) -> Result<()> {
+    fn mint(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         // 资产类型mint操作，按类型细化
         match self {
             AssetType::Crypto | AssetType::Stablecoin | AssetType::IndexToken | AssetType::ETF | AssetType::Stock | AssetType::RWA => Ok(()),
@@ -326,7 +327,7 @@ impl AssetTrait for AssetType {
         }
     }
     /// burn操作，最小功能单元，逐行注释
-    fn burn(&mut self, _amount: u64) -> Result<()> {
+    fn burn(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         // 资产类型burn操作，按类型细化
         match self {
             AssetType::Crypto | AssetType::Stablecoin | AssetType::IndexToken | AssetType::ETF | AssetType::Stock | AssetType::RWA => Ok(()),
@@ -334,7 +335,7 @@ impl AssetTrait for AssetType {
         }
     }
     /// 买入操作，最小功能单元，逐行注释
-    fn buy(&mut self, _amount: u64) -> Result<()> {
+    fn buy(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         // 资产类型买入操作，按类型细化
         match self {
             AssetType::Crypto | AssetType::Stablecoin | AssetType::IndexToken | AssetType::ETF | AssetType::Stock | AssetType::RWA => Ok(()),
@@ -342,7 +343,7 @@ impl AssetTrait for AssetType {
         }
     }
     /// 卖出操作，最小功能单元，逐行注释
-    fn sell(&mut self, _amount: u64) -> Result<()> {
+    fn sell(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         // 资产类型卖出操作，按类型细化
         match self {
             AssetType::Crypto | AssetType::Stablecoin | AssetType::IndexToken | AssetType::ETF | AssetType::Stock | AssetType::RWA => Ok(()),
@@ -350,7 +351,7 @@ impl AssetTrait for AssetType {
         }
     }
     /// 资产兑换操作，最小功能单元，逐行注释
-    fn swap(&mut self, _from_amount: u64, _to_asset: &mut dyn AssetTrait) -> Result<()> {
+    fn swap(&mut self, _from_amount: u64, _to_asset: &mut dyn AssetTrait) -> anchor_lang::Result<()> {
         // 资产类型兑换操作，按类型细化
         if self.is_tradable() && _to_asset.is_tradable() {
             Ok(())
@@ -359,7 +360,7 @@ impl AssetTrait for AssetType {
         }
     }
     /// 资产组合操作，最小功能单元，逐行注释
-    fn combine(&mut self, _other: &mut dyn AssetTrait, _amount: u64) -> Result<()> {
+    fn combine(&mut self, _other: &mut dyn AssetTrait, _amount: u64) -> anchor_lang::Result<()> {
         // 资产类型组合操作，按类型细化
         if self.is_tradable() && _other.is_tradable() {
             Ok(())
@@ -368,7 +369,7 @@ impl AssetTrait for AssetType {
         }
     }
     /// 资产分割操作，最小功能单元，逐行注释
-    fn split(&mut self, _amount: u64) -> Result<()> {
+    fn split(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         // 资产类型分割操作，按类型细化
         match self {
             AssetType::Crypto | AssetType::Stablecoin | AssetType::IndexToken | AssetType::ETF | AssetType::Stock | AssetType::RWA => Ok(()),
@@ -376,7 +377,7 @@ impl AssetTrait for AssetType {
         }
     }
     /// 授权操作，最小功能单元，逐行注释
-    fn authorize(&mut self, _authority: Pubkey) -> Result<()> {
+    fn authorize(&mut self, _authority: Pubkey) -> anchor_lang::Result<()> {
         // 资产类型授权操作，按类型细化
         match self {
             AssetType::Crypto | AssetType::Stablecoin | AssetType::IndexToken | AssetType::ETF | AssetType::Stock | AssetType::RWA => Ok(()),
@@ -384,7 +385,7 @@ impl AssetTrait for AssetType {
         }
     }
     /// 冻结操作，最小功能单元，逐行注释
-    fn freeze(&mut self) -> Result<()> {
+    fn freeze(&mut self) -> anchor_lang::Result<()> {
         // 资产类型冻结操作，按类型细化
         match self {
             AssetType::Crypto | AssetType::Stablecoin | AssetType::IndexToken | AssetType::ETF | AssetType::Stock | AssetType::RWA => Ok(()),
@@ -392,7 +393,7 @@ impl AssetTrait for AssetType {
         }
     }
     /// 解冻操作，最小功能单元，逐行注释
-    fn unfreeze(&mut self) -> Result<()> {
+    fn unfreeze(&mut self) -> anchor_lang::Result<()> {
         // 资产类型解冻操作，按类型细化
         match self {
             AssetType::Crypto | AssetType::Stablecoin | AssetType::IndexToken | AssetType::ETF | AssetType::Stock | AssetType::RWA => Ok(()),
@@ -403,39 +404,39 @@ impl AssetTrait for AssetType {
 
 impl AssetOperationTrait for TokenInfo {
     /// 买入操作，TokenInfo本身不直接实现，返回Ok(())
-    fn buy(&mut self, _amount: u64) -> Result<()> {
+    fn buy(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 卖出操作，TokenInfo本身不直接实现，返回Ok(())
-    fn sell(&mut self, _amount: u64) -> Result<()> {
+    fn sell(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 资产兑换操作，TokenInfo本身不直接实现，返回Ok(())
-    fn swap(&mut self, _from_amount: u64, _to_asset: &mut dyn AssetTrait) -> Result<()> {
+    fn swap(&mut self, _from_amount: u64, _to_asset: &mut dyn AssetTrait) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 资产组合操作，TokenInfo本身不直接实现，返回Ok(())
-    fn combine(&mut self, _other: &mut dyn AssetTrait, _amount: u64) -> Result<()> {
+    fn combine(&mut self, _other: &mut dyn AssetTrait, _amount: u64) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 资产分割操作，TokenInfo本身不直接实现，返回Ok(())
-    fn split(&mut self, _amount: u64) -> Result<()> {
+    fn split(&mut self, _amount: u64) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 授权操作，TokenInfo本身不直接实现，返回Ok(())
-    fn authorize(&mut self, _authority: Pubkey) -> Result<()> {
+    fn authorize(&mut self, _authority: Pubkey) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 冻结操作，TokenInfo本身不直接实现，返回Ok(())
-    fn freeze(&mut self) -> Result<()> {
+    fn freeze(&mut self) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 解冻操作，TokenInfo本身不直接实现，返回Ok(())
-    fn unfreeze(&mut self) -> Result<()> {
+    fn unfreeze(&mut self) -> anchor_lang::Result<()> {
         Ok(())
     }
     /// 批量操作，TokenInfo本身不直接实现，遍历所有批量操作，返回Ok(())
-    fn batch_operate(&mut self, _operations: Vec<AssetBatchOperation>) -> Result<()> {
+    fn batch_operate(&mut self, _operations: Vec<AssetBatchOperation>) -> anchor_lang::Result<()> {
         Ok(())
     }
 } 

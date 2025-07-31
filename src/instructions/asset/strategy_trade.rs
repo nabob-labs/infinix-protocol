@@ -2,12 +2,10 @@
 //! Asset Strategy Trade Instruction
 //! 资产策略交易指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
-use crate::accounts::BasketIndexStateAccount; // 账户状态结构体定义
 use crate::events::asset_event::*; // 资产相关事件定义（Anchor事件）
 use crate::services::asset_service::AssetService; // 资产业务逻辑服务层
-use crate::state::baskets::BasketIndexState; // 资产篮子状态
-use crate::validation::asset_validation::AssetValidatable; // 资产校验trait
-use crate::core::types::{StrategyParams, TradeParams, OracleParams}; // 策略与交易参数类型
+use crate::core::types::*; // 策略与交易参数类型
+use crate::state::baskets::BasketIndexState; // 篮子状态类型
 use anchor_lang::prelude::*; // Anchor预导入，提供Solana合约开发的基础类型和宏
 
 /// 资产策略交易参数结构体
@@ -40,7 +38,7 @@ pub struct StrategyTradeAsset<'info> {
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - params: 策略交易参数
 /// - 返回: Anchor规范Result
-pub fn strategy_trade_asset(ctx: Context<StrategyTradeAsset>, params: StrategyTradeAssetParams) -> Result<()> {
+pub fn strategy_trade_asset(ctx: Context<StrategyTradeAsset>, params: StrategyTradeAssetParams) -> anchor_lang::Result<()> {
     let asset = &mut ctx.accounts.asset; // 获取可变资产篮子账户
     asset.validate()?; // 校验资产篮子状态
     // 权限校验：必须是当前authority

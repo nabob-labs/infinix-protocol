@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::etf_service::EtfService;
 use crate::events::asset_event::AssetQuoted;
@@ -16,9 +15,9 @@ pub struct QuoteEtf<'info> {
 /// ETF资产quote指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 询价数量
-pub fn quote_etf(ctx: Context<QuoteEtf>, amount: u64) -> Result<()> {
+pub fn quote_etf(ctx: Context<QuoteEtf>, amount: u64) -> anchor_lang::Result<()> {
     let etf = &ctx.accounts.etf;
-    require!(etf.asset_type == AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
+    require!(etf.asset_type == AssetType::ETF, ProgramError::InvalidAssetType);
     let service = EtfService::new();
     let quote = service.quote(etf, amount)?;
     emit!(AssetQuoted {

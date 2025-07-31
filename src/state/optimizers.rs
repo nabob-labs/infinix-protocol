@@ -7,7 +7,7 @@
 use anchor_lang::prelude::*;
 use crate::state::common::*;
 use crate::core::traits::*;
-use crate::error::ProgramError;
+use anchor_lang::prelude::ProgramError;
 use crate::version::{ProgramVersion, Versioned};
 
 // ========================= 优化器与风险管理器状态实现 =========================
@@ -16,7 +16,7 @@ use crate::version::{ProgramVersion, Versioned};
 
 /// 执行优化器账户
 #[account]
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace, PartialEq, Eq)]
+#[derive(Debug, InitSpace, PartialEq, Eq)]
 pub struct ExecutionOptimizer {
     /// 通用账户基础信息
     pub base: BaseAccount,
@@ -31,12 +31,13 @@ pub struct ExecutionOptimizer {
     /// AI/ML模型预测分数
     pub ai_score: Option<f64>,
     /// 外部信号
+    #[max_len(16)]
     pub external_signals: Option<Vec<u64>>,
 }
 
 impl ExecutionOptimizer {
     /// 初始化优化器
-    pub fn initialize(&mut self, authority: Pubkey, config: OptimizerConfig, bump: u8) -> Result<()> {
+    pub fn initialize(&mut self, authority: Pubkey, config: OptimizerConfig, bump: u8) -> anchor_lang::Result<()> {
         self.base = BaseAccount::new(authority, bump)?;
         self.config = config;
         self.performance_metrics = OptimizerPerformanceMetrics::default();
@@ -45,14 +46,14 @@ impl ExecutionOptimizer {
         Ok(())
     }
     /// 更新配置
-    pub fn update_config(&mut self, new_config: OptimizerConfig) -> Result<()> {
+    pub fn update_config(&mut self, new_config: OptimizerConfig) -> anchor_lang::Result<()> {
         new_config.validate()?;
         self.config = new_config;
         self.base.touch()?;
         Ok(())
     }
     /// 记录优化结果
-    pub fn record_optimization(&mut self, gas_saved: u64, slippage_reduced: u64, execution_time_ms: u64, ai_score: Option<f64>, external_signals: Option<Vec<u64>>) -> Result<()> {
+    pub fn record_optimization(&mut self, gas_saved: u64, slippage_reduced: u64, execution_time_ms: u64, ai_score: Option<f64>, external_signals: Option<Vec<u64>>) -> anchor_lang::Result<()> {
         self.performance_metrics.total_optimizations += 1;
         self.performance_metrics.total_gas_saved += gas_saved;
         self.performance_metrics.total_slippage_reduced += slippage_reduced;
@@ -69,7 +70,7 @@ impl ExecutionOptimizer {
 
 /// 校验 trait 实现
 impl Validatable for ExecutionOptimizer {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         self.base.validate()?;
         self.config.validate()?;
         Ok(())
@@ -79,7 +80,7 @@ impl Validatable for ExecutionOptimizer {
 /// 权限 trait 实现
 impl Authorizable for ExecutionOptimizer {
     fn authority(&self) -> Pubkey { self.base.authority }
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> anchor_lang::Result<()> {
         self.base.authority = new_authority;
         self.base.touch()?;
         Ok(())
@@ -89,16 +90,16 @@ impl Authorizable for ExecutionOptimizer {
 /// 暂停 trait 实现
 impl Pausable for ExecutionOptimizer {
     fn is_paused(&self) -> bool { self.base.is_paused }
-    fn pause(&mut self) -> Result<()> { self.base.pause() }
-    fn unpause(&mut self) -> Result<()> { self.base.unpause() }
-    fn resume(&mut self) -> Result<()> { self.unpause() }
+    fn pause(&mut self) -> anchor_lang::Result<()> { self.base.pause() }
+    fn unpause(&mut self) -> anchor_lang::Result<()> { self.base.unpause() }
+    fn resume(&mut self) -> anchor_lang::Result<()> { self.unpause() }
 }
 
 /// 激活 trait 实现
 impl Activatable for ExecutionOptimizer {
     fn is_active(&self) -> bool { self.base.is_active }
-    fn activate(&mut self) -> Result<()> { self.base.activate() }
-    fn deactivate(&mut self) -> Result<()> { self.base.deactivate() }
+    fn activate(&mut self) -> anchor_lang::Result<()> { self.base.activate() }
+    fn deactivate(&mut self) -> anchor_lang::Result<()> { self.base.deactivate() }
 }
 
 /// 版本 trait 实现
@@ -111,7 +112,7 @@ impl Versioned for ExecutionOptimizer {
 
 /// 风险管理器账户
 #[account]
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace, PartialEq, Eq)]
+#[derive(Debug, InitSpace, PartialEq, Eq)]
 pub struct RiskManager {
     /// 通用账户基础信息
     pub base: BaseAccount,
@@ -128,12 +129,13 @@ pub struct RiskManager {
     /// AI/ML风险预测分数
     pub ai_risk_score: Option<f64>,
     /// 外部风险信号
+    #[max_len(16)]
     pub external_risk_signals: Option<Vec<u64>>,
 }
 
 impl RiskManager {
     /// 初始化风险管理器
-    pub fn initialize(&mut self, authority: Pubkey, risk_limits: RiskLimits, bump: u8) -> Result<()> {
+    pub fn initialize(&mut self, authority: Pubkey, risk_limits: RiskLimits, bump: u8) -> anchor_lang::Result<()> {
         self.base = BaseAccount::new(authority, bump)?;
         self.risk_limits = risk_limits;
         self.current_metrics = RiskMetrics::default();
@@ -143,14 +145,14 @@ impl RiskManager {
         Ok(())
     }
     /// 更新风险限额
-    pub fn update_risk_limits(&mut self, new_limits: RiskLimits) -> Result<()> {
+    pub fn update_risk_limits(&mut self, new_limits: RiskLimits) -> anchor_lang::Result<()> {
         new_limits.validate()?;
         self.risk_limits = new_limits;
         self.base.touch()?;
         Ok(())
     }
     /// 风险评估
-    pub fn assess_risk(&mut self, portfolio_value: u64, weights: &[u64], ai_risk_score: Option<f64>, external_risk_signals: Option<Vec<u64>>) -> Result<()> {
+    pub fn assess_risk(&mut self, portfolio_value: u64, weights: &[u64], ai_risk_score: Option<f64>, external_risk_signals: Option<Vec<u64>>) -> anchor_lang::Result<()> {
         let concentration_risk = self.calculate_concentration_risk(weights);
         let var_bps = self.calculate_var(portfolio_value, weights)?;
         let ai_score = ai_risk_score.unwrap_or(0.0);
@@ -175,7 +177,7 @@ impl RiskManager {
         (hhi / 100).min(10_000) as u32
     }
     /// 计算VaR
-    fn calculate_var(&self, portfolio_value: u64, weights: &[u64]) -> Result<u64> {
+    fn calculate_var(&self, portfolio_value: u64, weights: &[u64]) -> anchor_lang::Result<u64> {
         if portfolio_value == 0 || weights.is_empty() { return Ok(0); }
         let volatility_estimate = 2000u64;
         let confidence_factor = 1960u64;
@@ -190,14 +192,14 @@ impl RiskManager {
             || self.current_metrics.max_drawdown_bps > self.risk_limits.max_drawdown_bps as u64
     }
     /// 激活熔断器
-    pub fn activate_circuit_breaker(&mut self) -> Result<()> {
+    pub fn activate_circuit_breaker(&mut self) -> anchor_lang::Result<()> {
         self.circuit_breaker_active = true;
         self.base.touch()?;
         msg!("Circuit breaker activated due to risk limit breach");
         Ok(())
     }
     /// 关闭熔断器
-    pub fn deactivate_circuit_breaker(&mut self) -> Result<()> {
+    pub fn deactivate_circuit_breaker(&mut self) -> anchor_lang::Result<()> {
         self.circuit_breaker_active = false;
         self.base.touch()?;
         msg!("Circuit breaker deactivated");
@@ -213,7 +215,7 @@ impl RiskManager {
 
 /// 校验 trait 实现
 impl Validatable for RiskManager {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         self.base.validate()?;
         self.risk_limits.validate()?;
         Ok(())
@@ -223,7 +225,7 @@ impl Validatable for RiskManager {
 /// 权限 trait 实现
 impl Authorizable for RiskManager {
     fn authority(&self) -> Pubkey { self.base.authority }
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> anchor_lang::Result<()> {
         self.base.authority = new_authority;
         self.base.touch()?;
         Ok(())
@@ -233,16 +235,16 @@ impl Authorizable for RiskManager {
 /// 暂停 trait 实现
 impl Pausable for RiskManager {
     fn is_paused(&self) -> bool { self.base.is_paused }
-    fn pause(&mut self) -> Result<()> { self.base.pause() }
-    fn unpause(&mut self) -> Result<()> { self.base.unpause() }
-    fn resume(&mut self) -> Result<()> { self.unpause() }
+    fn pause(&mut self) -> anchor_lang::Result<()> { self.base.pause() }
+    fn unpause(&mut self) -> anchor_lang::Result<()> { self.base.unpause() }
+    fn resume(&mut self) -> anchor_lang::Result<()> { self.unpause() }
 }
 
 /// 激活 trait 实现
 impl Activatable for RiskManager {
     fn is_active(&self) -> bool { self.base.is_active }
-    fn activate(&mut self) -> Result<()> { self.base.activate() }
-    fn deactivate(&mut self) -> Result<()> { self.base.deactivate() }
+    fn activate(&mut self) -> anchor_lang::Result<()> { self.base.activate() }
+    fn deactivate(&mut self) -> anchor_lang::Result<()> { self.base.deactivate() }
 }
 
 /// 版本 trait 实现
@@ -287,7 +289,7 @@ impl Default for OptimizerConfig {
 }
 
 impl Validatable for OptimizerConfig {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         if self.max_batch_size == 0 || self.max_batch_size > 128 {
             return Err(ProgramError::InvalidStrategyParameters.into());
         }

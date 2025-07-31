@@ -10,8 +10,9 @@
 //! - 便于 adapter/algorithm/strategy 热插拔和动态注册
 
 use anchor_lang::prelude::*; // Anchor 预导入，包含 Context、Result、账户等，确保trait与Anchor兼容
-use crate::core::adapter::AdapterTrait; // 引入统一适配器 trait，便于算法与外部集成
-use crate::core::types::{TradeParams, BatchTradeParams, AlgoParams, StrategyParams}; // 引入通用参数类型，便于算法通用化
+use crate::core::adapter::AdapterTrait;
+use crate::core::types::{AlgoParams, TradeParams, StrategyParams};
+// use crate::core::types::{TradeParams, BatchTradeParams, AlgoParams, StrategyParams}; // 引入通用参数类型，便于算法通用化 - 暂时注释掉
 
 /// 通用算法 trait，所有算法/策略都应实现
 /// - 继承 AdapterTrait，便于统一管理
@@ -20,6 +21,8 @@ pub trait Algorithm: AdapterTrait {
     /// - 参数 params: 算法参数
     /// - 返回 ExecutionResult，包含执行结果
     fn execute(&self, params: &AlgoParams) -> anchor_lang::Result<ExecutionResult>; // 算法主入口，参数类型安全
+    /// 算法名称
+    fn name(&self) -> &'static str;
     /// 算法支持的资产类型（如 SOL、USDC、ETF、RWA 等）
     fn supported_assets(&self) -> Vec<String> { vec![] } // 默认空，子类可重载
     /// 算法支持的市场类型（如现货、期货、DEX、AMM 等）
@@ -34,7 +37,9 @@ pub trait ExecutionStrategy: Algorithm {
     /// - 参数 ctx: Anchor 上下文，包含账户、权限等
     /// - 参数 params: 算法参数
     /// - 返回 ExecutionResult
-    fn execute(&self, ctx: Context<Execute>, params: &AlgoParams) -> Result<ExecutionResult>; // Anchor 上下文+参数，类型安全
+    fn execute(&self, ctx: Context<Execute>, params: &AlgoParams) -> anchor_lang::Result<ExecutionResult>; // Anchor 上下文+参数，类型安全
+    /// 算法名称
+    fn name(&self) -> &'static str;
 }
 
 /// 路由类算法 trait（如智能路由、跨市场套利等）
@@ -43,7 +48,7 @@ pub trait RoutingStrategy: Algorithm {
     /// - 参数 ctx: Anchor 上下文，包含账户、权限等
     /// - 参数 params: 交易参数
     /// - 返回 RoutingResult
-    fn route(&self, ctx: Context<Route>, params: &TradeParams) -> Result<RoutingResult>; // Anchor 上下文+参数，类型安全
+    fn route(&self, ctx: Context<Route>, params: &TradeParams) -> anchor_lang::Result<RoutingResult>; // Anchor 上下文+参数，类型安全
 }
 
 /// 风控类算法 trait（如风险评估、风控管理等）
@@ -52,7 +57,7 @@ pub trait RiskManagement: Algorithm {
     /// - 参数 ctx: Anchor 上下文，包含账户、权限等
     /// - 参数 params: 策略参数
     /// - 返回 RiskResult
-    fn assess(&self, ctx: Context<AssessRisk>, params: &StrategyParams) -> Result<RiskResult>; // Anchor 上下文+参数，类型安全
+    fn assess(&self, ctx: Context<AssessRisk>, params: &StrategyParams) -> anchor_lang::Result<RiskResult>; // Anchor 上下文+参数，类型安全
 }
 
 /// 优化器类算法 trait（如执行优化、成本最小化等）
@@ -61,7 +66,7 @@ pub trait OptimizerStrategy: Algorithm {
     /// - 参数 ctx: Anchor 上下文，包含账户、权限等
     /// - 参数 params: 算法参数
     /// - 返回 OptimizerResult
-    fn optimize(&self, ctx: Context<Optimize>, params: &AlgoParams) -> Result<OptimizerResult>; // Anchor 上下文+参数，类型安全
+    fn optimize(&self, ctx: Context<Optimize>, params: &AlgoParams) -> anchor_lang::Result<OptimizerResult>; // Anchor 上下文+参数，类型安全
 }
 
 /// 算法类型枚举，便于注册表/工厂统一管理
@@ -148,7 +153,7 @@ impl ExecutionStrategy for MockExecutionAlgorithm {
         &self,
         _ctx: Context<crate::algorithms::traits::Execute>,
         params: &AlgoParams,
-    ) -> Result<ExecutionResult> {
+    ) -> anchor_lang::Result<ExecutionResult> {
         Ok(ExecutionResult {
             optimized_size: params.order_size, // 直接返回输入量
             expected_cost: params.order_size * 1_000_000, // 假定每单位成本1000000

@@ -4,6 +4,8 @@
 //! - Pyth预言机适配器
 //! - Switchboard预言机适配器  
 //! - Chainlink预言机适配器
+//! - Band Protocol预言机适配器
+//! - API3预言机适配器
 //! - 统一的价格查询接口
 //! - 动态适配器注册和管理
 //! 
@@ -23,18 +25,17 @@ pub mod traits;                           // 预言机相关trait定义
 pub mod pyth;                             // Pyth预言机适配器
 pub mod switchboard;                      // Switchboard预言机适配器
 pub mod chainlink;                        // Chainlink预言机适配器
+pub mod band_protocol;                    // Band Protocol预言机适配器
+pub mod api3;                             // API3预言机适配器
 pub mod chainlink_adapter;                // Chainlink适配器实现
 pub mod pyth_adapter;                     // Pyth适配器实现
 pub mod switchboard_adapter;              // Switchboard适配器实现
 pub mod adapter_registry;                 // 适配器注册表
 
-// 重新导出核心类型，避免重复导出
-pub use traits::*;                        // 核心trait定义（优先）
-pub use adapter::*;                       // 适配器核心功能
-pub use factory::*;                       // 工厂模式
-pub use pyth::*;                          // Pyth适配器
-pub use switchboard::*;                   // Switchboard适配器
-pub use chainlink::*;                     // Chainlink适配器
+// 只导出核心类型，避免命名冲突
+pub use traits::OracleAdapter;            // 核心trait定义
+pub use adapter::OracleAdapterRegistry;   // 适配器注册表
+
 
 /// Oracle模块版本号
 pub const ORACLE_VERSION: &str = "1.0.0";
@@ -42,7 +43,7 @@ pub const ORACLE_VERSION: &str = "1.0.0";
 /// Oracle模块初始化函数
 /// - 用于初始化所有Oracle相关组件
 /// - 设计意图：确保Oracle模块正确初始化，便于统一管理
-pub fn initialize_oracles() -> Result<()> {
+pub fn initialize_oracles() -> anchor_lang::Result<()> {
     msg!("Initializing Oracle module v{}", ORACLE_VERSION);
     
     // 初始化Oracle适配器注册表
@@ -56,7 +57,7 @@ pub fn initialize_oracles() -> Result<()> {
 /// Oracle模块清理函数
 /// - 用于清理Oracle相关资源
 /// - 设计意图：确保资源正确释放，避免内存泄漏
-pub fn cleanup_oracles() -> Result<()> {
+pub fn cleanup_oracles() -> anchor_lang::Result<()> {
     msg!("Cleaning up Oracle module");
     
     // 清理Oracle适配器资源
@@ -70,11 +71,11 @@ pub fn cleanup_oracles() -> Result<()> {
 /// Oracle模块状态查询
 /// - 返回Oracle模块当前状态信息
 /// - 设计意图：便于监控和调试Oracle模块运行状态
-pub fn get_oracle_status() -> Result<String> {
+pub fn get_oracle_status() -> anchor_lang::Result<String> {
     let status = format!(
         "Oracle Module v{} - Status: Active, Adapters: {}",
         ORACLE_VERSION,
-        "Pyth, Switchboard, Chainlink"
+        "Pyth, Switchboard, Chainlink, Band Protocol, API3"
     );
     Ok(status)
 }

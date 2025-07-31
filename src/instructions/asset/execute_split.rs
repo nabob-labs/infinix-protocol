@@ -2,11 +2,9 @@
 //! Asset Execute Split Instruction
 //! 资产执行拆分指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
-use crate::accounts::BasketIndexStateAccount; // 账户状态结构体定义
 use crate::events::asset_event::*; // 资产相关事件定义（Anchor事件）
 use crate::services::asset_service::AssetService; // 资产业务逻辑服务层
-use crate::state::baskets::BasketIndexState; // 资产篮子状态
-use crate::validation::asset_validation::AssetValidatable; // 资产校验trait
+use crate::state::baskets::BasketIndexState; // 篮子状态类型
 use anchor_lang::prelude::*; // Anchor预导入，提供Solana合约开发的基础类型和宏
 
 /// 资产执行拆分指令账户上下文
@@ -30,7 +28,7 @@ pub struct ExecuteSplitAsset<'info> {
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 拆分数量
 /// - 返回: Anchor规范Result
-pub fn execute_split_asset(ctx: Context<ExecuteSplitAsset>, amount: u64) -> Result<()> {
+pub fn execute_split_asset(ctx: Context<ExecuteSplitAsset>, amount: u64) -> anchor_lang::Result<()> {
     let source = &mut ctx.accounts.source; // 获取可变源资产篮子账户
     let new_asset = &mut ctx.accounts.new_asset; // 获取可变新资产篮子账户
     source.validate()?; // 校验源资产篮子状态

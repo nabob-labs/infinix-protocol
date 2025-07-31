@@ -16,7 +16,7 @@
  */
 
 use anchor_lang::prelude::*; // Anchor预导入，包含Result、Accounts、msg!等
-use crate::core::adapter::AdapterTrait; // 适配器元信息trait，统一接口
+// use crate::core::adapter; // 暂时注释掉
 use crate::core::types::OracleParams;   // 预言机参数类型
 
 /// 预言机适配器Trait（标准化、可扩展）

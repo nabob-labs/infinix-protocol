@@ -1,13 +1,21 @@
-//!
-//! Price Utilities Module
-//!
-//! 本模块提供价格计算与分析工具，支持总价值计算、价格冲击评估、TWAP/VWAP 计算、波动率分析、价格变化百分比、移动平均、价格校验等功能，确保价格相关计算合规、精确、可追溯。
+//! Price模块 - 价格计算工具
+//! 
+//! 本模块提供价格计算功能，包含：
+//! - 价格计算
+//! - 价格验证
+//! - 价格转换
+//! - 价格格式化
+//! 
+//! 设计理念：
+//! - 准确性：确保价格计算的准确性
+//! - 性能：使用高效的算法
+//! - 安全性：防止价格操纵
+//! - 标准化：遵循价格计算标准
+//! - 设计意图：极致精确、高性能、安全可靠
 
-// 引入核心模块、错误类型、数学工具和 Anchor 依赖。
-use crate::core::*;
-use crate::error::StrategyError;
+use anchor_lang::prelude::*;             // Anchor 预导入，包含Pubkey、Result等
+// use crate::errors::strategy_error::StrategyError;
 use crate::utils::math::MathOps;
-use anchor_lang::prelude::*;
 
 /// 价格计算工具结构体，提供各种价格相关计算功能。
 pub struct PriceUtils;
@@ -20,7 +28,7 @@ impl PriceUtils {
     /// * `price_feeds` - 价格数据源数组。
     /// # 返回
     /// * 总价值或错误。
-    pub fn calculate_total_value(tokens: &[TokenWeight], price_feeds: &[PriceFeed]) -> Result<u64> {
+    pub fn calculate_total_value(tokens: &[TokenWeight], price_feeds: &[PriceFeed]) -> anchor_lang::Result<u64> {
         // 校验数组长度一致。
         if tokens.len() != price_feeds.len() {
             return Err(StrategyError::InvalidStrategyParameters.into());
@@ -52,7 +60,7 @@ impl PriceUtils {
         trade_amount: u64,
         liquidity: u64,
         current_price: u64,
-    ) -> Result<u64> {
+    ) -> anchor_lang::Result<u64> {
         // 无流动性时返回最大冲击。
         if liquidity == 0 {
             return Ok(MAX_SLIPPAGE_BPS);
@@ -70,7 +78,7 @@ impl PriceUtils {
     /// * `time_weights` - 时间权重数组。
     /// # 返回
     /// * TWAP 或错误。
-    pub fn calculate_twap(prices: &[u64], time_weights: &[u64]) -> Result<u64> {
+    pub fn calculate_twap(prices: &[u64], time_weights: &[u64]) -> anchor_lang::Result<u64> {
         // 校验数组非空且长度一致。
         if prices.is_empty() || prices.len() != time_weights.len() {
             return Err(StrategyError::InvalidStrategyParameters.into());
@@ -85,7 +93,7 @@ impl PriceUtils {
     /// * `volumes` - 成交量数组。
     /// # 返回
     /// * VWAP 或错误。
-    pub fn calculate_vwap(prices: &[u64], volumes: &[u64]) -> Result<u64> {
+    pub fn calculate_vwap(prices: &[u64], volumes: &[u64]) -> anchor_lang::Result<u64> {
         // 校验数组非空且长度一致。
         if prices.is_empty() || prices.len() != volumes.len() {
             return Err(StrategyError::InvalidStrategyParameters.into());
@@ -99,7 +107,7 @@ impl PriceUtils {
     /// * `prices` - 价格数组。
     /// # 返回
     /// * 波动率或错误。
-    pub fn calculate_volatility(prices: &[u64]) -> Result<u64> {
+    pub fn calculate_volatility(prices: &[u64]) -> anchor_lang::Result<u64> {
         // 至少需要 2 个价格点计算波动率。
         if prices.len() < 2 {
             return Ok(0);
@@ -130,7 +138,7 @@ impl PriceUtils {
     /// * `new_price` - 新价格。
     /// # 返回
     /// * 变化百分比（基点）或错误。
-    pub fn calculate_price_change(old_price: u64, new_price: u64) -> Result<i64> {
+    pub fn calculate_price_change(old_price: u64, new_price: u64) -> anchor_lang::Result<i64> {
         // 避免除零错误。
         if old_price == 0 {
             return Ok(0);
@@ -157,7 +165,7 @@ impl PriceUtils {
     /// * `window` - 移动窗口大小。
     /// # 返回
     /// * 移动平均或错误。
-    pub fn calculate_moving_average(prices: &[u64], window: usize) -> Result<u64> {
+    pub fn calculate_moving_average(prices: &[u64], window: usize) -> anchor_lang::Result<u64> {
         // 校验参数有效性。
         if prices.is_empty() || window == 0 || window > prices.len() {
             return Err(StrategyError::InvalidStrategyParameters.into());
@@ -172,7 +180,7 @@ impl PriceUtils {
     /// * `price_feed` - 价格数据源。
     /// # 返回
     /// * 校验结果。
-    pub fn validate_price_feed(price_feed: &PriceFeed) -> Result<()> {
+    pub fn validate_price_feed(price_feed: &PriceFeed) -> anchor_lang::Result<()> {
         // 检查价格是否有效。
         if price_feed.price == 0 {
             return Err(StrategyError::PriceFeedUnavailable.into());
@@ -212,7 +220,7 @@ pub struct RebalanceAction {
 /// 为价格数据源实现校验 trait。
 impl PriceFeed {
     /// 校验价格数据源有效性。
-    pub fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> anchor_lang::Result<()> {
         PriceUtils::validate_price_feed(self)
     }
 }

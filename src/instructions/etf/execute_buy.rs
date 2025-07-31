@@ -3,8 +3,7 @@
 //! ETF资产执行买入指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
-use crate::core::types::{TradeParams, OracleParams};
+use crate::core::types::*;
 use crate::services::portfolio_service::PortfolioServiceFacade;
 
 /// ETF资产执行买入指令账户上下文
@@ -17,10 +16,10 @@ pub struct ExecuteBuyEtf<'info> {
 }
 
 /// ETF资产执行买入指令实现
-pub fn execute_buy_etf(ctx: Context<ExecuteBuyEtf>, params: TradeParams, price: u64) -> Result<()> {
+pub fn execute_buy_etf(ctx: Context<ExecuteBuyEtf>, params: TradeParams, price: u64) -> anchor_lang::Result<()> {
     let etf = &mut ctx.accounts.etf;
     etf.validate()?;
-    require!(etf.asset_type == crate::core::types::AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
+    require!(etf.asset_type == crate::core::types::AssetType::ETF, ProgramError::InvalidAssetType);
     // 业务逻辑：调用服务层执行买入
     let facade = PortfolioServiceFacade::new();
     facade.asset_manage.execute_buy(etf, &params, price, ctx.accounts.buyer.key())?;

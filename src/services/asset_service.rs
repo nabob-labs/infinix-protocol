@@ -4,15 +4,15 @@
 
 use anchor_lang::prelude::*; // Anchor 预导入，包含合约开发基础类型、宏、事件、Result等
 use crate::state::baskets::BasketIndexState; // 引入资产篮子状态结构体，作为所有资产操作的核心数据结构
-use crate::errors::asset_error::AssetError; // 引入资产相关错误类型，便于错误处理和合规校验
-use crate::core::logging::log_instruction_dispatch; // 引入统一日志分发工具，便于链上操作审计
-use crate::core::types::{TradeParams, BatchTradeParams, StrategyParams, OracleParams, PriceParams}; // 引入核心参数类型，涵盖交易、批量、策略、预言机等
+// use crate::errors::asset_error::AssetError; // 引入资产相关错误类型，便于错误处理和合规校验
+// use crate::core::logging::log_instruction_dispatch; // 引入统一日志分发工具，便于链上操作审计
+use crate::core::types::{TradeParams, BatchTradeParams, StrategyParams, OracleParams}; // 引入核心参数类型，涵盖交易、批量、策略、预言机等
 
 /// 资产增发trait
 ///
 /// 定义资产增发的接口，便于不同实现的扩展。
 /// - 设计意图：抽象出增发操作，便于后续多种资产类型的统一处理。
-pub trait AssetMintable {
+trait AssetMintable {
     /// 增发资产
     ///
     /// # 参数
@@ -21,7 +21,7 @@ pub trait AssetMintable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    fn mint(&self, basket_index: &mut BasketIndexState, amount: u64) -> Result<()>;
+    fn mint(&self, basket_index: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()>;
 }
 
 /// 资产增发服务实现
@@ -33,7 +33,7 @@ impl AssetMintable for MintAssetService {
     ///
     /// - 若资产未激活，返回 NotAllowed 错误。
     /// - 若累加溢出，返回 InsufficientValue 错误。
-    fn mint(&self, basket_index: &mut BasketIndexState, amount: u64) -> Result<()> {
+    fn mint(&self, basket_index: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         if !basket_index.is_active {
             // 资产未激活，禁止增发，合规校验
             return Err(AssetError::NotAllowed.into());
@@ -47,7 +47,7 @@ impl AssetMintable for MintAssetService {
 /// 资产销毁trait
 ///
 /// 定义资产销毁的接口，便于不同实现的扩展。
-pub trait AssetBurnable {
+trait AssetBurnable {
     /// 销毁资产
     ///
     /// # 参数
@@ -56,7 +56,7 @@ pub trait AssetBurnable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    fn burn(&self, basket_index: &mut BasketIndexState, amount: u64) -> Result<()>;
+    fn burn(&self, basket_index: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()>;
 }
 
 /// 资产销毁服务实现
@@ -67,7 +67,7 @@ impl AssetBurnable for BurnAssetService {
     /// 销毁资产实现
     ///
     /// - 若余额不足，返回 InsufficientValue 错误。
-    fn burn(&self, basket_index: &mut BasketIndexState, amount: u64) -> Result<()> {
+    fn burn(&self, basket_index: &mut BasketIndexState, amount: u64) -> anchor_lang::Result<()> {
         if basket_index.total_value < amount {
             // 余额不足，禁止销毁，合规校验
             return Err(AssetError::InsufficientValue.into());
@@ -82,7 +82,7 @@ impl AssetBurnable for BurnAssetService {
 /// 资产报价trait
 ///
 /// 定义资产报价接口，便于集成不同报价逻辑。
-pub trait AssetQuotable {
+trait AssetQuotable {
     /// 资产报价
     ///
     /// # 参数
@@ -92,7 +92,7 @@ pub trait AssetQuotable {
     ///
     /// # 返回值
     /// - 返回报价（u64），失败返回 AssetError。
-    fn quote(&self, asset: &BasketIndexState, params: &TradeParams, price_params: &OracleParams) -> Result<u64>;
+    fn quote(&self, asset: &BasketIndexState, params: &TradeParams, price_params: &OracleParams) -> anchor_lang::Result<u64>;
 }
 
 /// 资产报价服务实现
@@ -104,7 +104,7 @@ impl AssetQuotable for QuoteAssetService {
     ///
     /// - 这里只做业务处理，不做校验和事件分发。
     /// - 示例：直接返回一个模拟价格，实际应集成DEX/Oracle。
-    fn quote(&self, asset: &BasketIndexState, params: &TradeParams, price_params: &OracleParams) -> Result<u64> {
+    fn quote(&self, asset: &BasketIndexState, params: &TradeParams, price_params: &OracleParams) -> anchor_lang::Result<u64> {
         let price = params.amount_in * 1000; // 假设1:1000，实际应集成DEX/Oracle
         Ok(price) // 返回模拟价格
     }
@@ -113,7 +113,7 @@ impl AssetQuotable for QuoteAssetService {
 /// 资产买入trait
 ///
 /// 定义资产买入接口。
-pub trait AssetBuyExecutable {
+trait AssetBuyExecutable {
     /// 执行买入
     ///
     /// # 参数
@@ -124,7 +124,7 @@ pub trait AssetBuyExecutable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    fn execute_buy(&self, asset: &mut BasketIndexState, params: &TradeParams, price: u64, buyer: Pubkey) -> Result<()>;
+    fn execute_buy(&self, asset: &mut BasketIndexState, params: &TradeParams, price: u64, buyer: Pubkey) -> anchor_lang::Result<()>;
 }
 
 /// 资产买入服务实现
@@ -135,7 +135,7 @@ impl AssetBuyExecutable for ExecuteBuyAssetService {
     /// 买入资产实现
     ///
     /// - 若累加溢出，返回 BuyFailed 错误。
-    fn execute_buy(&self, asset: &mut BasketIndexState, params: &TradeParams, price: u64, _buyer: Pubkey) -> Result<()> {
+    fn execute_buy(&self, asset: &mut BasketIndexState, params: &TradeParams, price: u64, _buyer: Pubkey) -> anchor_lang::Result<()> {
         asset.total_value = asset.total_value.checked_add(params.amount_in).ok_or(crate::errors::asset_error::AssetError::BuyFailed)?; // 安全累加，溢出报错
         Ok(()) // 买入成功
     }
@@ -145,7 +145,7 @@ impl AssetBuyExecutable for ExecuteBuyAssetService {
 /// 资产卖出trait
 ///
 /// 定义资产卖出接口。
-pub trait AssetSellable {
+trait AssetSellable {
     /// 执行卖出
     ///
     /// # 参数
@@ -156,7 +156,7 @@ pub trait AssetSellable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    fn execute_sell(&self, asset: &mut BasketIndexState, params: &TradeParams, price: u64, seller: Pubkey) -> Result<()>;
+    fn execute_sell(&self, asset: &mut BasketIndexState, params: &TradeParams, price: u64, seller: Pubkey) -> anchor_lang::Result<()>;
 }
 
 /// 资产卖出服务实现
@@ -167,7 +167,7 @@ impl AssetSellable for ExecuteSellAssetService {
     /// 卖出资产实现
     ///
     /// - 若余额不足，返回 SellFailed 错误。
-    fn execute_sell(&self, asset: &mut BasketIndexState, params: &TradeParams, price: u64, _seller: Pubkey) -> Result<()> {
+    fn execute_sell(&self, asset: &mut BasketIndexState, params: &TradeParams, price: u64, _seller: Pubkey) -> anchor_lang::Result<()> {
         if asset.total_value < params.amount_in {
             return Err(crate::errors::asset_error::AssetError::SellFailed.into()); // 余额不足，禁止卖出
         }
@@ -180,7 +180,7 @@ impl AssetSellable for ExecuteSellAssetService {
 /// 资产交换trait
 ///
 /// 定义资产交换接口。
-pub trait AssetSwappable {
+trait AssetSwappable {
     /// 执行资产交换
     ///
     /// # 参数
@@ -192,7 +192,7 @@ pub trait AssetSwappable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    fn execute_swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, authority: Pubkey) -> Result<()>;
+    fn execute_swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, authority: Pubkey) -> anchor_lang::Result<()>;
 }
 
 /// 资产交换服务实现
@@ -204,7 +204,7 @@ impl AssetSwappable for ExecuteSwapAssetService {
     ///
     /// - 若源资产余额不足，返回 InsufficientValue 错误。
     /// - 若目标资产累加溢出，返回 InsufficientValue 错误。
-    fn execute_swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, _authority: Pubkey) -> Result<()> {
+    fn execute_swap(&self, from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, _authority: Pubkey) -> anchor_lang::Result<()> {
         if from.total_value < from_amount {
             return Err(crate::errors::asset_error::AssetError::InsufficientValue.into()); // 源资产余额不足，禁止交换
         }
@@ -218,7 +218,7 @@ impl AssetSwappable for ExecuteSwapAssetService {
 /// 资产合并trait
 ///
 /// 定义资产合并接口。
-pub trait AssetCombinable {
+trait AssetCombinable {
     /// 执行资产合并
     ///
     /// # 参数
@@ -229,7 +229,7 @@ pub trait AssetCombinable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    fn execute_combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, authority: Pubkey) -> Result<()>;
+    fn execute_combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, authority: Pubkey) -> anchor_lang::Result<()>;
 }
 
 /// 资产合并服务实现
@@ -241,7 +241,7 @@ impl AssetCombinable for ExecuteCombineAssetService {
     ///
     /// - 若源资产余额不足，返回 CombineFailed 错误。
     /// - 若目标资产累加溢出，返回 CombineFailed 错误。
-    fn execute_combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, _authority: Pubkey) -> Result<()> {
+    fn execute_combine(&self, target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, _authority: Pubkey) -> anchor_lang::Result<()> {
         if source.total_value < amount {
             return Err(crate::errors::asset_error::AssetError::CombineFailed.into()); // 源资产余额不足，禁止合并
         }
@@ -255,7 +255,7 @@ impl AssetCombinable for ExecuteCombineAssetService {
 /// 资产拆分trait
 ///
 /// 定义资产拆分接口。
-pub trait AssetSplittable {
+trait AssetSplittable {
     /// 执行资产拆分
     ///
     /// # 参数
@@ -266,7 +266,7 @@ pub trait AssetSplittable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    fn execute_split(&self, source: &mut BasketIndexState, new_asset: &mut BasketIndexState, amount: u64, authority: Pubkey) -> Result<()>;
+    fn execute_split(&self, source: &mut BasketIndexState, new_asset: &mut BasketIndexState, amount: u64, authority: Pubkey) -> anchor_lang::Result<()>;
 }
 
 /// 资产拆分服务实现
@@ -278,7 +278,7 @@ impl AssetSplittable for ExecuteSplitAssetService {
     ///
     /// - 若源资产余额不足，返回 SplitFailed 错误。
     /// - 若新资产累加溢出，返回 SplitFailed 错误。
-    fn execute_split(&self, source: &mut BasketIndexState, new_asset: &mut BasketIndexState, amount: u64, _authority: Pubkey) -> Result<()> {
+    fn execute_split(&self, source: &mut BasketIndexState, new_asset: &mut BasketIndexState, amount: u64, _authority: Pubkey) -> anchor_lang::Result<()> {
         if source.total_value < amount {
             return Err(crate::errors::asset_error::AssetError::SplitFailed.into()); // 源资产余额不足，禁止拆分
         }
@@ -307,12 +307,12 @@ impl AssetService {
         }
     }
     /// 增发资产（统一通过AssetTrait接口）
-    pub fn mint<T: AssetTrait>(&self, asset: &mut T, amount: u64) -> Result<()> {
+    pub fn mint<T: AssetTrait>(&self, asset: &mut T, amount: u64) -> anchor_lang::Result<()> {
         // 统一通过AssetTrait::mint接口，便于多资产类型扩展
         asset.mint(amount)
     }
     /// 销毁资产（统一通过AssetTrait接口）
-    pub fn burn<T: AssetTrait>(&self, asset: &mut T, amount: u64) -> Result<()> {
+    pub fn burn<T: AssetTrait>(&self, asset: &mut T, amount: u64) -> anchor_lang::Result<()> {
         // 统一通过AssetTrait::burn接口，便于多资产类型扩展
         asset.burn(amount)
     }
@@ -325,7 +325,7 @@ impl AssetService {
         exec_params: Option<ExecutionParams>,
         strategy_params: Option<StrategyParams>,
         oracle_params: Option<OracleParams>,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         // 1. 算法/策略融合：如有 ExecutionParams，查找并调用已注册的 ExecutionStrategy trait 实现
         if let Some(exec_params) = &exec_params {
             if let Some(algo_name) = &exec_params.algo_name {
@@ -364,7 +364,7 @@ impl AssetService {
                             user: buyer,
                             dex_accounts: exec_params.dex_accounts.clone(),
                         };
-                        let swap_result = dex_adapter.swap(crate::dex::traits::Context::default(), swap_params)?;
+                        let swap_result = dex_adapter.swap(anchor_lang::prelude::Context::default(), swap_params)?;
                         // 用 swap_result.amount_out 作为实际买入数量，swap_result.fee 参与后续决策
                         // 可根据 swap_result.avg_price 更新 final_price
                         final_price = swap_result.amount_out; // 或 avg_price
@@ -394,7 +394,7 @@ impl AssetService {
         exec_params: Option<ExecutionParams>,
         strategy_params: Option<StrategyParams>,
         oracle_params: Option<OracleParams>,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         // 1. 算法/策略融合：如有 ExecutionParams，查找并调用已注册的 ExecutionStrategy trait 实现
         if let Some(exec_params) = &exec_params {
             if let Some(algo_name) = &exec_params.algo_name {
@@ -431,7 +431,7 @@ impl AssetService {
                             user: seller,
                             dex_accounts: exec_params.dex_accounts.clone(),
                         };
-                        let swap_result = dex_adapter.swap(crate::dex::traits::Context::default(), swap_params)?;
+                        let swap_result = dex_adapter.swap(anchor_lang::prelude::Context::default(), swap_params)?;
                         final_price = swap_result.amount_out;
                     }
                 }
@@ -460,7 +460,7 @@ impl AssetService {
         exec_params: Option<ExecutionParams>,
         strategy_params: Option<StrategyParams>,
         oracle_params: Option<OracleParams>,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         // 1. 算法/策略融合：如有 ExecutionParams，查找并调用已注册的 ExecutionStrategy trait 实现
         if let Some(exec_params) = &exec_params {
             if let Some(algo_name) = &exec_params.algo_name {
@@ -497,7 +497,7 @@ impl AssetService {
                             user: authority,
                             dex_accounts: exec_params.dex_accounts.clone(),
                         };
-                        let swap_result = dex_adapter.swap(crate::dex::traits::Context::default(), swap_params)?;
+                        let swap_result = dex_adapter.swap(anchor_lang::prelude::Context::default(), swap_params)?;
                         final_to_amount = swap_result.amount_out;
                     }
                 }
@@ -518,27 +518,27 @@ impl AssetService {
         Ok(())
     }
     /// 资产组合（统一通过AssetTrait接口）
-    pub fn combine<T: AssetTrait>(&self, target: &mut T, source: &mut T, amount: u64) -> Result<()> {
+    pub fn combine<T: AssetTrait>(&self, target: &mut T, source: &mut T, amount: u64) -> anchor_lang::Result<()> {
         // 统一通过AssetTrait::combine接口，便于多资产类型扩展
         target.combine(source, amount)
     }
     /// 资产分割（统一通过AssetTrait接口）
-    pub fn split<T: AssetTrait>(&self, asset: &mut T, amount: u64) -> Result<()> {
+    pub fn split<T: AssetTrait>(&self, asset: &mut T, amount: u64) -> anchor_lang::Result<()> {
         // 统一通过AssetTrait::split接口，便于多资产类型扩展
         asset.split(amount)
     }
     /// 资产授权（统一通过AssetTrait接口）
-    pub fn authorize<T: AssetTrait>(&self, asset: &mut T, authority: Pubkey) -> Result<()> {
+    pub fn authorize<T: AssetTrait>(&self, asset: &mut T, authority: Pubkey) -> anchor_lang::Result<()> {
         // 统一通过AssetTrait::authorize接口，便于多资产类型扩展
         asset.authorize(authority)
     }
     /// 资产冻结（统一通过AssetTrait接口）
-    pub fn freeze<T: AssetTrait>(&self, asset: &mut T) -> Result<()> {
+    pub fn freeze<T: AssetTrait>(&self, asset: &mut T) -> anchor_lang::Result<()> {
         // 统一通过AssetTrait::freeze接口，便于多资产类型扩展
         asset.freeze()
     }
     /// 资产解冻（统一通过AssetTrait接口）
-    pub fn unfreeze<T: AssetTrait>(&self, asset: &mut T) -> Result<()> {
+    pub fn unfreeze<T: AssetTrait>(&self, asset: &mut T) -> anchor_lang::Result<()> {
         // 统一通过AssetTrait::unfreeze接口，便于多资产类型扩展
         asset.unfreeze()
     }
@@ -555,7 +555,7 @@ impl AssetService {
     ///
     /// # 边界条件
     /// - 权限校验失败、数量不一致、余额不足、累加溢出均会报错。
-    pub fn batch_transfer(from: &mut BasketIndexState, to_assets: &mut [&mut BasketIndexState], amounts: &[u64], authority: Pubkey) -> Result<()> {
+    pub fn batch_transfer(from: &mut BasketIndexState, to_assets: &mut [&mut BasketIndexState], amounts: &[u64], authority: Pubkey) -> anchor_lang::Result<()> {
         if from.authority != authority {
             msg!("[ERROR][batch_transfer_asset] BatchTransferFailed: from_asset_id={}, authority={}", from.id, authority); // 权限校验失败
             return Err(crate::errors::asset_error::AssetError::BatchTransferFailed.into());
@@ -634,7 +634,7 @@ impl AssetService {
     ///
     /// # 设计意图
     /// - 可集成算法/策略执行逻辑，当前仅记录事件。
-    pub fn strategy_trade(asset: &mut crate::state::baskets::BasketIndexState, params: &{ strategy: StrategyParams, swap_params: Option<TradeParams>, price_params: Option<OracleParams>, exec_params: Option<TradeParams> }, authority: anchor_lang::prelude::Pubkey) -> anchor_lang::Result<()> {
+    pub fn strategy_trade(asset: &mut crate::state::baskets::BasketIndexState, params: &crate::instructions::asset::strategy_trade::StrategyTradeAssetParams, authority: anchor_lang::prelude::Pubkey) -> anchor_lang::Result<()> {
         if params.strategy.strategy_name.is_empty() {
             return Err(crate::errors::asset_error::AssetError::InvalidParams.into()); // 策略名不能为空
         }
@@ -662,7 +662,7 @@ impl AssetService {
     ///
     /// # 返回值
     /// - 返回报价（u64），失败返回 AssetError。
-    pub fn quote(asset: &BasketIndexState, params: &TradeParams, price_params: &OracleParams) -> Result<u64> {
+    pub fn quote(asset: &BasketIndexState, params: &TradeParams, price_params: &OracleParams) -> anchor_lang::Result<u64> {
         let service = QuoteAssetService; // 实例化报价服务
         service.quote(asset, params, price_params) // 调用报价逻辑
     }
@@ -676,7 +676,7 @@ impl AssetService {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn execute_buy(asset: &mut BasketIndexState, params: &TradeParams, price: u64, buyer: Pubkey) -> Result<()> {
+    pub fn execute_buy(asset: &mut BasketIndexState, params: &TradeParams, price: u64, buyer: Pubkey) -> anchor_lang::Result<()> {
         let service = ExecuteBuyAssetService; // 实例化买入服务
         service.execute_buy(asset, params, price, buyer) // 调用买入逻辑
     }
@@ -691,7 +691,7 @@ impl AssetService {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn execute_sell(asset: &mut BasketIndexState, params: &TradeParams, price: u64, seller: Pubkey) -> Result<()> {
+    pub fn execute_sell(asset: &mut BasketIndexState, params: &TradeParams, price: u64, seller: Pubkey) -> anchor_lang::Result<()> {
         let service = ExecuteSellAssetService; // 实例化卖出服务
         service.execute_sell(asset, params, price, seller) // 调用卖出逻辑
     }
@@ -706,7 +706,7 @@ impl AssetService {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn execute_swap(from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, authority: Pubkey) -> Result<()> {
+    pub fn execute_swap(from: &mut BasketIndexState, to: &mut BasketIndexState, from_amount: u64, to_amount: u64, authority: Pubkey) -> anchor_lang::Result<()> {
         let service = ExecuteSwapAssetService; // 实例化交换服务
         service.execute_swap(from, to, from_amount, to_amount, authority) // 调用交换逻辑
     }
@@ -720,7 +720,7 @@ impl AssetService {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn execute_combine(target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, authority: Pubkey) -> Result<()> {
+    pub fn execute_combine(target: &mut BasketIndexState, source: &mut BasketIndexState, amount: u64, authority: Pubkey) -> anchor_lang::Result<()> {
         let service = ExecuteCombineAssetService; // 实例化合并服务
         service.execute_combine(target, source, amount, authority) // 调用合并逻辑
     }
@@ -734,12 +734,12 @@ impl AssetService {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 AssetError。
-    pub fn execute_split(source: &mut BasketIndexState, new_asset: &mut BasketIndexState, amount: u64, authority: Pubkey) -> Result<()> {
+    pub fn execute_split(source: &mut BasketIndexState, new_asset: &mut BasketIndexState, amount: u64, authority: Pubkey) -> anchor_lang::Result<()> {
         let service = ExecuteSplitAssetService; // 实例化拆分服务
         service.execute_split(source, new_asset, amount, authority) // 调用拆分逻辑
     }
     /// 获取资产价格，融合DEX/Oracle
-    pub fn get_price(params: &PriceParams) -> Result<u64> {
+    pub fn get_price(params: &crate::core::types::PriceParams) -> anchor_lang::Result<u64> {
         // 1. 优先通过oracle_name获取链上预言机价格
         if let Some(oracle_name) = &params.oracle_name {
             let factory = crate::core::registry::ADAPTER_FACTORY.lock().unwrap();

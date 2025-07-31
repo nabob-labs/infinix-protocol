@@ -116,7 +116,7 @@ pub trait Versioned {
 
     /// 迁移账户到当前版本
     /// - 自动按版本升级路径依次迁移
-    fn migrate(&mut self) -> Result<()> {
+    fn migrate(&mut self) -> anchor_lang::Result<()> {
         if !self.needs_migration() {
             return Ok(());
         }
@@ -153,28 +153,28 @@ pub trait Versioned {
     }
 
     /// 迁移到1.0.1版本 - 逻辑简化
-    fn migrate_to_1_0_1(&mut self) -> Result<()> {
+    fn migrate_to_1_0_1(&mut self) -> anchor_lang::Result<()> {
         // 简化：基础兼容性更新
         msg!("Migrating to v1.0.1: Applying simplified logic improvements");
         Ok(())
     }
 
     /// 迁移到1.1.0版本 - 增强优化特性
-    fn migrate_to_1_1_0(&mut self) -> Result<()> {
+    fn migrate_to_1_1_0(&mut self) -> anchor_lang::Result<()> {
         // 简化：增加优化特性
         msg!("Migrating to v1.1.0: Adding enhanced optimization features");
         Ok(())
     }
 
     /// 迁移到2.0.0版本 - 架构重构
-    fn migrate_to_2_0_0(&mut self) -> Result<()> {
+    fn migrate_to_2_0_0(&mut self) -> anchor_lang::Result<()> {
         // 简化：迁移到新重构架构
         msg!("Migrating to v2.0.0: Upgrading to refactored architecture with simplified logic");
         Ok(())
     }
 
     /// 迁移到2.1.0版本 - 增强重构特性
-    fn migrate_to_2_1_0(&mut self) -> Result<()> {
+    fn migrate_to_2_1_0(&mut self) -> anchor_lang::Result<()> {
         // 简化：增强特性和性能优化
         msg!("Migrating to v2.1.0: Adding enhanced refactored features and performance optimizations");
         Ok(())
@@ -186,7 +186,7 @@ pub struct VersionValidator;
 
 impl VersionValidator {
     /// 校验账户版本兼容性
-    pub fn validate_compatibility(account_version: &ProgramVersion) -> Result<()> {
+    pub fn validate_compatibility(account_version: &ProgramVersion) -> anchor_lang::Result<()> {
         if !CURRENT_VERSION.is_compatible_with(account_version) {
             return Err(crate::error::StrategyError::IncompatibleVersion.into());
         }
@@ -194,7 +194,7 @@ impl VersionValidator {
     }
 
     /// 校验特性支持
-    pub fn validate_feature_support(version: &ProgramVersion, feature: Feature) -> Result<()> {
+    pub fn validate_feature_support(version: &ProgramVersion, feature: Feature) -> anchor_lang::Result<()> {
         if !version.supports_feature(feature) {
             return Err(crate::error::StrategyError::FeatureNotSupported.into());
         }

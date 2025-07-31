@@ -1,10 +1,10 @@
 //!
 //! Utilities Module
 //!
-//! 本模块提供核心工具函数集合，包含数学运算、验证、缓存、性能监控、价格计算、简化工具等子模块，为整个系统提供基础功能支持。
+//! 本模块提供核心工具函数集合，包含数学运算、验证、缓存、性能监控、价格计算、简化工具、批量优化等子模块，为整个系统提供基础功能支持。
 
 use anchor_lang::prelude::*;
-use anchor_lang::msg;
+// anchor_lang::msg not available, removing import
 
 // 导出所有子模块，确保外部可访问。
 pub mod cache;      // 缓存工具模块
@@ -13,6 +13,7 @@ pub mod performance;// 性能监控模块
 pub mod price;      // 价格计算模块
 pub mod simplified; // 简化工具模块
 pub mod validation; // 验证工具模块
+pub mod batch_optimizer; // 批量操作优化模块
 
 // 重新导出常用结构体和函数，提供便捷访问。
 pub use cache::*;           // 导出缓存相关
@@ -21,6 +22,7 @@ pub use performance::*;     // 导出性能监控相关
 pub use price::*;           // 导出价格计算相关
 pub use simplified::*;      // 导出简化工具相关
 pub use validation::*;      // 导出验证工具相关
+pub use batch_optimizer::*; // 导出批量优化相关
 
 /// 工具模块版本信息。
 pub const UTILS_VERSION: &str = "1.0.0";
@@ -29,14 +31,14 @@ pub const UTILS_VERSION: &str = "1.0.0";
 pub const UTILS_MODULE_NAME: &str = "utils";
 
 /// 工具模块初始化函数。
-pub fn initialize_utils() -> Result<()> {
+pub fn initialize_utils() -> anchor_lang::Result<()> {
     // 初始化所有子模块
     msg!("Initializing utils module v{}", UTILS_VERSION);
     Ok(())
 }
 
 /// 工具模块清理函数。
-pub fn cleanup_utils() -> Result<()> {
+pub fn cleanup_utils() -> anchor_lang::Result<()> {
     // 清理所有子模块资源
     msg!("Cleaning up utils module");
     Ok(())
@@ -96,7 +98,7 @@ impl UtilsManager {
     }
     
     /// 初始化工具模块管理器。
-    pub fn initialize(&mut self) -> Result<()> {
+    pub fn initialize(&mut self) -> anchor_lang::Result<()> {
         // 根据配置初始化各组件
         if self.config.enable_cache {
             self.cache_manager = Some(CacheManager::new(

@@ -8,9 +8,9 @@
  * 生产级Chainlink链上适配器实现，支持自动注册、标准接口、Anchor最佳实践。
  */
 
-use crate::core::adapter::AdapterTrait; // 适配器元信息trait，统一接口
+// use crate::core::adapter: // 暂时注释掉:AdapterTrait; // 适配器元信息trait，统一接口
 use crate::oracles::adapter::OracleAdapter; // OracleAdapter trait
-use crate::core::types::PriceParams;        // 价格参数类型
+use crate::oracles::traits::OracleParams;        // Oracle参数类型
 use anchor_lang::prelude::*;                // Anchor预导入，包含Result、Pubkey等
 use std::sync::Arc;                         // Arc用于多线程安全
 
@@ -33,7 +33,7 @@ impl OracleAdapter for ChainlinkAdapter {
     /// - params: 价格参数（PriceParams结构体）
     /// - 返回：价格数值（u64）
     /// - 设计意图：集成Chainlink链上CPI，完成链上价格查询，便于统一调用
-    fn get_price(&self, params: &PriceParams) -> Result<u64> {
+    fn get_price(&self, params: &OracleParams) -> anchor_lang::Result<u64> {
         // Chainlink get_price 业务逻辑（此处为示例，实际应集成Chainlink链上CPI调用）
         Ok(0)
     }
@@ -65,7 +65,7 @@ pub enum ErrorCode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::types::PriceParams;
+    use crate::oracles::traits::OracleParams;
     use anchor_lang::prelude::Pubkey;
 
     /// 测试ChainlinkAdapter名称
@@ -81,9 +81,10 @@ mod tests {
     #[test]
     fn test_chainlink_adapter_get_price() {
         let adapter = ChainlinkAdapter;
-        let params = PriceParams {
+        let params = OracleParams {
             asset: Pubkey::default(), // 测试用默认token
             oracle_name: "chainlink".to_string(),
+            price: 0,
         };
         let result = adapter.get_price(&params);
         assert!(result.is_ok());

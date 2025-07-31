@@ -18,11 +18,16 @@
 use anchor_lang::prelude::*;
 use crate::algorithms::traits::{Algorithm, RoutingStrategy, AlgorithmType, RoutingResult};
 use crate::core::adapter::AdapterTrait;
-use crate::core::types::trade::TradeParams;
-use crate::errors::algorithm_error::AlgorithmError;
-use crate::core::constants::*;
+use crate::algorithms::traits::AlgorithmError;
+use crate::core::types::TradeParams;
+// use crate::core::types::trade::TradeParams; // 暂时注释掉
+// use crate::errors::algorithm_error::AlgorithmError; // 暂时注释掉
+// use crate::core::constants::*; // 暂时注释掉
 use std::collections::{HashMap, BTreeMap};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// 最大滑点容忍度（基点）
+const MAX_SLIPPAGE_BPS: u64 = 1000; // 10%
 
 /// 智能路由算法参数结构体
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
@@ -426,28 +431,24 @@ impl Default for SmartRoutingConfig {
 
 /// AdapterTrait 实现
 impl AdapterTrait for SmartRoutingAlgorithm {
-    fn name(&self) -> &'static str { 
-        "smart_routing" 
+    fn name(&self) -> &str {
+        "SmartRouting"
     }
     
-    fn version(&self) -> &'static str { 
-        "2.0.0" 
+    fn version(&self) -> &str {
+        "1.0.0"
     }
     
-    fn supported_assets(&self) -> Vec<String> { 
-        vec![
-            "SOL".to_string(), 
-            "USDC".to_string(),
-            "USDT".to_string(),
-            "ETH".to_string(),
-            "BTC".to_string(),
-            "RAY".to_string(),
-            "SRM".to_string(),
-        ] 
+    fn is_available(&self) -> bool {
+        true
     }
     
-    fn status(&self) -> Option<String> { 
-        Some("active".to_string()) 
+    fn initialize(&mut self) -> anchor_lang::Result<()> {
+        Ok(())
+    }
+    
+    fn cleanup(&mut self) -> anchor_lang::Result<()> {
+        Ok(())
     }
 }
 
@@ -479,7 +480,7 @@ impl Algorithm for SmartRoutingAlgorithm {
 
 /// RoutingStrategy trait 实现
 impl RoutingStrategy for SmartRoutingAlgorithm {
-    fn route(&self, _ctx: Context<crate::algorithms::traits::Route>, params: &TradeParams) -> Result<RoutingResult> {
+    fn route(&self, _ctx: Context<crate::algorithms::traits::Route>, params: &TradeParams) -> anchor_lang::Result<RoutingResult> {
         // 解析智能路由参数
         let routing_params = self.parse_routing_params(params)?;
         
@@ -529,7 +530,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 解析智能路由参数
-    fn parse_routing_params(&self, params: &TradeParams) -> Result<SmartRoutingParams> {
+    fn parse_routing_params(&self, params: &TradeParams) -> anchor_lang::Result<SmartRoutingParams> {
         // 从TradeParams构建SmartRoutingParams
         Ok(SmartRoutingParams {
             from_token: params.from_token,
@@ -562,7 +563,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 验证智能路由参数
-    fn validate_routing_params(&self, params: &SmartRoutingParams) -> Result<()> {
+    fn validate_routing_params(&self, params: &SmartRoutingParams) -> anchor_lang::Result<()> {
         // 验证输入数量
         require!(
             params.amount_in > 0,
@@ -591,7 +592,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 构建路由图
-    fn build_routing_graph(&self, params: &SmartRoutingParams) -> Result<RoutingGraph> {
+    fn build_routing_graph(&self, params: &SmartRoutingParams) -> anchor_lang::Result<RoutingGraph> {
         let mut graph = RoutingGraph {
             nodes: HashMap::new(),
             edges: HashMap::new(),
@@ -620,7 +621,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 创建节点
-    fn create_node(&self, token: Pubkey, node_type: NodeType) -> Result<RouteNode> {
+    fn create_node(&self, token: Pubkey, node_type: NodeType) -> anchor_lang::Result<RouteNode> {
         Ok(RouteNode {
             id: token,
             node_type,
@@ -649,7 +650,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 获取中间代币
-    fn get_intermediate_tokens(&self, params: &SmartRoutingParams) -> Result<Vec<Pubkey>> {
+    fn get_intermediate_tokens(&self, params: &SmartRoutingParams) -> anchor_lang::Result<Vec<Pubkey>> {
         // 模拟中间代币（实际应从DEX数据获取）
         let mut tokens = Vec::new();
         
@@ -663,7 +664,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 添加边
-    fn add_edges(&self, graph: &mut RoutingGraph, params: &SmartRoutingParams) -> Result<()> {
+    fn add_edges(&self, graph: &mut RoutingGraph, params: &SmartRoutingParams) -> anchor_lang::Result<()> {
         // 模拟添加边（实际应从DEX数据获取）
         for (from_token, from_node) in &graph.nodes {
             for (to_token, to_node) in &graph.nodes {
@@ -696,7 +697,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 计算最优路径
-    fn calculate_optimal_path(&self, graph: &RoutingGraph, params: &SmartRoutingParams) -> Result<RoutePath> {
+    fn calculate_optimal_path(&self, graph: &RoutingGraph, params: &SmartRoutingParams) -> anchor_lang::Result<RoutePath> {
         // 使用Dijkstra算法计算最优路径
         let mut distances: HashMap<Pubkey, f64> = HashMap::new();
         let mut previous: HashMap<Pubkey, Option<Pubkey>> = HashMap::new();
@@ -775,7 +776,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 检测套利机会
-    fn detect_arbitrage_opportunities(&self, graph: &RoutingGraph, params: &SmartRoutingParams) -> Result<Vec<ArbitrageOpportunity>> {
+    fn detect_arbitrage_opportunities(&self, graph: &RoutingGraph, params: &SmartRoutingParams) -> anchor_lang::Result<Vec<ArbitrageOpportunity>> {
         let mut opportunities = Vec::new();
         
         // 模拟套利机会检测
@@ -797,7 +798,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 检测三角套利
-    fn detect_triangular_arbitrage(&self, graph: &RoutingGraph, params: &SmartRoutingParams) -> Result<Option<ArbitrageOpportunity>> {
+    fn detect_triangular_arbitrage(&self, graph: &RoutingGraph, params: &SmartRoutingParams) -> anchor_lang::Result<Option<ArbitrageOpportunity>> {
         // 模拟三角套利检测
         // 实际实现应该分析三个代币之间的套利机会
         
@@ -854,7 +855,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 检测跨DEX套利
-    fn detect_cross_dex_arbitrage(&self, graph: &RoutingGraph, params: &SmartRoutingParams) -> Result<Option<ArbitrageOpportunity>> {
+    fn detect_cross_dex_arbitrage(&self, graph: &RoutingGraph, params: &SmartRoutingParams) -> anchor_lang::Result<Option<ArbitrageOpportunity>> {
         // 模拟跨DEX套利检测
         // 实际实现应该比较不同DEX的价格
         
@@ -905,7 +906,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 优化路径
-    fn optimize_path(&self, path: &RoutePath, arbitrage_opportunities: &[ArbitrageOpportunity], params: &SmartRoutingParams) -> Result<RoutePath> {
+    fn optimize_path(&self, path: &RoutePath, arbitrage_opportunities: &[ArbitrageOpportunity], params: &SmartRoutingParams) -> anchor_lang::Result<RoutePath> {
         let mut optimized_path = path.clone();
         
         // 如果有套利机会，优先选择套利路径
@@ -948,7 +949,7 @@ impl SmartRoutingAlgorithm {
     }
     
     /// 计算路由结果
-    fn calculate_routing_result(&self, path: &RoutePath, params: &SmartRoutingParams) -> Result<RoutingResult> {
+    fn calculate_routing_result(&self, path: &RoutePath, params: &SmartRoutingParams) -> anchor_lang::Result<RoutingResult> {
         Ok(RoutingResult {
             best_dex: "Jupiter".to_string(), // 实际应该从路径中获取
             expected_out: path.expected_output,

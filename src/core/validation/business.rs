@@ -5,7 +5,7 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::error::StrategyError;
+use crate::errors::strategy_error::StrategyError;
 
 /// 业务校验器结构体
 pub struct BusinessValidator;
@@ -19,7 +19,7 @@ impl BusinessValidator {
         last_rebalanced: i64,
         min_interval: u64,
         current_timestamp: i64,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         if current_weights.len() != target_weights.len() {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
@@ -45,7 +45,7 @@ impl BusinessValidator {
         price_difference: u64,
         transaction_costs: u64,
         min_profit_bps: u64,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         if price_difference <= transaction_costs + min_profit_bps {
             return Err(StrategyError::NoArbitrageOpportunity.into());
         }
@@ -57,7 +57,7 @@ impl BusinessValidator {
         trade_amount: u64,
         available_liquidity: u64,
         min_liquidity_ratio_bps: u64,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         if available_liquidity == 0 || trade_amount * 10_000 / available_liquidity > min_liquidity_ratio_bps {
             return Err(StrategyError::InsufficientLiquidity.into());
         }
@@ -68,7 +68,7 @@ impl BusinessValidator {
     pub fn validate_concentration_limits(
         weights: &[u64],
         max_concentration_bps: u64,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         for &w in weights {
             if w > max_concentration_bps {
                 return Err(StrategyError::ConcentrationLimitExceeded.into());
@@ -82,7 +82,7 @@ impl BusinessValidator {
         price_change_bps: u64,
         volume_change_bps: u64,
         circuit_breaker_threshold_bps: u64,
-    ) -> Result<()> {
+    ) -> anchor_lang::Result<()> {
         if price_change_bps > circuit_breaker_threshold_bps || volume_change_bps > circuit_breaker_threshold_bps {
             return Err(StrategyError::CircuitBreakerTriggered.into());
         }

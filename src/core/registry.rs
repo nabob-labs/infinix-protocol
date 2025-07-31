@@ -5,7 +5,7 @@
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 use crate::algorithms::algorithm_registry::AlgorithmRegistry;
-use crate::dex::adapter_registry::DexAdapterRegistry;
+use crate::dex::adapter::DexAdapterRegistry;
 use crate::oracles::adapter_registry::OracleAdapterRegistry;
 use crate::core::adapter::AdapterTrait;
 use std::collections::HashMap;

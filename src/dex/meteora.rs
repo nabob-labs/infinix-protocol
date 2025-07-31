@@ -12,21 +12,16 @@ use anchor_lang::prelude::*;
 pub struct MeteoraAdapter;
 
 impl AdapterTrait for MeteoraAdapter {
-    /// 返回适配器名称。
-    fn name(&self) -> &'static str { "meteora" }
-    /// 返回适配器版本。
-    fn version(&self) -> &'static str { "1.0.0" }
-    /// 返回支持的资产列表。
-    fn supported_assets(&self) -> Vec<String> { 
-        vec!["SOL".to_string(), "USDC".to_string(), "METEORA".to_string(), "ETH".to_string()] 
-    }
-    /// 返回适配器状态。
-    fn status(&self) -> Option<String> { Some("active".to_string()) }
+    fn name(&self) -> &str { "meteora" }
+    fn version(&self) -> &str { "1.0.0" }
+    fn is_available(&self) -> bool { true }
+    fn initialize(&mut self) -> anchor_lang::Result<()> { Ok(()) }
+    fn cleanup(&mut self) -> anchor_lang::Result<()> { Ok(()) }
 }
 
 impl DexAdapter for MeteoraAdapter {
     /// 执行 Meteora swap 操作。
-    fn swap(&self, params: &TradeParams) -> Result<DexSwapResult> {
+    fn swap(&self, params: &TradeParams) -> anchor_lang::Result<DexSwapResult> {
         // 生产级实现：集成Meteora链上CPI调用，参数校验、错误处理、事件追踪
         require!(params.amount_in > 0, crate::errors::asset_error::AssetError::InvalidAmount);
         require!(params.from_token != params.to_token, crate::errors::dex_error::DexError::InvalidTokens);
@@ -101,10 +96,10 @@ pub enum MeteoraError {
     #[msg("Operation unsupported")] Unsupported,
 }
 
-/// 自动注册 MeteoraAdapter 到工厂。
+/// 自动注册 MeteoraAdapter 到工厂
 // #[ctor::ctor]
 fn register_meteora_adapter() {
-    crate::dex::factory::DEX_FACTORY.register("meteora", std::sync::Arc::new(MeteoraAdapter));
+    // crate::dex::factory::DEX_FACTORY.register("meteora", std::sync::Arc::new(MeteoraAdapter));
 }
 
 #[cfg(test)]

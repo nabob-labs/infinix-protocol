@@ -5,10 +5,9 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::events::index_token_event::IndexTokenBatchTransferred;
-use crate::validation::index_token_validation::IndexTokenValidatable;
-use crate::core::types::{AlgoParams, StrategyParams};
+// IndexTokenValidatable trait not found, removing import
+use crate::core::types::*;
 
 /// 指数代币批量转账指令账户上下文结构体
 /// - 管理批量转账操作所需的链上账户
@@ -36,7 +35,7 @@ pub fn batch_transfer_index_token(
     amounts: Vec<u64>,
     exec_params: Option<AlgoParams>,
     strategy_params: Option<StrategyParams>,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     // 获取转出方账户和批量转入方账户
     let from = &mut ctx.accounts.from_index_token;
     let to_tokens = &mut ctx.accounts.to_index_token;

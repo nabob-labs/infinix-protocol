@@ -2,10 +2,10 @@
 //! DEX服务层
 //! 业务逻辑实现，供指令入口调用，封装DEX适配器注册、交易、报价、流动性管理、批量操作、权限校验等操作。
 
-use anchor_lang::prelude::*;
-use crate::dex::traits::{DexAdapter, SwapParams, SwapResult, AddLiquidityParams, RemoveLiquidityParams, QuoteParams, QuoteResult};
-use crate::core::types::{BatchTradeParams};
-use crate::errors::basket_error::BasketError;
+// use anchor_lang::prelude::*;
+// use crate::dex::traits::{DexAdapter, SwapParams, SwapResult, AddLiquidityParams, RemoveLiquidityParams, QuoteParams, QuoteResult};
+// use crate::core::types::{BatchTradeParams};
+// use crate::errors::basket_error::BasketError;
 
 // === 统一服务门面 ===
 /// DEX服务门面，聚合所有操作trait，便于统一调用和扩展
@@ -46,6 +46,20 @@ impl DexServiceFacade {
     }
 }
 
+/// 兼容指令调用的空服务结构体
+pub struct DexService;
+impl DexService {
+    pub fn register() {
+        // TODO: 实现实际逻辑
+    }
+    pub fn query() {
+        // TODO: 实现实际逻辑
+    }
+    pub fn switch() {
+        // TODO: 实现实际逻辑
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,10 +75,10 @@ mod tests {
 
     struct MockDexAdapter;
     impl DexAdapter for MockDexAdapter {
-        fn swap(&self, _params: &SwapParams) -> Result<SwapResult> { Ok(SwapResult { amount_out: 1, fee: 0 }) }
-        fn add_liquidity(&self, _params: &AddLiquidityParams) -> Result<u64> { Ok(1) }
-        fn remove_liquidity(&self, _params: &RemoveLiquidityParams) -> Result<u64> { Ok(1) }
-        fn quote(&self, _params: &QuoteParams) -> Result<QuoteResult> { Ok(QuoteResult { price: 1 }) }
+        fn swap(&self, _params: &SwapParams) -> anchor_lang::Result<SwapResult> { Ok(SwapResult { amount_out: 1, fee: 0 }) }
+        fn add_liquidity(&self, _params: &AddLiquidityParams) -> anchor_lang::Result<u64> { Ok(1) }
+        fn remove_liquidity(&self, _params: &RemoveLiquidityParams) -> anchor_lang::Result<u64> { Ok(1) }
+        fn quote(&self, _params: &QuoteParams) -> anchor_lang::Result<QuoteResult> { Ok(QuoteResult { price: 1 }) }
     }
 
     #[test]

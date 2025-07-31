@@ -5,10 +5,11 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
+use crate::core::ExecutionParams;
 
-/// 篮子交易策略类型
-/// - 定义篮子相关的主要交易场景
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, PartialEq)]
+/// 篮子交易策略枚举
+/// - 定义篮子交易的不同策略类型
+#[derive(Debug, Clone)]
 pub enum BasketTradingStrategy {
     /// 通过买入成分代币创建篮子
     Creation,
@@ -20,20 +21,18 @@ pub enum BasketTradingStrategy {
     Rebalancing,
 }
 
-/// 交易执行参数
-/// - 控制篮子交易的滑点、价格冲击、成交方式等
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
-pub struct ExecutionParams {
-    /// 最大滑点容忍度（基点）
-    pub max_slippage: u16,
-    /// 最大价格冲击（基点）
-    pub max_price_impact: u16,
-    /// 执行截止时间（unix时间戳）
-    pub deadline: i64,
-    /// 是否允许部分成交
-    pub allow_partial_fill: bool,
-    /// 最小成交百分比（基点）
-    pub min_fill_percentage: u16,
+/// 篮子交易配置
+/// - 控制篮子交易的行为和参数
+#[derive(Debug, Clone)]
+pub struct BasketTradingConfig {
+    /// 交易策略
+    pub strategy: BasketTradingStrategy,
+    /// 执行参数
+    pub execution_params: ExecutionParams,
+    /// 是否启用优化
+    pub optimization_enabled: bool,
+    /// 是否启用风险管理
+    pub risk_management_enabled: bool,
 }
 
 /// 执行策略
@@ -135,9 +134,9 @@ pub struct RebalancingStrategy {
     /// 需要的交易
     pub trades: Vec<RebalancingTrade>,
     /// 执行方法
-    pub execution_method: ExecutionMethod,
+    pub execution_method: crate::algorithms::execution_optimizer::types::ExecutionMethod,
     /// 风险限制
-    pub risk_limits: RiskLimits,
+    pub risk_limits: crate::core::types::RiskLimits,
 }
 
 /// 再平衡交易

@@ -16,7 +16,7 @@ impl ExecutionStrategy for MlImpl {
     /// - 参数 ctx: Anchor 上下文
     /// - 参数 params: 算法参数（需序列化为 (order_size, market_impact, slippage_tolerance)）
     /// - 返回 ExecutionResult，包含优化后成交量、预期成本等
-    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &AlgoParams) -> Result<ExecutionResult> {
+    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &AlgoParams) -> anchor_lang::Result<ExecutionResult> {
         // 解析 AlgoParams，获取 order_size、market_impact、slippage_tolerance
         let (order_size, market_impact, slippage_tolerance): (u64, u64, u64) = bincode::deserialize(&params.params)
             .map_err(|_| AlgorithmError::InvalidInput)?; // 反序列化参数，错误则返回 InvalidInput，防止恶意输入

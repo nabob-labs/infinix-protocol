@@ -5,9 +5,8 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::events::index_token_event::IndexTokenBatchRedeemed;
-use crate::validation::index_token_validation::IndexTokenValidatable;
+// IndexTokenValidatable trait not found, removing import
 
 /// 指数代币批量赎回指令账户上下文结构体
 /// - 管理批量赎回操作所需的链上账户
@@ -28,7 +27,7 @@ pub struct BatchRedeemIndexToken<'info> {
 pub fn batch_redeem_index_token(
     ctx: Context<BatchRedeemIndexToken>,
     amounts: Vec<u64>,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     // 获取指数代币账户
     let index_token = &mut ctx.accounts.index_token;
     // 校验账户状态

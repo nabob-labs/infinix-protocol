@@ -9,14 +9,11 @@ pub struct MangoAdapter;
 
 /// 实现AdapterTrait，提供适配器元信息
 impl AdapterTrait for MangoAdapter {
-    /// 返回适配器名称（唯一标识）
-    fn name(&self) -> &'static str { "mango" }
-    /// 返回适配器版本号
-    fn version(&self) -> &'static str { "1.0.0" }
-    /// 返回支持的资产列表（如SOL、USDC等）
-    fn supported_assets(&self) -> Vec<String> { vec!["SOL".to_string(), "USDC".to_string()] }
-    /// 返回适配器当前状态（如active、paused等）
-    fn status(&self) -> Option<String> { Some("active".to_string()) }
+    fn name(&self) -> &str { "mango" }
+    fn version(&self) -> &str { "1.0.0" }
+    fn is_available(&self) -> bool { true }
+    fn initialize(&mut self) -> anchor_lang::Result<()> { Ok(()) }
+    fn cleanup(&mut self) -> anchor_lang::Result<()> { Ok(()) }
 }
 
 /// 自动注册MangoAdapter到全局工厂
@@ -84,64 +81,62 @@ pub struct GetQuote<'info> {
 /// 实现 DexAdapter trait，集成 Mango 链上 CPI 调用。
 impl DexAdapter for MangoAdapter {
     /// 执行 Mango swap 操作。
-    fn swap(&self, ctx: Context<Swap>, params: SwapParams) -> Result<SwapResult> {
-        // 校验输入数量必须大于0。
-        require!(params.amount_in > 0, ErrorCode::InvalidAmount);
-        // 校验输入输出token不可相同。
-        require!(params.token_in != params.token_out, ErrorCode::InvalidAccount);
-        // 构造CPI账户。
-        let cpi_accounts = mango::cpi::accounts::Swap {
-            user: ctx.accounts.user.to_account_info(),
-            pool: ctx.accounts.pool.to_account_info(),
-            input_vault: ctx.accounts.input_vault.to_account_info(),
-            output_vault: ctx.accounts.output_vault.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
-            token_program: ctx.accounts.token_program.to_account_info(),
-        };
-        // 构造CPI上下文。
-        let cpi_ctx = CpiContext::new(ctx.accounts.mango_program.to_account_info(), cpi_accounts);
-        // 调用Mango CPI swap。
-        let result = mango::cpi::swap(cpi_ctx, params.amount_in, params.min_amount_out)?;
-        // 返回swap结果。
-        Ok(SwapResult { amount_out: result.amount_out, fee: result.fee })
+    fn swap(&self, params: SwapParams) -> anchor_lang::Result<SwapResult> {
+        // TODO: 实现 Mango DEX 交换逻辑
+        // 由于 mango 依赖不可用，暂时返回错误
+        Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized))
+        
+        // let cpi_accounts = mango::cpi::accounts::Swap {
+        //     // 账户配置
+        // };
+        // let cpi_ctx = CpiContext::new(self.program_id, cpi_accounts);
+        // let result = mango::cpi::swap(cpi_ctx, params.amount_in, params.min_amount_out)?;
+        // Ok(SwapResult {
+        //     amount_out: result.amount_out,
+        //     fee: result.fee,
+        // })
     }
     /// 添加流动性。
-    fn add_liquidity(&self, ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> Result<u64> {
-        let cpi_accounts = mango::cpi::accounts::AddLiquidity {
-            user: ctx.accounts.user.to_account_info(),
-            pool: ctx.accounts.pool.to_account_info(),
-            vault_a: ctx.accounts.vault_a.to_account_info(),
-            vault_b: ctx.accounts.vault_b.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
-            token_program: ctx.accounts.token_program.to_account_info(),
-        };
-        let cpi_ctx = CpiContext::new(ctx.accounts.mango_program.to_account_info(), cpi_accounts);
-        let result = mango::cpi::add_liquidity(cpi_ctx, params.amount_a, params.amount_b)?;
-        Ok(result.liquidity)
+    fn add_liquidity(&self, params: AddLiquidityParams) -> anchor_lang::Result<u64> {
+        // TODO: 实现 Mango DEX 添加流动性逻辑
+        // 由于 mango 依赖不可用，暂时返回错误
+        Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized))
+        
+        // let cpi_accounts = mango::cpi::accounts::AddLiquidity {
+        //     // 账户配置
+        // };
+        // let cpi_ctx = CpiContext::new(self.program_id, cpi_accounts);
+        // let result = mango::cpi::add_liquidity(cpi_ctx, params.amount_a, params.amount_b)?;
+        // Ok(AddLiquidityResult {
+        //     lp_tokens: result.lp_tokens,
+        //     fee: result.fee,
+        // })
     }
     /// 移除流动性。
-    fn remove_liquidity(&self, ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> Result<u64> {
-        let cpi_accounts = mango::cpi::accounts::RemoveLiquidity {
-            user: ctx.accounts.user.to_account_info(),
-            pool: ctx.accounts.pool.to_account_info(),
-            lp_vault: ctx.accounts.lp_vault.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
-            token_program: ctx.accounts.token_program.to_account_info(),
-        };
-        let cpi_ctx = CpiContext::new(ctx.accounts.mango_program.to_account_info(), cpi_accounts);
-        let result = mango::cpi::remove_liquidity(cpi_ctx, params.liquidity)?;
-        Ok(result.amount_out)
+    fn remove_liquidity(&self, params: RemoveLiquidityParams) -> anchor_lang::Result<u64> {
+        // TODO: 实现 Mango DEX 移除流动性逻辑
+        // 由于 mango 依赖不可用，暂时返回错误
+        Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized))
+        
+        // let cpi_accounts = mango::cpi::accounts::RemoveLiquidity {
+        //     // 账户配置
+        // };
+        // let cpi_ctx = CpiContext::new(self.program_id, cpi_accounts);
+        // let result = mango::cpi::remove_liquidity(cpi_ctx, params.liquidity)?;
+        // Ok(result.amount_out)
     }
     /// 获取报价。
-    fn get_quote(&self, ctx: Context<GetQuote>, params: QuoteParams) -> Result<QuoteResult> {
-        let cpi_accounts = mango::cpi::accounts::GetQuote {
-            pool: ctx.accounts.pool.to_account_info(),
-            input_vault: ctx.accounts.input_vault.to_account_info(),
-            output_vault: ctx.accounts.output_vault.to_account_info(),
-        };
-        let cpi_ctx = CpiContext::new(ctx.accounts.mango_program.to_account_info(), cpi_accounts);
-        let quote = mango::cpi::get_quote(cpi_ctx, params.input_mint, params.output_mint, params.amount_in)?;
-        Ok(QuoteResult { amount_out: quote.amount_out, fee: quote.fee })
+    fn get_quote(&self, params: QuoteParams) -> anchor_lang::Result<QuoteResult> {
+        // TODO: 实现 Mango DEX 获取报价逻辑
+        // 由于 mango 依赖不可用，暂时返回错误
+        Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::AccountNotInitialized))
+        
+        // let cpi_accounts = mango::cpi::accounts::GetQuote {
+        //     // 账户配置
+        // };
+        // let cpi_ctx = CpiContext::new(self.program_id, cpi_accounts);
+        // let quote = mango::cpi::get_quote(cpi_ctx, params.input_mint, params.output_mint, params.amount_in)?;
+        // Ok(QuoteResult { amount_out: quote.amount_out, fee: quote.fee })
     }
 }
 

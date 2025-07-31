@@ -2,14 +2,11 @@
 //! Basket Buy Instruction
 //! 篮子购买指令实现，支持多种购买策略和DEX集成。
 
-use crate::accounts::BasketIndexStateAccount;
 use crate::events::basket_event::*;
-use crate::services::basket_service::BasketService;
-use crate::state::baskets::BasketIndexState;
-use crate::validation::basket_validation::BasketValidatable;
-use crate::core::types::{ExecutionParams, StrategyParams, TradeParams};
+use crate::services::basket_service::BasketServiceFacade;
+use crate::core::types::*;
 use crate::dex::adapter::DexAdapter;
-use crate::algorithms::traits::AlgorithmAdapter;
+use crate::state::baskets::BasketIndexState; // 篮子状态类型
 use anchor_lang::prelude::*;
 
 /// 篮子购买指令账户上下文
@@ -69,7 +66,7 @@ pub struct BuyBasketParams {
 /// - ctx: Anchor账户上下文
 /// - params: 购买参数
 /// - 返回: Anchor规范Result
-pub fn buy_basket(ctx: Context<BuyBasket>, params: BuyBasketParams) -> Result<()> {
+pub fn buy_basket(ctx: Context<BuyBasket>, params: BuyBasketParams) -> anchor_lang::Result<()> {
     // 参数验证
     require!(params.basket_amount > 0, crate::errors::basket_error::BasketError::InvalidAmount);
     require!(params.max_payment > 0, crate::errors::basket_error::BasketError::InvalidAmount);

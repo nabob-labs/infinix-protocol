@@ -6,7 +6,6 @@
 
 use anchor_lang::prelude::*;
 use crate::version::{ProgramVersion, Versioned, CURRENT_VERSION};
-use crate::core::types::StrategyParams;
 use crate::strategies::types::*;
 
 /// 策略配置结构体
@@ -39,7 +38,7 @@ impl StrategyConfig {
         authority: Pubkey,
         weight_config: WeightStrategyConfig,
         rebalancing_config: RebalancingStrategyConfig,
-    ) -> Result<Self> {
+    ) -> anchor_lang::Result<Self> {
         Ok(Self {
             version: CURRENT_VERSION,
             config_id,
@@ -53,13 +52,13 @@ impl StrategyConfig {
         })
     }
     /// 更新权重策略配置
-    pub fn update_weight_config(&mut self, new_config: WeightStrategyConfig) -> Result<()> {
+    pub fn update_weight_config(&mut self, new_config: WeightStrategyConfig) -> anchor_lang::Result<()> {
         self.weight_config = new_config;
         self.updated_at = Clock::get()?.unix_timestamp;
         Ok(())
     }
     /// 更新再平衡策略配置
-    pub fn update_rebalancing_config(&mut self, new_config: RebalancingStrategyConfig) -> Result<()> {
+    pub fn update_rebalancing_config(&mut self, new_config: RebalancingStrategyConfig) -> anchor_lang::Result<()> {
         self.rebalancing_config = new_config;
         self.updated_at = Clock::get()?.unix_timestamp;
         Ok(())

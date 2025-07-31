@@ -2,11 +2,9 @@
 //! Asset Transfer Instruction
 //! 资产转账指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
-use crate::accounts::BasketIndexStateAccount; // 账户状态结构体定义
 use crate::events::asset_event::*; // 资产相关事件定义（Anchor事件）
 use crate::services::asset_service::AssetService; // 资产业务逻辑服务层
-use crate::state::baskets::BasketIndexState; // 资产篮子状态
-use crate::validation::asset_validation::AssetValidatable; // 资产校验trait
+use crate::state::baskets::BasketIndexState; // 篮子状态类型
 use anchor_lang::prelude::*; // Anchor预导入，提供Solana合约开发的基础类型和宏
 
 /// 资产转账指令账户上下文
@@ -30,7 +28,7 @@ pub struct TransferAsset<'info> {
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 转账数量，单位为最小资产单位
 /// - 返回: Anchor规范Result
-pub fn transfer_asset(ctx: Context<TransferAsset>, amount: u64) -> Result<()> {
+pub fn transfer_asset(ctx: Context<TransferAsset>, amount: u64) -> anchor_lang::Result<()> {
     let from = &mut ctx.accounts.from; // 获取可变源资产篮子账户
     let to = &mut ctx.accounts.to; // 获取可变目标资产篮子账户
     from.validate()?; // 校验源资产篮子状态（如活跃、合法等），防止非法操作

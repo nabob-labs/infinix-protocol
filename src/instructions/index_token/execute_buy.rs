@@ -5,7 +5,6 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::events::index_token_event::IndexTokenBuyExecuted;
 use crate::core::types::TradeParams;
 
@@ -30,7 +29,7 @@ pub fn execute_buy_index_token(
     ctx: Context<ExecuteBuyIndexToken>,
     params: TradeParams,
     price: u64,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     // 获取指数代币账户
     let index_token = &mut ctx.accounts.index_token;
     // 校验买入数量

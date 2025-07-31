@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stablecoin_service::StablecoinService;
 use crate::events::asset_event::AssetUnfrozen;
@@ -17,9 +16,9 @@ pub struct UnfreezeStablecoin<'info> {
 
 /// Stablecoin资产unfreeze指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
-pub fn unfreeze_stablecoin(ctx: Context<UnfreezeStablecoin>) -> Result<()> {
+pub fn unfreeze_stablecoin(ctx: Context<UnfreezeStablecoin>) -> anchor_lang::Result<()> {
     let stablecoin = &mut ctx.accounts.stablecoin;
-    require!(stablecoin.asset_type == AssetType::Stablecoin, crate::error::ProgramError::InvalidAssetType);
+    require!(stablecoin.asset_type == AssetType::Stablecoin, ProgramError::InvalidAssetType);
     let service = StablecoinService::new();
     service.unfreeze(stablecoin)?;
     emit!(AssetUnfrozen {

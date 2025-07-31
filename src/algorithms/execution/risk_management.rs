@@ -30,7 +30,7 @@ impl RiskManagement for RiskManagementImpl {
     /// - 参数 ctx: Anchor 上下文
     /// - 参数 params: 风控参数（如持仓、波动率、最大回撤等）
     /// - 返回 RiskResult，包含风险评分、是否可接受等
-    fn assess(&self, _ctx: Context<crate::algorithms::traits::AssessRisk>, params: &RiskParams) -> Result<RiskResult> {
+    fn assess(&self, _ctx: Context<crate::algorithms::traits::AssessRisk>, params: &RiskParams) -> anchor_lang::Result<RiskResult> {
         if params.position_size == 0 || params.volatility == 0 {
             return Err(AlgorithmError::InvalidInput.into()); // 输入参数校验，持仓和波动率必须大于0，防止无效或恶意调用
         }

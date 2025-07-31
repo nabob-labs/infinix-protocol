@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::index_token_service::IndexTokenService;
 use crate::events::asset_event::AssetTransferred;
@@ -20,11 +19,11 @@ pub struct TransferIndexToken<'info> {
 /// IndexToken资产transfer指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 转账数量，类型安全
-pub fn transfer_index_token(ctx: Context<TransferIndexToken>, amount: u64) -> Result<()> {
+pub fn transfer_index_token(ctx: Context<TransferIndexToken>, amount: u64) -> anchor_lang::Result<()> {
     let from = &mut ctx.accounts.from;
     let to = &mut ctx.accounts.to;
-    require!(from.asset_type == AssetType::IndexToken, crate::error::ProgramError::InvalidAssetType);
-    require!(to.asset_type == AssetType::IndexToken, crate::error::ProgramError::InvalidAssetType);
+    require!(from.asset_type == AssetType::IndexToken, ProgramError::InvalidAssetType);
+    require!(to.asset_type == AssetType::IndexToken, ProgramError::InvalidAssetType);
     let service = IndexTokenService::new();
     service.transfer(from, to, amount)?;
     emit!(AssetTransferred {

@@ -3,7 +3,6 @@
 //! ETF资产批量合并指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::BatchTradeParams;
 use crate::services::portfolio_service::PortfolioServiceFacade;
 
@@ -19,14 +18,14 @@ pub struct BatchCombineEtf<'info> {
 }
 
 /// ETF资产批量合并指令实现
-pub fn batch_combine_etf(ctx: Context<BatchCombineEtf>, params: BatchTradeParams) -> Result<()> {
+pub fn batch_combine_etf(ctx: Context<BatchCombineEtf>, params: BatchTradeParams) -> anchor_lang::Result<()> {
     let target = &mut ctx.accounts.target;
     let source_etf = &mut ctx.accounts.source_etf;
     target.validate()?;
     source_etf.validate()?;
-    require!(target.asset_type == crate::core::types::AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
-    require!(source_etf.asset_type == crate::core::types::AssetType::ETF, crate::error::ProgramError::InvalidAssetType);
-    require_keys_eq!(ctx.accounts.authority.key(), target.authority, crate::error::ProgramError::InvalidAuthority);
+    require!(target.asset_type == crate::core::types::AssetType::ETF, ProgramError::InvalidAssetType);
+    require!(source_etf.asset_type == crate::core::types::AssetType::ETF, ProgramError::InvalidAssetType);
+    require_keys_eq!(ctx.accounts.authority.key(), target.authority, ProgramError::InvalidAuthority);
     // 业务逻辑：批量合并
     let mut source_refs: Vec<&mut BasketIndexState> = vec![source_etf.as_mut()];
     let facade = PortfolioServiceFacade::new();

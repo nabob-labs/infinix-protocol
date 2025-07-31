@@ -3,22 +3,22 @@
 //! 业务逻辑实现，供指令入口调用，封装算法注册、查询、切换、执行、批量操作、权限校验等操作。
 
 use anchor_lang::prelude::*;
-use crate::core::types::{AlgorithmParams, BatchAlgorithmParams, AlgorithmResult};
-use crate::errors::basket_error::BasketError;
+use crate::core::types::AlgorithmParams;
+// use crate::errors::algorithm_error::AlgorithmError;
 
 /// 算法注册trait
 ///
 /// 定义算法注册接口，便于扩展多种注册方式。
 /// - 设计意图：统一注册入口，便于后续多种算法注册策略。
-pub trait AlgorithmRegistrable {
+trait AlgorithmRegistrable {
     /// 注册算法
     ///
     /// # 参数
     /// - `params`: 算法参数。
     ///
     /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn register(&self, params: &AlgorithmParams) -> Result<()>;
+    /// - 成功返回 Ok(())，失败返回 AlgorithmError。
+    fn register(&self, params: &AlgorithmParams) -> anchor_lang::Result<()>;
 }
 
 /// 算法注册服务实现
@@ -27,7 +27,7 @@ pub trait AlgorithmRegistrable {
 pub struct RegisterAlgorithmService;
 impl AlgorithmRegistrable for RegisterAlgorithmService {
     /// 注册实现
-    fn register(&self, _params: &AlgorithmParams) -> Result<()> {
+    fn register(&self, _params: &AlgorithmParams) -> anchor_lang::Result<()> {
         // 生产级实现：注册到全局算法表
         Ok(())
     }
@@ -37,15 +37,15 @@ impl AlgorithmRegistrable for RegisterAlgorithmService {
 ///
 /// 定义算法查询接口，便于扩展多种查询方式。
 /// - 设计意图：统一查询入口，便于后续多种算法查询。
-pub trait AlgorithmQueryable {
+trait AlgorithmQueryable {
     /// 查询算法
     ///
     /// # 参数
     /// - `params`: 查询参数。
     ///
     /// # 返回值
-    /// - 返回算法结果，失败返回 BasketError。
-    fn query(&self, params: &AlgorithmParams) -> Result<AlgorithmResult>;
+    /// - 返回算法结果，失败返回 AlgorithmError。
+    fn query(&self, params: &AlgorithmParams) -> anchor_lang::Result<AlgorithmResult>;
 }
 
 /// 算法查询服务实现
@@ -54,7 +54,7 @@ pub trait AlgorithmQueryable {
 pub struct QueryAlgorithmService;
 impl AlgorithmQueryable for QueryAlgorithmService {
     /// 查询实现
-    fn query(&self, _params: &AlgorithmParams) -> Result<AlgorithmResult> {
+    fn query(&self, _params: &AlgorithmParams) -> anchor_lang::Result<AlgorithmResult> {
         // 生产级实现：根据params查询算法
         Ok(AlgorithmResult { success: true, output: 100 })
     }
@@ -64,15 +64,15 @@ impl AlgorithmQueryable for QueryAlgorithmService {
 ///
 /// 定义算法切换接口，便于扩展多种切换方式。
 /// - 设计意图：统一切换入口，便于后续多种算法切换。
-pub trait AlgorithmSwitchable {
+trait AlgorithmSwitchable {
     /// 切换算法
     ///
     /// # 参数
     /// - `params`: 切换参数。
     ///
     /// # 返回值
-    /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn switch(&self, params: &AlgorithmParams) -> Result<()>;
+    /// - 成功返回 Ok(())，失败返回 AlgorithmError。
+    fn switch(&self, params: &AlgorithmParams) -> anchor_lang::Result<()>;
 }
 
 /// 算法切换服务实现
@@ -81,7 +81,7 @@ pub trait AlgorithmSwitchable {
 pub struct SwitchAlgorithmService;
 impl AlgorithmSwitchable for SwitchAlgorithmService {
     /// 切换实现
-    fn switch(&self, _params: &AlgorithmParams) -> Result<()> {
+    fn switch(&self, _params: &AlgorithmParams) -> anchor_lang::Result<()> {
         // 生产级实现：切换算法
         Ok(())
     }
@@ -91,15 +91,15 @@ impl AlgorithmSwitchable for SwitchAlgorithmService {
 ///
 /// 定义算法执行接口，便于扩展多种执行方式。
 /// - 设计意图：统一执行入口，便于后续多种算法执行。
-pub trait AlgorithmExecutable {
+trait AlgorithmExecutable {
     /// 执行算法
     ///
     /// # 参数
     /// - `params`: 执行参数。
     ///
     /// # 返回值
-    /// - 返回算法执行结果，失败返回 BasketError。
-    fn execute(&self, params: &AlgorithmParams) -> Result<AlgorithmResult>;
+    /// - 返回算法执行结果，失败返回 AlgorithmError。
+    fn execute(&self, params: &AlgorithmParams) -> anchor_lang::Result<AlgorithmResult>;
 }
 
 /// 算法执行服务实现
@@ -108,7 +108,7 @@ pub trait AlgorithmExecutable {
 pub struct ExecuteAlgorithmService;
 impl AlgorithmExecutable for ExecuteAlgorithmService {
     /// 执行实现
-    fn execute(&self, _params: &AlgorithmParams) -> Result<AlgorithmResult> {
+    fn execute(&self, _params: &AlgorithmParams) -> anchor_lang::Result<AlgorithmResult> {
         // 生产级实现：根据params执行算法
         Ok(AlgorithmResult { success: true, output: 100 })
     }
@@ -118,15 +118,15 @@ impl AlgorithmExecutable for ExecuteAlgorithmService {
 ///
 /// 定义批量操作接口，便于扩展多种批量操作方式。
 /// - 设计意图：统一批量操作入口，便于后续多种批量策略。
-pub trait AlgorithmBatchOperable {
+trait AlgorithmBatchOperable {
     /// 批量操作
     ///
     /// # 参数
     /// - `batch_params`: 批量参数。
     ///
     /// # 返回值
-    /// - 返回每笔操作的结果集合，失败返回 BasketError。
-    fn batch_operate(&self, batch_params: &BatchAlgorithmParams) -> Result<Vec<AlgorithmResult>>;
+    /// - 返回每笔操作的结果集合，失败返回 AlgorithmError。
+    fn batch_operate(&self, batch_params: &BatchAlgorithmParams) -> anchor_lang::Result<Vec<AlgorithmResult>>;
 }
 
 /// 算法批量操作服务实现
@@ -135,7 +135,7 @@ pub trait AlgorithmBatchOperable {
 pub struct BatchOperateAlgorithmService;
 impl AlgorithmBatchOperable for BatchOperateAlgorithmService {
     /// 批量操作实现
-    fn batch_operate(&self, batch_params: &BatchAlgorithmParams) -> Result<Vec<AlgorithmResult>> {
+    fn batch_operate(&self, batch_params: &BatchAlgorithmParams) -> anchor_lang::Result<Vec<AlgorithmResult>> {
         // 生产级实现：遍历批量参数
         Ok(batch_params.algorithms.iter().map(|_| AlgorithmResult { success: true, output: 100 }).collect())
     }
@@ -145,7 +145,7 @@ impl AlgorithmBatchOperable for BatchOperateAlgorithmService {
 ///
 /// 定义算法权限校验接口，便于扩展多种权限模型。
 /// - 设计意图：统一权限校验入口，便于后续多种权限策略。
-pub trait AlgorithmAuthorizable {
+trait AlgorithmAuthorizable {
     /// 校验算法操作权限
     ///
     /// # 参数
@@ -153,7 +153,7 @@ pub trait AlgorithmAuthorizable {
     ///
     /// # 返回值
     /// - 是否有权限。
-    fn authorize(&self, authority: Pubkey) -> Result<bool>;
+    fn authorize(&self, authority: Pubkey) -> anchor_lang::Result<bool>;
 }
 
 /// 算法权限校验服务实现
@@ -162,7 +162,7 @@ pub trait AlgorithmAuthorizable {
 pub struct AuthorizeAlgorithmService;
 impl AlgorithmAuthorizable for AuthorizeAlgorithmService {
     /// 权限校验实现
-    fn authorize(&self, _authority: Pubkey) -> Result<bool> {
+    fn authorize(&self, _authority: Pubkey) -> anchor_lang::Result<bool> {
         // 生产级实现：校验权限
         Ok(true)
     }
@@ -174,22 +174,22 @@ impl AlgorithmAuthorizable for AuthorizeAlgorithmService {
 pub struct AlgorithmService;
 impl AlgorithmService {
     /// 注册新算法
-    pub fn register(params: &AlgorithmParams) -> Result<()> {
+    pub fn register(params: &AlgorithmParams) -> anchor_lang::Result<()> {
         let svc = RegisterAlgorithmService;
         svc.register(params)
     }
     /// 查询算法元数据
-    pub fn query(params: &AlgorithmParams) -> Result<AlgorithmResult> {
+    pub fn query(params: &AlgorithmParams) -> anchor_lang::Result<AlgorithmResult> {
         let svc = QueryAlgorithmService;
         svc.query(params)
     }
     /// 切换算法
-    pub fn switch(params: &AlgorithmParams) -> Result<()> {
+    pub fn switch(params: &AlgorithmParams) -> anchor_lang::Result<()> {
         let svc = SwitchAlgorithmService;
         svc.switch(params)
     }
     /// 算法注册，融合多资产/策略/DEX/Oracle
-    pub fn register_algorithm(name: &str, params: &AlgoParams) -> Result<()> {
+    pub fn register_algorithm(name: &str, params: &AlgoParams) -> anchor_lang::Result<()> {
         // 1. 参数校验
         require!(!name.is_empty(), crate::errors::asset_error::AssetError::InvalidParams);
         // 2. 可选策略/DEX/Oracle适配器注册

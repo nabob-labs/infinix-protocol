@@ -2,11 +2,9 @@
 //! Asset Unfreeze Instruction
 //! 资产解冻指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
-use crate::accounts::BasketIndexStateAccount; // 账户状态结构体定义
 use crate::events::asset_event::*; // 资产相关事件定义（Anchor事件）
 use crate::services::asset_service::AssetService; // 资产业务逻辑服务层
-use crate::state::baskets::BasketIndexState; // 资产篮子状态
-use crate::validation::asset_validation::AssetValidatable; // 资产校验trait
+use crate::state::baskets::BasketIndexState; // 篮子状态类型
 use anchor_lang::prelude::*; // Anchor预导入，提供Solana合约开发的基础类型和宏
 
 /// 资产解冻指令账户上下文
@@ -25,7 +23,7 @@ pub struct UnfreezeAsset<'info> {
 /// 资产解冻指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - 返回: Anchor规范Result
-pub fn unfreeze_asset(ctx: Context<UnfreezeAsset>) -> Result<()> {
+pub fn unfreeze_asset(ctx: Context<UnfreezeAsset>) -> anchor_lang::Result<()> {
     let asset = &mut ctx.accounts.asset; // 获取可变资产篮子账户
     asset.validate()?; // 校验资产篮子状态
     // 权限校验：必须是当前authority

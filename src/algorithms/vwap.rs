@@ -17,11 +17,17 @@
 use anchor_lang::prelude::*;
 use crate::algorithms::traits::{Algorithm, ExecutionStrategy, AlgorithmType, ExecutionResult};
 use crate::core::adapter::AdapterTrait;
-use crate::core::types::algo::AlgoParams;
+use crate::core::types::AlgoParams;
+// use crate::core::types::algo::AlgoParams; // 暂时注释掉
 use crate::errors::algorithm_error::AlgorithmError;
-use crate::core::constants::*;
+// use crate::core::constants::*; // 暂时注释掉
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// 最大再平衡间隔（秒）
+const MAX_REBALANCE_INTERVAL: u64 = 86400; // 24小时
+/// 最大滑点容忍度（基点）
+const MAX_SLIPPAGE_BPS: u64 = 1000; // 10%
 
 /// VWAP算法参数结构体
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq)]
@@ -252,28 +258,24 @@ impl Default for VwapConfig {
 
 /// AdapterTrait 实现
 impl AdapterTrait for VwapAlgorithm {
-    fn name(&self) -> &'static str { 
-        "vwap" 
+    fn name(&self) -> &str {
+        "Vwap"
     }
     
-    fn version(&self) -> &'static str { 
-        "2.0.0" 
+    fn version(&self) -> &str {
+        "1.0.0"
     }
     
-    fn supported_assets(&self) -> Vec<String> { 
-        vec![
-            "SOL".to_string(), 
-            "USDC".to_string(),
-            "USDT".to_string(),
-            "ETH".to_string(),
-            "BTC".to_string(),
-            "RAY".to_string(),
-            "SRM".to_string(),
-        ] 
+    fn is_available(&self) -> bool {
+        true
     }
     
-    fn status(&self) -> Option<String> { 
-        Some("active".to_string()) 
+    fn initialize(&mut self) -> anchor_lang::Result<()> {
+        Ok(())
+    }
+    
+    fn cleanup(&mut self) -> anchor_lang::Result<()> {
+        Ok(())
     }
 }
 
@@ -314,7 +316,7 @@ impl Algorithm for VwapAlgorithm {
 
 /// ExecutionStrategy trait 实现
 impl ExecutionStrategy for VwapAlgorithm {
-    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &AlgoParams) -> Result<ExecutionResult> {
+    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &AlgoParams) -> anchor_lang::Result<ExecutionResult> {
         self.execute(params)
     }
 }
@@ -337,7 +339,7 @@ impl VwapAlgorithm {
     }
     
     /// 解析VWAP参数
-    fn parse_vwap_params(&self, params: &AlgoParams) -> Result<VwapParams> {
+    fn parse_vwap_params(&self, params: &AlgoParams) -> anchor_lang::Result<VwapParams> {
         if params.params.is_empty() {
             return Err(AlgorithmError::InvalidParameters {
                 reason: "Empty parameters".to_string(),
@@ -353,7 +355,7 @@ impl VwapAlgorithm {
     }
     
     /// 验证VWAP参数
-    fn validate_vwap_params(&self, params: &VwapParams) -> Result<()> {
+    fn validate_vwap_params(&self, params: &VwapParams) -> anchor_lang::Result<()> {
         // 验证总订单数量
         require!(
             params.total_amount > 0,
@@ -406,7 +408,7 @@ impl VwapAlgorithm {
     }
     
     /// 计算执行计划
-    fn calculate_execution_plan(&self, params: &VwapParams) -> Result<VwapExecutionPlan> {
+    fn calculate_execution_plan(&self, params: &VwapParams) -> anchor_lang::Result<VwapExecutionPlan> {
         // 计算权重分布
         let weights = self.calculate_weights(params.num_intervals)?;
         let total_weight: f64 = weights.iter().sum();
@@ -453,7 +455,7 @@ impl VwapAlgorithm {
     }
     
     /// 计算权重分布
-    fn calculate_weights(&self, num_intervals: u32) -> Result<Vec<f64>> {
+    fn calculate_weights(&self, num_intervals: u32) -> anchor_lang::Result<Vec<f64>> {
         match &self.config.default_weight_strategy {
             WeightStrategy::Linear => {
                 let mut weights = Vec::new();
@@ -488,7 +490,7 @@ impl VwapAlgorithm {
     }
     
     /// 执行VWAP算法
-    fn execute_vwap_algorithm(&self, params: &VwapParams, plan: &VwapExecutionPlan) -> Result<ExecutionResult> {
+    fn execute_vwap_algorithm(&self, params: &VwapParams, plan: &VwapExecutionPlan) -> anchor_lang::Result<ExecutionResult> {
         let mut total_executed = 0u64;
         let mut total_cost = 0u64;
         let mut total_weighted_cost = 0u64;
@@ -582,7 +584,7 @@ impl VwapAlgorithm {
     }
     
     /// 执行单个分段
-    fn execute_interval(&self, interval: &VwapInterval, target_price: u64, params: &VwapParams) -> Result<VwapIntervalResult> {
+    fn execute_interval(&self, interval: &VwapInterval, target_price: u64, params: &VwapParams) -> anchor_lang::Result<VwapIntervalResult> {
         let start_time = self.get_current_timestamp();
         
         // 模拟市场执行（实际应调用DEX接口）
@@ -619,13 +621,13 @@ impl VwapAlgorithm {
     }
     
     /// 获取市场价格（模拟实现）
-    fn get_market_price(&self) -> Result<u64> {
+    fn get_market_price(&self) -> anchor_lang::Result<u64> {
         // 实际实现应调用Oracle接口
         Ok(1_000_000) // 模拟价格：1 SOL = 1,000,000 lamports
     }
     
     /// 获取市场深度数据（模拟实现）
-    fn get_market_depth(&self) -> Result<MarketDepthData> {
+    fn get_market_depth(&self) -> anchor_lang::Result<MarketDepthData> {
         // 实际实现应调用DEX接口获取订单簿数据
         Ok(MarketDepthData {
             bid_depth: vec![
@@ -649,7 +651,7 @@ impl VwapAlgorithm {
         slippage_tolerance_bps: u32,
         market_depth: &MarketDepthData,
         order_size: u64,
-    ) -> Result<u64> {
+    ) -> anchor_lang::Result<u64> {
         // 基础滑点计算
         let base_slippage_factor = 1.0 + (slippage_tolerance_bps as f64 / 10000.0);
         
@@ -664,7 +666,7 @@ impl VwapAlgorithm {
     }
     
     /// 模拟市场执行
-    fn simulate_market_execution(&self, size: u64, target_price: u64) -> Result<u64> {
+    fn simulate_market_execution(&self, size: u64, target_price: u64) -> anchor_lang::Result<u64> {
         // 实际实现应调用DEX接口
         // 这里模拟执行价格，包含一些随机性
         let base_price = target_price;
@@ -694,7 +696,7 @@ impl VwapAlgorithm {
     }
     
     /// 检查风险限制
-    fn check_risk_limits(&self, params: &VwapParams, result: &VwapIntervalResult) -> Result<()> {
+    fn check_risk_limits(&self, params: &VwapParams, result: &VwapIntervalResult) -> anchor_lang::Result<()> {
         // 检查单次执行比例
         let execution_ratio = (result.executed_amount as f64 / params.total_amount as f64) * 10000.0;
         if execution_ratio > params.risk_params.max_single_execution_bps as f64 {
@@ -731,7 +733,7 @@ impl VwapAlgorithm {
     }
     
     /// 更新执行缓存
-    fn update_execution_cache(&self, plan: &VwapExecutionPlan, result: &VwapIntervalResult) -> Result<()> {
+    fn update_execution_cache(&self, plan: &VwapExecutionPlan, result: &VwapIntervalResult) -> anchor_lang::Result<()> {
         let cache_key = format!("vwap_{}", plan.start_time);
         // 这里应该更新缓存，但由于self是不可变的，实际实现中需要内部可变性
         Ok(())
@@ -746,7 +748,7 @@ impl VwapAlgorithm {
         total_execution_time: u64,
         total_intervals: usize,
         vwap_price: u64,
-    ) -> Result<VwapMetrics> {
+    ) -> anchor_lang::Result<VwapMetrics> {
         if execution_times.is_empty() {
             return Err(AlgorithmError::InvalidResult {
                 reason: "No execution times available for metrics calculation".to_string(),
@@ -812,7 +814,7 @@ impl VwapAlgorithm {
     }
     
     /// 计算成交量分布统计
-    fn calculate_volume_distribution_stats(&self, volumes: &[u64]) -> Result<VolumeDistributionStats> {
+    fn calculate_volume_distribution_stats(&self, volumes: &[u64]) -> anchor_lang::Result<VolumeDistributionStats> {
         if volumes.is_empty() {
             return Err(AlgorithmError::InvalidResult {
                 reason: "No volume data available for distribution calculation".to_string(),
@@ -873,7 +875,7 @@ impl VwapAlgorithm {
     }
     
     /// 记录性能指标
-    fn record_performance_metrics(&self, metrics: &VwapMetrics) -> Result<()> {
+    fn record_performance_metrics(&self, metrics: &VwapMetrics) -> anchor_lang::Result<()> {
         msg!("VWAP Performance Metrics:");
         msg!("  Total Execution Time: {} ms", metrics.total_execution_time_ms);
         msg!("  Avg Execution Latency: {} ms", metrics.avg_execution_latency_ms);

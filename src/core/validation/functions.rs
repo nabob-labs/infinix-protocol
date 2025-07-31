@@ -5,10 +5,10 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::error::StrategyError;
+use crate::errors::strategy_error::StrategyError;
 
 /// 校验数值在指定范围内
-pub fn validate_amount(amount: u64, min: u64, max: u64) -> Result<()> {
+pub fn validate_amount(amount: u64, min: u64, max: u64) -> anchor_lang::Result<()> {
     if amount < min || amount > max {
         return Err(StrategyError::InvalidStrategyParameters.into());
     }
@@ -16,7 +16,7 @@ pub fn validate_amount(amount: u64, min: u64, max: u64) -> Result<()> {
 }
 
 /// 校验Pubkey非默认值
-pub fn validate_pubkey(key: &Pubkey) -> Result<()> {
+pub fn validate_pubkey(key: &Pubkey) -> anchor_lang::Result<()> {
     if *key == Pubkey::default() {
         return Err(StrategyError::InvalidStrategyParameters.into());
     }
@@ -24,7 +24,7 @@ pub fn validate_pubkey(key: &Pubkey) -> Result<()> {
 }
 
 /// 校验权重和为指定值
-pub fn validate_weights(weights: &[u64], expected_sum: u64) -> Result<()> {
+pub fn validate_weights(weights: &[u64], expected_sum: u64) -> anchor_lang::Result<()> {
     let total: u64 = weights.iter().sum();
     if total != expected_sum {
         return Err(StrategyError::InvalidWeightSum.into());

@@ -3,14 +3,14 @@
 //! 业务逻辑实现，供指令入口调用，封装策略注册、执行、验证、批量操作、权限校验等操作。
 
 use anchor_lang::prelude::*;
-use crate::core::types::{StrategyParams, BatchStrategyParams, StrategyResult};
-use crate::errors::basket_error::BasketError;
+use crate::core::types::StrategyParams;
+// use crate::errors::basket_error::BasketError;
 
 /// 策略注册trait
 ///
 /// 定义策略注册接口，便于扩展多种策略注册方式。
 /// - 设计意图：统一注册入口，便于后续多种策略注册策略。
-pub trait StrategyRegistrable {
+trait StrategyRegistrable {
     /// 注册策略
     ///
     /// # 参数
@@ -18,7 +18,7 @@ pub trait StrategyRegistrable {
     ///
     /// # 返回值
     /// - 成功返回 Ok(())，失败返回 BasketError。
-    fn register(&self, params: &StrategyParams) -> Result<()>;
+    fn register(&self, params: &StrategyParams) -> anchor_lang::Result<()>;
 }
 
 /// 策略注册服务实现
@@ -27,7 +27,7 @@ pub trait StrategyRegistrable {
 pub struct RegisterStrategyService;
 impl StrategyRegistrable for RegisterStrategyService {
     /// 注册实现
-    fn register(&self, _params: &StrategyParams) -> Result<()> {
+    fn register(&self, _params: &StrategyParams) -> anchor_lang::Result<()> {
         // 生产级实现：注册到全局策略表
         Ok(())
     }
@@ -37,7 +37,7 @@ impl StrategyRegistrable for RegisterStrategyService {
 ///
 /// 定义策略执行接口，便于扩展多种策略执行方式。
 /// - 设计意图：统一执行入口，便于后续多种策略执行。
-pub trait StrategyExecutable {
+trait StrategyExecutable {
     /// 执行策略
     ///
     /// # 参数
@@ -45,7 +45,7 @@ pub trait StrategyExecutable {
     ///
     /// # 返回值
     /// - 返回策略执行结果，失败返回 BasketError。
-    fn execute(&self, params: &StrategyParams) -> Result<StrategyResult>;
+    fn execute(&self, params: &StrategyParams) -> anchor_lang::Result<StrategyResult>;
 }
 
 /// 策略执行服务实现
@@ -54,7 +54,7 @@ pub trait StrategyExecutable {
 pub struct ExecuteStrategyService;
 impl StrategyExecutable for ExecuteStrategyService {
     /// 执行实现
-    fn execute(&self, params: &StrategyParams) -> Result<StrategyResult> {
+    fn execute(&self, params: &StrategyParams) -> anchor_lang::Result<StrategyResult> {
         // 生产级实现：根据params执行策略
         Ok(StrategyResult { success: true, output: 100 })
     }
@@ -64,7 +64,7 @@ impl StrategyExecutable for ExecuteStrategyService {
 ///
 /// 定义策略验证接口，便于扩展多种策略验证方式。
 /// - 设计意图：统一验证入口，便于后续多种策略验证。
-pub trait StrategyValidatable {
+trait StrategyValidatable {
     /// 验证策略
     ///
     /// # 参数
@@ -72,7 +72,7 @@ pub trait StrategyValidatable {
     ///
     /// # 返回值
     /// - 是否有效。
-    fn validate(&self, params: &StrategyParams) -> Result<bool>;
+    fn validate(&self, params: &StrategyParams) -> anchor_lang::Result<bool>;
 }
 
 /// 策略验证服务实现
@@ -81,7 +81,7 @@ pub trait StrategyValidatable {
 pub struct ValidateStrategyService;
 impl StrategyValidatable for ValidateStrategyService {
     /// 验证实现
-    fn validate(&self, _params: &StrategyParams) -> Result<bool> {
+    fn validate(&self, _params: &StrategyParams) -> anchor_lang::Result<bool> {
         // 生产级实现：验证策略有效性
         Ok(true)
     }
@@ -91,7 +91,7 @@ impl StrategyValidatable for ValidateStrategyService {
 ///
 /// 定义批量操作接口，便于扩展多种批量操作方式。
 /// - 设计意图：统一批量操作入口，便于后续多种批量策略。
-pub trait StrategyBatchOperable {
+trait StrategyBatchOperable {
     /// 批量操作
     ///
     /// # 参数
@@ -99,7 +99,7 @@ pub trait StrategyBatchOperable {
     ///
     /// # 返回值
     /// - 返回每笔操作的结果集合，失败返回 BasketError。
-    fn batch_operate(&self, batch_params: &BatchStrategyParams) -> Result<Vec<StrategyResult>>;
+    fn batch_operate(&self, batch_params: &BatchStrategyParams) -> anchor_lang::Result<Vec<StrategyResult>>;
 }
 
 /// 策略批量操作服务实现
@@ -108,7 +108,7 @@ pub trait StrategyBatchOperable {
 pub struct BatchOperateStrategyService;
 impl StrategyBatchOperable for BatchOperateStrategyService {
     /// 批量操作实现
-    fn batch_operate(&self, batch_params: &BatchStrategyParams) -> Result<Vec<StrategyResult>> {
+    fn batch_operate(&self, batch_params: &BatchStrategyParams) -> anchor_lang::Result<Vec<StrategyResult>> {
         // 生产级实现：遍历批量参数
         Ok(batch_params.strategies.iter().map(|_| StrategyResult { success: true, output: 100 }).collect())
     }
@@ -118,7 +118,7 @@ impl StrategyBatchOperable for BatchOperateStrategyService {
 ///
 /// 定义策略权限校验接口，便于扩展多种权限模型。
 /// - 设计意图：统一权限校验入口，便于后续多种权限策略。
-pub trait StrategyAuthorizable {
+trait StrategyAuthorizable {
     /// 校验策略操作权限
     ///
     /// # 参数
@@ -126,7 +126,7 @@ pub trait StrategyAuthorizable {
     ///
     /// # 返回值
     /// - 是否有权限。
-    fn authorize(&self, authority: Pubkey) -> Result<bool>;
+    fn authorize(&self, authority: Pubkey) -> anchor_lang::Result<bool>;
 }
 
 /// 策略权限校验服务实现
@@ -135,7 +135,7 @@ pub trait StrategyAuthorizable {
 pub struct AuthorizeStrategyService;
 impl StrategyAuthorizable for AuthorizeStrategyService {
     /// 权限校验实现
-    fn authorize(&self, _authority: Pubkey) -> Result<bool> {
+    fn authorize(&self, _authority: Pubkey) -> anchor_lang::Result<bool> {
         // 生产级实现：校验权限
         Ok(true)
     }
@@ -147,7 +147,7 @@ impl StrategyAuthorizable for AuthorizeStrategyService {
 pub struct StrategyService;
 impl StrategyService {
     /// 策略注册，融合多资产/算法/DEX/Oracle
-    pub fn register_strategy(name: &str, params: &StrategyParams) -> Result<()> {
+    pub fn register_strategy(name: &str, params: &StrategyParams) -> anchor_lang::Result<()> {
         // 1. 参数校验
         require!(!name.is_empty(), crate::errors::asset_error::AssetError::InvalidParams);
         // 2. 可选算法/DEX/Oracle适配器注册
@@ -174,12 +174,12 @@ impl StrategyService {
         Ok(())
     }
     /// 查询策略
-    pub fn query(registry: &StrategyRegistryAccount, strategy_id: u64) -> Result<StrategyMeta> {
+    pub fn query(registry: &StrategyRegistryAccount, strategy_id: u64) -> anchor_lang::Result<StrategyMeta> {
         let svc = QueryStrategyService;
         svc.query(registry, strategy_id)
     }
     /// 切换策略
-    pub fn switch(registry: &mut StrategyRegistryAccount, from: u64, to: u64) -> Result<()> {
+    pub fn switch(registry: &mut StrategyRegistryAccount, from: u64, to: u64) -> anchor_lang::Result<()> {
         let svc = SwitchStrategyService;
         svc.switch(registry, from, to)
     }
@@ -188,7 +188,7 @@ impl StrategyService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::accounts::strategy_registry_account::{StrategyRegistryAccount, StrategyMeta};
+    use crate::account_models::strategy_registry_account::{StrategyRegistryAccount, StrategyMeta};
     use crate::strategies::strategy_registry::StrategyConfig;
     use anchor_lang::prelude::Pubkey;
 

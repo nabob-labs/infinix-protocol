@@ -19,7 +19,7 @@ impl RiskAlgorithm for RiskAssessmentAlgorithm {
     /// - 参数 ctx: Anchor 上下文，包含账户、权限等
     /// - 参数 params: 风险参数，包含评估所需的所有输入
     /// - 返回 RiskResult，包含风险评分、原因等
-    fn assess(&self, _ctx: Context<AssessRisk>, params: &RiskParams) -> Result<RiskResult> {
+    fn assess(&self, _ctx: Context<AssessRisk>, params: &RiskParams) -> anchor_lang::Result<RiskResult> {
         require!(params.amount > 0, ErrorCode::InvalidAmount); // 校验输入参数 amount 必须大于 0，否则返回 InvalidAmount 错误码，防止无效或恶意输入
         // 生产级风险评估算法实现（此处为简化示例，实际应根据多维度参数综合评估风险）
         Ok(RiskResult {

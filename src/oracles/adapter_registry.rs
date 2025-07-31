@@ -67,7 +67,7 @@ impl OracleAdapterRegistry {
         self.adapters.write().unwrap().insert(name.to_string(), adapter);
         self.metadata.write().unwrap().insert(name.to_string(), meta.clone());
         info!("Registered Oracle adapter: {} v{}", name, meta.version);
-        emit!(OracleAdapterEvent::Registered { name: name.to_string(), version: meta.version });
+        emit!(OracleAdapterRegistered { name: name.to_string(), version: meta.version });
     }
     /// 查询适配器实例
     /// 参数：name 适配器名称
@@ -88,7 +88,7 @@ impl OracleAdapterRegistry {
         self.adapters.write().unwrap().remove(name);
         self.metadata.write().unwrap().remove(name);
         info!("Removed Oracle adapter: {}", name);
-        emit!(OracleAdapterEvent::Removed { name: name.to_string() });
+        emit!(OracleAdapterRemoved { name: name.to_string() });
     }
     /// 设置适配器状态
     /// 参数：
@@ -100,7 +100,7 @@ impl OracleAdapterRegistry {
             meta.status = status.clone();
             meta.last_updated = Clock::get().map(|c| c.unix_timestamp).unwrap_or(0);
             info!("Set status for Oracle adapter {}: {:?}", name, status);
-            emit!(OracleAdapterEvent::StatusChanged { name: name.to_string(), status });
+            emit!(OracleAdapterStatusChanged { name: name.to_string(), status });
         }
     }
     /// 按状态筛选适配器元数据
@@ -139,22 +139,34 @@ impl OracleAdapterRegistry {
         self.adapters.write().unwrap().insert(name.to_string(), new_adapter);
         self.metadata.write().unwrap().insert(name.to_string(), new_meta.clone());
         info!("Hot-swapped Oracle adapter: {} v{}", name, new_meta.version);
-        emit!(OracleAdapterEvent::HotSwapped { name: name.to_string(), version: new_meta.version });
+        emit!(OracleAdapterHotSwapped { name: name.to_string(), version: new_meta.version });
     }
 }
 
 /// 预言机适配器注册相关事件（Anchor事件）
 /// - 用于链上追踪适配器注册、注销、状态变更、热插拔等操作，便于前端/监控系统监听
+
 #[event]
-pub enum OracleAdapterEvent {
-    /// 注册事件，表示适配器被成功注册
-    Registered { name: String, version: String },
-    /// 注销事件，表示适配器被移除
-    Removed { name: String },
-    /// 状态变更事件，表示适配器状态发生变化
-    StatusChanged { name: String, status: AdapterStatus },
-    /// 热插拔事件，表示适配器被热替换
-    HotSwapped { name: String, version: String },
+pub struct OracleAdapterRegistered {
+    pub name: String,
+    pub version: String,
+}
+
+#[event]
+pub struct OracleAdapterRemoved {
+    pub name: String,
+}
+
+#[event]
+pub struct OracleAdapterStatusChanged {
+    pub name: String,
+    pub status: AdapterStatus,
+}
+
+#[event]
+pub struct OracleAdapterHotSwapped {
+    pub name: String,
+    pub version: String,
 }
 
 /// 全局预言机适配器注册表（单例，带示例注册）

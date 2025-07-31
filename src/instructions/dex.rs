@@ -1,6 +1,6 @@
 //! DEX instruction set: register, query, switch DEX/AMM adapters (PDA持久化/权限校验/事件日志)
 use anchor_lang::prelude::*; // 引入Anchor框架预导入模块，包含Solana程序开发常用类型与宏
-use crate::accounts::dex_registry_account::{DexRegistryAccount, DexMeta}; // 引入DEX注册表账户与元数据结构体
+use crate::account_models::dex_registry_account::{DexRegistryAccount, DexMeta}; // 引入DEX注册表账户与元数据结构体
 
 #[event] // Anchor事件宏，自动生成链上事件日志结构体
 pub struct DexRegistered { // 定义DEX注册事件结构体
@@ -38,7 +38,7 @@ pub struct RegisterDexParams { // 定义注册DEX参数结构体
 pub fn register_dex(
     ctx: Context<RegisterDex>, // Anchor账户上下文，自动校验权限与生命周期
     params: RegisterDexParams, // 注册参数，类型安全
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变DEX注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取操作人公钥
     crate::services::dex_service::DexService::register(
@@ -67,7 +67,7 @@ pub struct QueryDexParams { // 定义查询DEX参数结构体
 pub fn query_dex(
     ctx: Context<QueryDex>, // Anchor账户上下文，自动校验权限与生命周期
     params: QueryDexParams, // 查询参数，类型安全
-) -> Result<DexMeta> { // Anchor规范返回类型，返回DEX元数据
+) -> anchor_lang::Result<DexMeta> { // Anchor规范返回类型，返回DEX元数据
     let registry = &ctx.accounts.registry; // 获取只读DEX注册表账户，生命周期由Anchor自动管理
     let meta = crate::services::dex_service::DexService::query(
         registry, // DEX注册表账户
@@ -92,7 +92,7 @@ pub struct SwitchDexParams { // 定义切换DEX参数结构体
 pub fn switch_dex(
     ctx: Context<SwitchDex>, // Anchor账户上下文，自动校验权限与生命周期
     params: SwitchDexParams, // 切换参数，类型安全
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变DEX注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取操作人公钥
     crate::services::dex_service::DexService::switch(
@@ -126,7 +126,7 @@ pub struct InitDexRegistry<'info> { // 定义DEX注册表初始化指令的账�
 
 pub fn init_dex_registry(
     ctx: Context<InitDexRegistry>, // Anchor账户上下文，自动校验权限与生命周期
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变DEX注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取初始化人公钥
     let bump = *ctx.bumps.get("registry").unwrap(); // 获取PDA bump种子

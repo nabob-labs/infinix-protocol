@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stablecoin_service::StablecoinService;
 use crate::events::asset_event::AssetQueried;
@@ -15,9 +14,9 @@ pub struct QueryStablecoin<'info> {
 
 /// Stablecoin资产query指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
-pub fn query_stablecoin(ctx: Context<QueryStablecoin>) -> Result<()> {
+pub fn query_stablecoin(ctx: Context<QueryStablecoin>) -> anchor_lang::Result<()> {
     let stablecoin = &ctx.accounts.stablecoin;
-    require!(stablecoin.asset_type == AssetType::Stablecoin, crate::error::ProgramError::InvalidAssetType);
+    require!(stablecoin.asset_type == AssetType::Stablecoin, ProgramError::InvalidAssetType);
     let service = StablecoinService::new();
     let info = service.query(stablecoin)?;
     emit!(AssetQueried {

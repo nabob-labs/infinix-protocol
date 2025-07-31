@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stablecoin_service::StablecoinService;
 use crate::events::asset_event::AssetBatchProcessed;
@@ -18,9 +17,9 @@ pub struct BatchStablecoin<'info> {
 /// Stablecoin资产batch指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - actions: 批量操作类型与参数数组
-pub fn batch_stablecoin(ctx: Context<BatchStablecoin>, actions: Vec<StablecoinBatchAction>) -> Result<()> {
+pub fn batch_stablecoin(ctx: Context<BatchStablecoin>, actions: Vec<StablecoinBatchAction>) -> anchor_lang::Result<()> {
     let stablecoin = &mut ctx.accounts.stablecoin;
-    require!(stablecoin.asset_type == AssetType::Stablecoin, crate::error::ProgramError::InvalidAssetType);
+    require!(stablecoin.asset_type == AssetType::Stablecoin, ProgramError::InvalidAssetType);
     let service = StablecoinService::new();
     service.batch(stablecoin, &actions)?;
     emit!(AssetBatchProcessed {

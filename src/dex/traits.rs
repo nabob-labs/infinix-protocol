@@ -12,22 +12,22 @@ pub trait DexAdapter: Send + Sync {
     /// - ctx: Anchor 上下文，包含账户信息
     /// - params: swap参数（支持多资产、多市场、多DEX）
     /// - 返回：swap结果（SwapResult）
-    fn swap(&self, ctx: Context<Swap>, params: SwapParams) -> Result<SwapResult>;
+    fn swap(&self, ctx: Context<Swap>, params: SwapParams) -> anchor_lang::Result<SwapResult>;
     /// 添加流动性（最小功能单元）
     /// - ctx: Anchor 上下文
     /// - params: 添加流动性参数
     /// - 返回：获得的流动性token数量
-    fn add_liquidity(&self, ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> Result<u64>;
+    fn add_liquidity(&self, ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> anchor_lang::Result<u64>;
     /// 移除流动性（最小功能单元）
     /// - ctx: Anchor 上下文
     /// - params: 移除流动性参数
     /// - 返回：返还的流动性token数量
-    fn remove_liquidity(&self, ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> Result<u64>;
+    fn remove_liquidity(&self, ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> anchor_lang::Result<u64>;
     /// 获取报价（最小功能单元）
     /// - ctx: Anchor 上下文
     /// - params: 报价参数
     /// - 返回：报价结果（QuoteResult）
-    fn get_quote(&self, ctx: Context<GetQuote>, params: QuoteParams) -> Result<QuoteResult>;
+    fn get_quote(&self, ctx: Context<GetQuote>, params: QuoteParams) -> anchor_lang::Result<QuoteResult>;
     /// 查询支持的资产类型
     fn supported_assets(&self) -> Vec<String> { vec![] }
     /// 查询支持的市场类型
@@ -135,22 +135,22 @@ pub struct MockDexAdapter;
 
 impl DexAdapter for MockDexAdapter {
     /// 模拟swap操作，直接返回输入数量和0手续费
-    fn swap(&self, _ctx: Context<Swap>, params: SwapParams) -> Result<SwapResult> {
+    fn swap(&self, _ctx: Context<Swap>, params: SwapParams) -> anchor_lang::Result<SwapResult> {
         Ok(SwapResult {
             amount_out: params.amount_in,
             fee: 0,
         })
     }
     /// 模拟添加流动性，返回两种资产数量之和
-    fn add_liquidity(&self, _ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> Result<u64> {
+    fn add_liquidity(&self, _ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> anchor_lang::Result<u64> {
         Ok(params.amount_a + params.amount_b)
     }
     /// 模拟移除流动性，返回输入的流动性token数量
-    fn remove_liquidity(&self, _ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> Result<u64> {
+    fn remove_liquidity(&self, _ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> anchor_lang::Result<u64> {
         Ok(params.liquidity)
     }
     /// 模拟报价，返回输入数量和0手续费
-    fn get_quote(&self, _ctx: Context<GetQuote>, params: QuoteParams) -> Result<QuoteResult> {
+    fn get_quote(&self, _ctx: Context<GetQuote>, params: QuoteParams) -> anchor_lang::Result<QuoteResult> {
         Ok(QuoteResult {
             amount_out: params.amount_in,
             fee: 0,

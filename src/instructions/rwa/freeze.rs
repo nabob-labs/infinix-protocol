@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::rwa_service::RwaService;
 use crate::events::asset_event::AssetFrozen;
@@ -17,9 +16,9 @@ pub struct FreezeRwa<'info> {
 
 /// RWA资产freeze指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
-pub fn freeze_rwa(ctx: Context<FreezeRwa>) -> Result<()> {
+pub fn freeze_rwa(ctx: Context<FreezeRwa>) -> anchor_lang::Result<()> {
     let rwa = &mut ctx.accounts.rwa;
-    require!(rwa.asset_type == AssetType::RWA, crate::error::ProgramError::InvalidAssetType);
+    require!(rwa.asset_type == AssetType::RWA, ProgramError::InvalidAssetType);
     let service = RwaService::new();
     service.freeze(rwa)?;
     emit!(AssetFrozen {

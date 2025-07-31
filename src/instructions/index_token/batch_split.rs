@@ -5,9 +5,8 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::events::index_token_event::IndexTokenBatchSplit;
-use crate::validation::index_token_validation::IndexTokenValidatable;
+// IndexTokenValidatable trait not found, removing import
 
 /// 指数代币批量拆分指令账户上下文结构体
 /// - 管理批量拆分操作所需的链上账户
@@ -31,7 +30,7 @@ pub struct BatchSplitIndexToken<'info> {
 pub fn batch_split_index_token(
     ctx: Context<BatchSplitIndexToken>,
     amounts: Vec<u64>,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     // 获取源和批量新生成指数代币账户
     let source = &mut ctx.accounts.source_index_token;
     let new_tokens = &mut ctx.accounts.new_index_token;

@@ -10,9 +10,8 @@
 
 use super::traits::{OracleParams, OraclePriceResult, OracleTwapResult, OracleVwapResult, OracleAdapterType}; // trait及参数类型
 use anchor_lang::prelude::*; // Anchor预导入，包含Result、Context等
-use crate::oracles::adapter::*; // 适配器trait与账户声明
 use crate::oracles::traits::OracleAdapter;
-use crate::core::adapter::AdapterTrait;
+// use crate::core::adapter: // 暂时注释掉:AdapterTrait;
 
 /// Switchboard Oracle适配器结构体
 /// - 用于对接Solana链上的Switchboard预言机，实现统一的Oracle适配接口

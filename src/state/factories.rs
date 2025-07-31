@@ -5,12 +5,12 @@
 use anchor_lang::prelude::*;
 use crate::state::common::*;
 use crate::core::traits::*;
-use crate::error::ProgramError;
+use anchor_lang::prelude::ProgramError;
 use crate::version::{ProgramVersion, Versioned};
 
 /// 权重策略工厂账户
 #[account]
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace, PartialEq, Eq)]
+#[derive(Debug, InitSpace, PartialEq, Eq)]
 pub struct WeightStrategyFactory {
     /// 通用账户基础信息
     pub base: BaseAccount,
@@ -30,7 +30,7 @@ pub struct WeightStrategyFactory {
 
 impl WeightStrategyFactory {
     /// 初始化工厂
-    pub fn initialize(&mut self, authority: Pubkey, factory_id: u64, fee_collector: Pubkey, max_strategies: u64, factory_fee_bps: u16, bump: u8) -> Result<()> {
+    pub fn initialize(&mut self, authority: Pubkey, factory_id: u64, fee_collector: Pubkey, max_strategies: u64, factory_fee_bps: u16, bump: u8) -> anchor_lang::Result<()> {
         self.base = BaseAccount::new(authority, bump)?;
         self.factory_id = factory_id;
         self.strategy_count = 0;
@@ -54,7 +54,7 @@ impl WeightStrategyFactory {
 
 /// 工厂参数校验
 impl Validatable for WeightStrategyFactory {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         self.base.validate()?;
         if self.factory_id == 0 {
             return Err(ProgramError::InvalidStrategyParameters.into());
@@ -72,7 +72,7 @@ impl Validatable for WeightStrategyFactory {
 /// 权限 trait 实现
 impl Authorizable for WeightStrategyFactory {
     fn authority(&self) -> Pubkey { self.base.authority }
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> anchor_lang::Result<()> {
         self.base.authority = new_authority;
         self.base.touch()?;
         Ok(())
@@ -82,16 +82,16 @@ impl Authorizable for WeightStrategyFactory {
 /// 暂停 trait 实现
 impl Pausable for WeightStrategyFactory {
     fn is_paused(&self) -> bool { self.base.is_paused }
-    fn pause(&mut self) -> Result<()> { self.base.pause() }
-    fn unpause(&mut self) -> Result<()> { self.base.unpause() }
-    fn resume(&mut self) -> Result<()> { self.unpause() }
+    fn pause(&mut self) -> anchor_lang::Result<()> { self.base.pause() }
+    fn unpause(&mut self) -> anchor_lang::Result<()> { self.base.unpause() }
+    fn resume(&mut self) -> anchor_lang::Result<()> { self.unpause() }
 }
 
 /// 激活 trait 实现
 impl Activatable for WeightStrategyFactory {
     fn is_active(&self) -> bool { self.base.is_active }
-    fn activate(&mut self) -> Result<()> { self.base.activate() }
-    fn deactivate(&mut self) -> Result<()> { self.base.deactivate() }
+    fn activate(&mut self) -> anchor_lang::Result<()> { self.base.activate() }
+    fn deactivate(&mut self) -> anchor_lang::Result<()> { self.base.deactivate() }
 }
 
 /// 版本 trait 实现
@@ -104,7 +104,7 @@ impl Versioned for WeightStrategyFactory {
 
 /// 再平衡策略工厂账户
 #[account]
-#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone, InitSpace, PartialEq, Eq)]
+#[derive(Debug, InitSpace, PartialEq, Eq)]
 pub struct RebalancingStrategyFactory {
     /// 通用账户基础信息
     pub base: BaseAccount,
@@ -124,7 +124,7 @@ pub struct RebalancingStrategyFactory {
 
 impl RebalancingStrategyFactory {
     /// 初始化工厂
-    pub fn initialize(&mut self, authority: Pubkey, factory_id: u64, fee_collector: Pubkey, max_strategies: u64, factory_fee_bps: u16, bump: u8) -> Result<()> {
+    pub fn initialize(&mut self, authority: Pubkey, factory_id: u64, fee_collector: Pubkey, max_strategies: u64, factory_fee_bps: u16, bump: u8) -> anchor_lang::Result<()> {
         self.base = BaseAccount::new(authority, bump)?;
         self.factory_id = factory_id;
         self.strategy_count = 0;
@@ -148,7 +148,7 @@ impl RebalancingStrategyFactory {
 
 /// 工厂参数校验
 impl Validatable for RebalancingStrategyFactory {
-    fn validate(&self) -> Result<()> {
+    fn validate(&self) -> anchor_lang::Result<()> {
         self.base.validate()?;
         if self.factory_id == 0 {
             return Err(ProgramError::InvalidStrategyParameters.into());
@@ -166,7 +166,7 @@ impl Validatable for RebalancingStrategyFactory {
 /// 权限 trait 实现
 impl Authorizable for RebalancingStrategyFactory {
     fn authority(&self) -> Pubkey { self.base.authority }
-    fn transfer_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+    fn transfer_authority(&mut self, new_authority: Pubkey) -> anchor_lang::Result<()> {
         self.base.authority = new_authority;
         self.base.touch()?;
         Ok(())
@@ -176,16 +176,16 @@ impl Authorizable for RebalancingStrategyFactory {
 /// 暂停 trait 实现
 impl Pausable for RebalancingStrategyFactory {
     fn is_paused(&self) -> bool { self.base.is_paused }
-    fn pause(&mut self) -> Result<()> { self.base.pause() }
-    fn unpause(&mut self) -> Result<()> { self.base.unpause() }
-    fn resume(&mut self) -> Result<()> { self.unpause() }
+    fn pause(&mut self) -> anchor_lang::Result<()> { self.base.pause() }
+    fn unpause(&mut self) -> anchor_lang::Result<()> { self.base.unpause() }
+    fn resume(&mut self) -> anchor_lang::Result<()> { self.unpause() }
 }
 
 /// 激活 trait 实现
 impl Activatable for RebalancingStrategyFactory {
     fn is_active(&self) -> bool { self.base.is_active }
-    fn activate(&mut self) -> Result<()> { self.base.activate() }
-    fn deactivate(&mut self) -> Result<()> { self.base.deactivate() }
+    fn activate(&mut self) -> anchor_lang::Result<()> { self.base.activate() }
+    fn deactivate(&mut self) -> anchor_lang::Result<()> { self.base.deactivate() }
 }
 
 /// 版本 trait 实现

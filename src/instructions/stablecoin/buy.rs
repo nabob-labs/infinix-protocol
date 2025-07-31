@@ -2,7 +2,6 @@
 //! Anchor最小功能单元，生产级注释
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
 use crate::core::types::AssetType;
 use crate::services::stablecoin_service::StablecoinService;
 use crate::events::asset_event::AssetBought;
@@ -18,9 +17,9 @@ pub struct BuyStablecoin<'info> {
 /// Stablecoin资产buy指令实现
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - amount: 买入数量，类型安全
-pub fn buy_stablecoin(ctx: Context<BuyStablecoin>, amount: u64) -> Result<()> {
+pub fn buy_stablecoin(ctx: Context<BuyStablecoin>, amount: u64) -> anchor_lang::Result<()> {
     let stablecoin = &mut ctx.accounts.stablecoin;
-    require!(stablecoin.asset_type == AssetType::Stablecoin, crate::error::ProgramError::InvalidAssetType);
+    require!(stablecoin.asset_type == AssetType::Stablecoin, ProgramError::InvalidAssetType);
     let service = StablecoinService::new();
     service.buy(stablecoin, amount)?;
     emit!(AssetBought {

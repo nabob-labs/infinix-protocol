@@ -1,6 +1,6 @@
 //! Oracle instruction set: register, query, switch oracle adapters (PDA持久化/权限校验/事件日志)
 use anchor_lang::prelude::*; // 引入Anchor框架预导入模块，包含Solana程序开发常用类型与宏
-use crate::accounts::oracle_registry_account::{OracleRegistryAccount, OracleMeta}; // 引入Oracle注册表账户与元数据结构体
+use crate::account_models::oracle_registry_account::{OracleRegistryAccount, OracleMeta}; // 引入Oracle注册表账户与元数据结构体
 
 #[event] // Anchor事件宏，自动生成链上事件日志结构体
 pub struct OracleRegistered { // 定义Oracle注册事件结构体
@@ -38,7 +38,7 @@ pub struct RegisterOracleParams { // 定义注册Oracle参数结构体
 pub fn register_oracle(
     ctx: Context<RegisterOracle>, // Anchor账户上下文，自动校验权限与生命周期
     params: RegisterOracleParams, // 注册参数，类型安全
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变Oracle注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取操作人公钥
     crate::services::oracle_service::OracleService::register(
@@ -67,7 +67,7 @@ pub struct QueryOracleParams { // 定义查询Oracle参数结构体
 pub fn query_oracle(
     ctx: Context<QueryOracle>, // Anchor账户上下文，自动校验权限与生命周期
     params: QueryOracleParams, // 查询参数，类型安全
-) -> Result<OracleMeta> { // Anchor规范返回类型，返回Oracle元数据
+) -> anchor_lang::Result<OracleMeta> { // Anchor规范返回类型，返回Oracle元数据
     let registry = &ctx.accounts.registry; // 获取只读Oracle注册表账户，生命周期由Anchor自动管理
     let meta = crate::services::oracle_service::OracleService::query(
         registry, // Oracle注册表账户
@@ -92,7 +92,7 @@ pub struct SwitchOracleParams { // 定义切换Oracle参数结构体
 pub fn switch_oracle(
     ctx: Context<SwitchOracle>, // Anchor账户上下文，自动校验权限与生命周期
     params: SwitchOracleParams, // 切换参数，类型安全
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变Oracle注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取操作人公钥
     crate::services::oracle_service::OracleService::switch(
@@ -126,7 +126,7 @@ pub struct InitOracleRegistry<'info> { // 定义Oracle注册表初始化指令�
 
 pub fn init_oracle_registry(
     ctx: Context<InitOracleRegistry>, // Anchor账户上下文，自动校验权限与生命周期
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变Oracle注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取初始化人公钥
     let bump = *ctx.bumps.get("registry").unwrap(); // 获取PDA bump种子

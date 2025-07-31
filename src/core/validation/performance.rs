@@ -5,14 +5,14 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::error::StrategyError;
+use crate::errors::strategy_error::StrategyError;
 
 /// 性能校验器结构体
 pub struct PerformanceValidator;
 
 impl PerformanceValidator {
     /// 校验计算预算是否充足
-    pub fn validate_compute_budget(required_units: u32, available_units: u32) -> Result<()> {
+    pub fn validate_compute_budget(required_units: u32, available_units: u32) -> anchor_lang::Result<()> {
         if required_units > available_units {
             return Err(StrategyError::InsufficientComputeBudget.into());
         }
@@ -20,7 +20,7 @@ impl PerformanceValidator {
     }
 
     /// 校验内存使用是否超限
-    pub fn validate_memory_usage(used_memory: usize, max_memory: usize) -> Result<()> {
+    pub fn validate_memory_usage(used_memory: usize, max_memory: usize) -> anchor_lang::Result<()> {
         if used_memory > max_memory {
             return Err(StrategyError::MemoryLimitExceeded.into());
         }
@@ -28,7 +28,7 @@ impl PerformanceValidator {
     }
 
     /// 校验缓存命中率
-    pub fn validate_cache_performance(hit_rate_bps: u32, min_hit_rate_bps: u32) -> Result<()> {
+    pub fn validate_cache_performance(hit_rate_bps: u32, min_hit_rate_bps: u32) -> anchor_lang::Result<()> {
         if hit_rate_bps < min_hit_rate_bps {
             return Err(StrategyError::CachePerformanceLow.into());
         }
@@ -36,7 +36,7 @@ impl PerformanceValidator {
     }
 
     /// 校验执行时间
-    pub fn validate_execution_time(execution_time_ms: u64, max_time_ms: u64) -> Result<()> {
+    pub fn validate_execution_time(execution_time_ms: u64, max_time_ms: u64) -> anchor_lang::Result<()> {
         if execution_time_ms > max_time_ms {
             return Err(StrategyError::ExecutionTimeout.into());
         }

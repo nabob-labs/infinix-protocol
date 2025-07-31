@@ -2,11 +2,11 @@
 //! 资产查询指令实现，支持多种查询功能和数据聚合。
 
 use anchor_lang::prelude::*;
-use crate::state::baskets::BasketIndexState;
-use crate::core::types::{AssetType, QueryParams};
+use crate::core::types::*;
 use crate::services::asset_service::AssetService;
 use crate::oracles::traits::{OracleAdapter, OracleParams};
 use crate::dex::adapter::DexAdapter;
+use crate::state::baskets::BasketIndexState; // 篮子状态类型
 
 /// Asset资产query指令账户上下文
 #[derive(Accounts)]
@@ -80,7 +80,7 @@ pub struct AssetQueryResult {
 /// - ctx: Anchor账户上下文，自动校验权限与生命周期
 /// - params: 查询参数
 /// - 返回: 查询结果
-pub fn query_asset(ctx: Context<QueryAsset>, params: QueryAssetParams) -> Result<AssetQueryResult> {
+pub fn query_asset(ctx: Context<QueryAsset>, params: QueryAssetParams) -> anchor_lang::Result<AssetQueryResult> {
     let asset = &ctx.accounts.asset;
     
     // 验证资产状态

@@ -1,38 +1,46 @@
-//!
-//! Mathematical Utilities Module
-//!
-//! 本模块实现核心数学运算，所有操作均带有溢出/下溢/除零等安全检查，适用于金融与策略场景下的高安全性数值处理。
+//! Math模块 - 数学计算工具
+//! 
+//! 本模块提供数学计算功能，包含：
+//! - 基础数学运算
+//! - 金融数学计算
+//! - 统计计算
+//! - 精度处理
+//! 
+//! 设计理念：
+//! - 精确性：确保计算结果的准确性
+//! - 性能：使用高效的算法
+//! - 安全性：防止溢出和精度丢失
+//! - 可扩展：支持多种数学运算
+//! - 设计意图：极致精确、高性能、安全可靠
 
-// 引入核心模块、错误类型和 Anchor 依赖。
-use crate::core::*;
-use crate::error::StrategyError;
-use anchor_lang::prelude::*;
+use anchor_lang::prelude::*;             // Anchor 预导入，包含Pubkey、Result等
+// use std::cmp::{max, min};                // 比较函数
 
 /// 数学运算工具结构体，所有方法均带安全检查。
 pub struct MathOps;
 
 impl MathOps {
     /// 安全乘法，带溢出检查。
-    pub fn mul(a: u64, b: u64) -> Result<u64> {
+    pub fn mul(a: u64, b: u64) -> anchor_lang::Result<u64> {
         a.checked_mul(b).ok_or(StrategyError::MathOverflow.into())
     }
     /// 安全除法，带除零检查。
-    pub fn div(a: u64, b: u64) -> Result<u64> {
+    pub fn div(a: u64, b: u64) -> anchor_lang::Result<u64> {
         if b == 0 {
             return Err(StrategyError::DivisionByZero.into());
         }
         Ok(a / b)
     }
     /// 安全加法，带溢出检查。
-    pub fn add(a: u64, b: u64) -> Result<u64> {
+    pub fn add(a: u64, b: u64) -> anchor_lang::Result<u64> {
         a.checked_add(b).ok_or(StrategyError::MathOverflow.into())
     }
     /// 安全减法，带下溢检查。
-    pub fn sub(a: u64, b: u64) -> Result<u64> {
+    pub fn sub(a: u64, b: u64) -> anchor_lang::Result<u64> {
         a.checked_sub(b).ok_or(StrategyError::MathOverflow.into())
     }
     /// 归一化权重数组，使其和为 BASIS_POINTS_MAX。
-    pub fn normalize_weights(weights: &mut [u64]) -> Result<()> {
+    pub fn normalize_weights(weights: &mut [u64]) -> anchor_lang::Result<()> {
         if weights.is_empty() {
             return Ok(());
         }
@@ -68,11 +76,11 @@ impl MathOps {
         Ok(())
     }
     /// 计算 value 的百分比（基点）。
-    pub fn percentage(value: u64, percentage_bps: u64) -> Result<u64> {
+    pub fn percentage(value: u64, percentage_bps: u64) -> anchor_lang::Result<u64> {
         Self::div(Self::mul(value, percentage_bps)?, BASIS_POINTS_MAX)
     }
     /// 计算加权平均。
-    pub fn weighted_average(values: &[u64], weights: &[u64]) -> Result<u64> {
+    pub fn weighted_average(values: &[u64], weights: &[u64]) -> anchor_lang::Result<u64> {
         if values.len() != weights.len() || values.is_empty() {
             return Err(StrategyError::InvalidStrategyParameters.into());
         }
@@ -101,7 +109,7 @@ impl MathOps {
         x
     }
     /// 幂运算，重复乘法实现。
-    pub fn pow(base: u64, exp: u32) -> Result<u64> {
+    pub fn pow(base: u64, exp: u32) -> anchor_lang::Result<u64> {
         if exp == 0 {
             return Ok(1);
         }

@@ -1,7 +1,8 @@
 //! Strategy instruction set: register, query, switch strategies (PDA持久化/权限校验/事件日志)
 use anchor_lang::prelude::*; // 引入Anchor框架预导入模块，包含Solana程序开发常用类型与宏
-use crate::accounts::strategy_registry_account::{StrategyRegistryAccount, StrategyMeta}; // 引入策略注册表账户与元数据结构体
-use crate::strategies::strategy_registry::StrategyConfig; // 引入策略配置结构体
+use crate::account_models::strategy_registry_account::{StrategyRegistryAccount, StrategyMeta}; // 引入策略注册表账户与元数据结构体
+// use crate::strategies::strategy_registry; // 暂时注释掉
+// use crate::strategies::strategy_registry::StrategyConfig; // 暂时注释掉
 
 #[event] // Anchor事件宏，自动生成链上事件日志结构体
 pub struct StrategyRegistered { // 定义策略注册事件结构体
@@ -40,7 +41,7 @@ pub struct RegisterStrategyParams { // 定义注册策略参数结构体
 pub fn register_strategy(
     ctx: Context<RegisterStrategy>, // Anchor账户上下文，自动校验权限与生命周期
     params: RegisterStrategyParams, // 注册参数，类型安全
-) -> Result<u64> { // Anchor规范返回类型，返回策略ID
+) -> anchor_lang::Result<u64> { // Anchor规范返回类型，返回策略ID
     let registry = &mut ctx.accounts.registry; // 获取可变策略注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取操作人公钥
     let id = crate::services::strategy_service::StrategyService::register(
@@ -70,7 +71,7 @@ pub struct QueryStrategyParams { // 定义查询策略参数结构体
 pub fn query_strategy(
     ctx: Context<QueryStrategy>, // Anchor账户上下文，自动校验权限与生命周期
     params: QueryStrategyParams, // 查询参数，类型安全
-) -> Result<StrategyMeta> { // Anchor规范返回类型，返回策略元数据
+) -> anchor_lang::Result<StrategyMeta> { // Anchor规范返回类型，返回策略元数据
     let registry = &ctx.accounts.registry; // 获取只读策略注册表账户，生命周期由Anchor自动管理
     let meta = crate::services::strategy_service::StrategyService::query(
         registry, // 策略注册表账户
@@ -95,7 +96,7 @@ pub struct SwitchStrategyParams { // 定义切换策略参数结构体
 pub fn switch_strategy(
     ctx: Context<SwitchStrategy>, // Anchor账户上下文，自动校验权限与生命周期
     params: SwitchStrategyParams, // 切换参数，类型安全
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变策略注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取操作人公钥
     crate::services::strategy_service::StrategyService::switch(
@@ -123,7 +124,7 @@ pub struct InitStrategyRegistry<'info> { // 定义初始化策略注册表指令
 
 pub fn init_strategy_registry(
     ctx: Context<InitStrategyRegistry>, // Anchor账户上下文，自动校验权限与生命周期
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变策略注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取操作人公钥
     crate::services::strategy_service::StrategyService::init_registry(

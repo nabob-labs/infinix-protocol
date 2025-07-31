@@ -2,11 +2,9 @@
 //! Basket Rebalance With Algo And Adapters Instruction
 //! 篮子带算法和适配器再平衡指令最小功能单元实现，严格遵循Anchor规范、SOLID原则、分层设计、接口清晰、类型安全、事件追踪、权限校验、生命周期管理、错误处理、逐行注释，生产级代码质量。
 
-use crate::accounts::BasketIndexStateAccount; // 引入资产篮子账户状态账户定义
 use crate::events::basket_event::*; // 引入所有篮子相关事件定义，便于emit!宏调用
-use crate::services::basket_service::BasketService; // 引入篮子服务层，封装核心业务逻辑
-use crate::state::baskets::BasketIndexState; // 引入资产篮子状态结构体，类型安全
-use crate::validation::basket_validation::BasketValidatable; // 引入篮子校验trait，便于状态校验
+use crate::services::basket_service::BasketServiceFacade; // 引入篮子服务层，封装核心业务逻辑
+// BasketValidatable trait not found, removing import // 引入篮子校验trait，便于状态校验
 use anchor_lang::prelude::*; // Anchor预导出内容，包含Context、Account、Signer、Result等
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
@@ -36,9 +34,9 @@ pub struct RebalanceBasketWithAlgoAndAdapters<'info> {
 pub fn rebalance_basket_with_algo_and_adapters(
     ctx: Context<RebalanceBasketWithAlgoAndAdapters>,
     args: RebalanceWithAlgoAndAdaptersParams,
-) -> Result<()> {
+) -> anchor_lang::Result<()> {
     use crate::algorithms::algorithm_registry::AlgorithmRegistry;
-    use crate::dex::adapter_registry::DexAdapterRegistry;
+    use crate::dex::adapter::DexAdapterRegistry;
     use crate::oracles::adapter_registry::OracleAdapterRegistry;
     let algo_registry = AlgorithmRegistry::new();
     let dex_registry = DexAdapterRegistry::new();

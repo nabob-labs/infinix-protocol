@@ -2,12 +2,10 @@
 //! Asset Quote Instruction
 //! 资产报价指令实现，所有业务逻辑下沉到 service 层，指令层只做参数校验、账户校验、事件触发。
 
-use crate::accounts::BasketIndexStateAccount; // 账户状态结构体定义
 use crate::events::asset_event::*; // 资产相关事件定义（Anchor事件）
 use crate::services::asset_service::AssetService; // 资产业务逻辑服务层
-use crate::state::baskets::BasketIndexState; // 资产篮子状态
-use crate::validation::asset_validation::AssetValidatable; // 资产校验trait
-use crate::core::types::{TradeParams, OracleParams}; // 交易与预言机参数类型
+use crate::core::types::*; // 交易与预言机参数类型
+use crate::state::baskets::BasketIndexState; // 篮子状态类型
 use anchor_lang::prelude::*; // Anchor预导入，提供Solana合约开发的基础类型和宏
 
 /// 资产报价指令账户上下文
@@ -28,7 +26,7 @@ pub struct QuoteAsset<'info> {
 /// - params: 交易参数
 /// - price_params: 预言机参数
 /// - 返回: Anchor规范Result，返回报价u64
-pub fn quote_asset(ctx: Context<QuoteAsset>, params: TradeParams, price_params: OracleParams) -> Result<u64> {
+pub fn quote_asset(ctx: Context<QuoteAsset>, params: TradeParams, price_params: OracleParams) -> anchor_lang::Result<u64> {
     let asset = &ctx.accounts.asset; // 获取资产篮子账户（只读）
     asset.validate()?; // 校验资产篮子状态
     // 权限校验：必须是当前authority

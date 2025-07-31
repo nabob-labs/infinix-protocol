@@ -41,7 +41,7 @@ impl MarketData {
         market_cap: u64,
         liquidity: u64,
         timestamp: i64,
-    ) -> Result<Self> {
+    ) -> anchor_lang::Result<Self> {
         Ok(Self {
             price,
             volume_24h,

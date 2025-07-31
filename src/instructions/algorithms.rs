@@ -1,6 +1,6 @@
 //! Algorithm instruction set: register, query, switch algorithms (PDA持久化/权限校验/事件日志)
 use anchor_lang::prelude::*; // 引入Anchor框架预导入模块，包含Solana程序开发常用类型与宏
-use crate::accounts::algorithm_registry_account::{AlgorithmRegistryAccount, AlgorithmMeta}; // 引入算法注册表账户与元数据结构体
+use crate::account_models::algorithm_registry_account::{AlgorithmRegistryAccount, AlgorithmMeta}; // 引入算法注册表账户与元数据结构体
 use crate::algorithms::algorithm_registry::AlgorithmRegistry; // 引入算法注册表全局管理器
 use std::sync::Arc; // 引入Arc智能指针，用于多线程安全算法trait对象
 
@@ -40,7 +40,7 @@ pub struct RegisterAlgorithmParams { // 定义注册算法参数结构体
 pub fn register_algorithm(
     ctx: Context<RegisterAlgorithm>, // Anchor账户上下文，自动校验权限与生命周期
     params: RegisterAlgorithmParams, // 注册参数，类型安全
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变算法注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取操作人公钥
     crate::services::algorithm_service::AlgorithmService::register(
@@ -69,7 +69,7 @@ pub struct QueryAlgorithmParams { // 定义查询算法参数结构体
 pub fn query_algorithm(
     ctx: Context<QueryAlgorithm>, // Anchor账户上下文，自动校验权限与生命周期
     params: QueryAlgorithmParams, // 查询参数，类型安全
-) -> Result<AlgorithmMeta> { // Anchor规范返回类型，返回算法元数据
+) -> anchor_lang::Result<AlgorithmMeta> { // Anchor规范返回类型，返回算法元数据
     let registry = &ctx.accounts.registry; // 获取只读算法注册表账户，生命周期由Anchor自动管理
     let meta = crate::services::algorithm_service::AlgorithmService::query(
         registry, // 算法注册表账户
@@ -94,7 +94,7 @@ pub struct SwitchAlgorithmParams { // 定义切换算法参数结构体
 pub fn switch_algorithm(
     ctx: Context<SwitchAlgorithm>, // Anchor账户上下文，自动校验权限与生命周期
     params: SwitchAlgorithmParams, // 切换参数，类型安全
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变算法注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取操作人公钥
     crate::services::algorithm_service::AlgorithmService::switch(
@@ -128,7 +128,7 @@ pub struct InitAlgorithmRegistry<'info> { // 定义算法注册表初始化指�
 
 pub fn init_algorithm_registry(
     ctx: Context<InitAlgorithmRegistry>, // Anchor账户上下文，自动校验权限与生命周期
-) -> Result<()> { // Anchor规范返回类型
+) -> anchor_lang::Result<()> { // Anchor规范返回类型
     let registry = &mut ctx.accounts.registry; // 获取可变算法注册表账户，生命周期由Anchor自动管理
     let authority = ctx.accounts.authority.key(); // 获取初始化人公钥
     let bump = *ctx.bumps.get("registry").unwrap(); // 获取PDA bump种子
@@ -146,7 +146,7 @@ pub struct RegisterExecutionAlgorithm<'info> {
     // 可扩展权限校验等
 }
 
-pub fn register_execution_algorithm(_ctx: Context<RegisterExecutionAlgorithm>, name: String, algo: Arc<dyn crate::algorithms::traits::ExecutionStrategy>) -> Result<()> {
+pub fn register_execution_algorithm(_ctx: Context<RegisterExecutionAlgorithm>, name: String, algo: Arc<dyn crate::algorithms::traits::ExecutionStrategy>) -> anchor_lang::Result<()> {
     crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.register_execution(&name, algo);
     Ok(())
 }
@@ -154,7 +154,7 @@ pub fn register_execution_algorithm(_ctx: Context<RegisterExecutionAlgorithm>, n
 #[derive(Accounts)]
 pub struct RemoveExecutionAlgorithm<'info> {}
 
-pub fn remove_execution_algorithm(_ctx: Context<RemoveExecutionAlgorithm>, name: String) -> Result<()> {
+pub fn remove_execution_algorithm(_ctx: Context<RemoveExecutionAlgorithm>, name: String) -> anchor_lang::Result<()> {
     crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.remove_execution(&name);
     Ok(())
 }
@@ -162,7 +162,7 @@ pub fn remove_execution_algorithm(_ctx: Context<RemoveExecutionAlgorithm>, name:
 #[derive(Accounts)]
 pub struct ListExecutionAlgorithms<'info> {}
 
-pub fn list_execution_algorithms(_ctx: Context<ListExecutionAlgorithms>) -> Result<Vec<String>> {
+pub fn list_execution_algorithms(_ctx: Context<ListExecutionAlgorithms>) -> anchor_lang::Result<Vec<String>> {
     Ok(crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.list_executions())
 }
 
@@ -171,7 +171,7 @@ pub struct RegisterRoutingAlgorithm<'info> {
     // 可扩展权限校验等
 }
 
-pub fn register_routing_algorithm(_ctx: Context<RegisterRoutingAlgorithm>, name: String, algo: Arc<dyn crate::algorithms::traits::RoutingStrategy>) -> Result<()> {
+pub fn register_routing_algorithm(_ctx: Context<RegisterRoutingAlgorithm>, name: String, algo: Arc<dyn crate::algorithms::traits::RoutingStrategy>) -> anchor_lang::Result<()> {
     crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.register_routing(&name, algo);
     Ok(())
 }
@@ -179,7 +179,7 @@ pub fn register_routing_algorithm(_ctx: Context<RegisterRoutingAlgorithm>, name:
 #[derive(Accounts)]
 pub struct RemoveRoutingAlgorithm<'info> {}
 
-pub fn remove_routing_algorithm(_ctx: Context<RemoveRoutingAlgorithm>, name: String) -> Result<()> {
+pub fn remove_routing_algorithm(_ctx: Context<RemoveRoutingAlgorithm>, name: String) -> anchor_lang::Result<()> {
     crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.remove_routing(&name);
     Ok(())
 }
@@ -187,7 +187,7 @@ pub fn remove_routing_algorithm(_ctx: Context<RemoveRoutingAlgorithm>, name: Str
 #[derive(Accounts)]
 pub struct ListRoutingAlgorithms<'info> {}
 
-pub fn list_routing_algorithms(_ctx: Context<ListRoutingAlgorithms>) -> Result<Vec<String>> {
+pub fn list_routing_algorithms(_ctx: Context<ListRoutingAlgorithms>) -> anchor_lang::Result<Vec<String>> {
     Ok(crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.list_routings())
 }
 
@@ -196,7 +196,7 @@ pub struct RegisterRiskAlgorithm<'info> {
     // 可扩展权限校验等
 }
 
-pub fn register_risk_algorithm(_ctx: Context<RegisterRiskAlgorithm>, name: String, algo: Arc<dyn crate::algorithms::traits::RiskStrategy>) -> Result<()> {
+pub fn register_risk_algorithm(_ctx: Context<RegisterRiskAlgorithm>, name: String, algo: Arc<dyn crate::algorithms::traits::RiskStrategy>) -> anchor_lang::Result<()> {
     crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.register_risk(&name, algo);
     Ok(())
 }
@@ -204,7 +204,7 @@ pub fn register_risk_algorithm(_ctx: Context<RegisterRiskAlgorithm>, name: Strin
 #[derive(Accounts)]
 pub struct RemoveRiskAlgorithm<'info> {}
 
-pub fn remove_risk_algorithm(_ctx: Context<RemoveRiskAlgorithm>, name: String) -> Result<()> {
+pub fn remove_risk_algorithm(_ctx: Context<RemoveRiskAlgorithm>, name: String) -> anchor_lang::Result<()> {
     crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.remove_risk(&name);
     Ok(())
 }
@@ -212,7 +212,7 @@ pub fn remove_risk_algorithm(_ctx: Context<RemoveRiskAlgorithm>, name: String) -
 #[derive(Accounts)]
 pub struct ListRiskAlgorithms<'info> {}
 
-pub fn list_risk_algorithms(_ctx: Context<ListRiskAlgorithms>) -> Result<Vec<String>> {
+pub fn list_risk_algorithms(_ctx: Context<ListRiskAlgorithms>) -> anchor_lang::Result<Vec<String>> {
     Ok(crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.list_risks())
 }
 
@@ -221,7 +221,7 @@ pub struct RegisterOptimizerAlgorithm<'info> {
     // 可扩展权限校验等
 }
 
-pub fn register_optimizer_algorithm(_ctx: Context<RegisterOptimizerAlgorithm>, name: String, algo: Arc<dyn crate::algorithms::traits::OptimizerStrategy>) -> Result<()> {
+pub fn register_optimizer_algorithm(_ctx: Context<RegisterOptimizerAlgorithm>, name: String, algo: Arc<dyn crate::algorithms::traits::OptimizerStrategy>) -> anchor_lang::Result<()> {
     crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.register_optimizer(&name, algo);
     Ok(())
 }
@@ -229,7 +229,7 @@ pub fn register_optimizer_algorithm(_ctx: Context<RegisterOptimizerAlgorithm>, n
 #[derive(Accounts)]
 pub struct RemoveOptimizerAlgorithm<'info> {}
 
-pub fn remove_optimizer_algorithm(_ctx: Context<RemoveOptimizerAlgorithm>, name: String) -> Result<()> {
+pub fn remove_optimizer_algorithm(_ctx: Context<RemoveOptimizerAlgorithm>, name: String) -> anchor_lang::Result<()> {
     crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.remove_optimizer(&name);
     Ok(())
 }
@@ -237,6 +237,6 @@ pub fn remove_optimizer_algorithm(_ctx: Context<RemoveOptimizerAlgorithm>, name:
 #[derive(Accounts)]
 pub struct ListOptimizerAlgorithms<'info> {}
 
-pub fn list_optimizer_algorithms(_ctx: Context<ListOptimizerAlgorithms>) -> Result<Vec<String>> {
+pub fn list_optimizer_algorithms(_ctx: Context<ListOptimizerAlgorithms>) -> anchor_lang::Result<Vec<String>> {
     Ok(crate::algorithms::algorithm_registry::ALGORITHM_REGISTRY.list_optimizers())
 } 

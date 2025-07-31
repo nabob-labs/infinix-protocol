@@ -17,7 +17,7 @@ use crate::algorithms::execution_optimizer::{
     ExecutionOptimizerParams, MarketData, OptimizationResult, ExecutionPlan, 
     ExecutionSegment, ExecutionStrategy, OptimizationMetrics, Optimizer
 };
-use crate::errors::algorithm_error::AlgorithmError;
+use crate::algorithms::traits::AlgorithmError;
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
 
@@ -219,7 +219,7 @@ impl Default for MLConfig {
 }
 
 impl Optimizer for MLOptimizer {
-    fn optimize(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<OptimizationResult> {
+    fn optimize(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<OptimizationResult> {
         let start_time = self.get_current_timestamp();
         
         // 提取特征
@@ -277,7 +277,7 @@ impl MLOptimizer {
     }
     
     /// 提取特征
-    fn extract_features(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<MLFeatures> {
+    fn extract_features(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<MLFeatures> {
         let market_sentiment = match market_data.market_sentiment {
             crate::algorithms::execution_optimizer::MarketSentiment::Bullish => 1.0,
             crate::algorithms::execution_optimizer::MarketSentiment::Bearish => -1.0,
@@ -324,7 +324,7 @@ impl MLOptimizer {
     }
     
     /// 标准化特征
-    fn normalize_features(&self, features: &MLFeatures) -> Result<MLFeatures> {
+    fn normalize_features(&self, features: &MLFeatures) -> anchor_lang::Result<MLFeatures> {
         if !self.feature_scaler.fitted {
             // 如果标准化器未拟合，使用简单的min-max标准化
             return Ok(MLFeatures {
@@ -357,7 +357,7 @@ impl MLOptimizer {
     }
     
     /// 使用模型进行预测
-    fn predict(&self, features: &MLFeatures) -> Result<MLPrediction> {
+    fn predict(&self, features: &MLFeatures) -> anchor_lang::Result<MLPrediction> {
         // 如果模型未训练，使用启发式方法
         if self.model.is_none() {
             return self.heuristic_prediction(features);
@@ -369,7 +369,7 @@ impl MLOptimizer {
     }
     
     /// 启发式预测（当模型未训练时使用）
-    fn heuristic_prediction(&self, features: &MLFeatures) -> Result<MLPrediction> {
+    fn heuristic_prediction(&self, features: &MLFeatures) -> anchor_lang::Result<MLPrediction> {
         // 基于特征计算最优分段数量
         let optimal_segment_count = self.calculate_optimal_segment_count_heuristic(features);
         
@@ -404,7 +404,7 @@ impl MLOptimizer {
     }
     
     /// 神经网络预测
-    fn neural_network_prediction(&self, model: &MLModel, features: &MLFeatures) -> Result<MLPrediction> {
+    fn neural_network_prediction(&self, model: &MLModel, features: &MLFeatures) -> anchor_lang::Result<MLPrediction> {
         // 将特征转换为神经网络输入
         let input = self.features_to_neural_input(features);
         
@@ -510,7 +510,7 @@ impl MLOptimizer {
     }
     
     /// 前向传播
-    fn forward_propagation(&self, model: &MLModel, input: &[f64]) -> Result<Vec<f64>> {
+    fn forward_propagation(&self, model: &MLModel, input: &[f64]) -> anchor_lang::Result<Vec<f64>> {
         let mut current_layer = input.to_vec();
         
         for layer_idx in 0..model.layers.len() - 1 {
@@ -548,7 +548,7 @@ impl MLOptimizer {
     }
     
     /// 解析神经网络输出
-    fn parse_neural_output(&self, output: &[f64], features: &MLFeatures) -> Result<MLPrediction> {
+    fn parse_neural_output(&self, output: &[f64], features: &MLFeatures) -> anchor_lang::Result<MLPrediction> {
         if output.len() < 4 {
             return Err(AlgorithmError::InvalidResult {
                 reason: "Neural network output too small".to_string(),
@@ -582,7 +582,7 @@ impl MLOptimizer {
     }
     
     /// 根据预测结果构建执行计划
-    fn build_execution_plan_from_prediction(&self, prediction: &MLPrediction, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<ExecutionPlan> {
+    fn build_execution_plan_from_prediction(&self, prediction: &MLPrediction, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<ExecutionPlan> {
         let mut segments = Vec::with_capacity(prediction.optimal_segment_count as usize);
         let mut remaining_amount = params.order_size;
         let mut remaining_time = params.target_execution_time;
@@ -656,7 +656,7 @@ impl MLOptimizer {
     }
     
     /// 构建优化结果
-    fn build_optimization_result(&self, execution_plan: &ExecutionPlan, params: &ExecutionOptimizerParams, market_data: &MarketData, start_time: u64) -> Result<OptimizationResult> {
+    fn build_optimization_result(&self, execution_plan: &ExecutionPlan, params: &ExecutionOptimizerParams, market_data: &MarketData, start_time: u64) -> anchor_lang::Result<OptimizationResult> {
         let optimization_time = self.get_current_timestamp() - start_time;
         
         let metrics = OptimizationMetrics {

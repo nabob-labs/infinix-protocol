@@ -258,3 +258,85 @@ pub struct IndexTokenBatchSplit {
     /// 事件发生时间戳
     pub timestamp: i64,
 }
+
+#[event]
+/// 指数代币买入执行事件
+/// 表示指数代币买入操作执行完成的链上事件。
+pub struct IndexTokenBuyExecuted {
+    /// 指数代币ID
+    pub index_token_id: u64,
+    /// 买入数量
+    pub amount: u64,
+    /// 买入价格
+    pub price: u64,
+    /// 买方地址
+    pub buyer: Pubkey,
+    /// 事件发生时间戳
+    pub timestamp: i64,
+}
+
+#[event]
+/// 指数代币卖出执行事件
+/// 表示指数代币卖出操作执行完成的链上事件。
+pub struct IndexTokenSellExecuted {
+    /// 指数代币ID
+    pub index_token_id: u64,
+    /// 卖出数量
+    pub amount: u64,
+    /// 卖出价格
+    pub price: u64,
+    /// 卖方地址
+    pub seller: Pubkey,
+    /// 事件发生时间戳
+    pub timestamp: i64,
+}
+
+#[event]
+/// 指数代币兑换执行事件
+/// 表示指数代币兑换操作执行完成的链上事件。
+pub struct IndexTokenSwapExecuted {
+    /// 源指数代币ID
+    pub from_index_token_id: u64,
+    /// 目标指数代币ID
+    pub to_index_token_id: u64,
+    /// 兑换前数量
+    pub from_amount: u64,
+    /// 兑换后数量
+    pub to_amount: u64,
+    /// 操作人
+    pub authority: Pubkey,
+    /// 事件发生时间戳
+    pub timestamp: i64,
+}
+
+#[event]
+/// 指数代币合并执行事件
+/// 表示指数代币合并操作执行完成的链上事件。
+pub struct IndexTokenCombineExecuted {
+    /// 目标指数代币ID（合并后）
+    pub target_index_token_id: u64,
+    /// 源指数代币ID（被合并）
+    pub source_index_token_id: u64,
+    /// 合并数量
+    pub amount: u64,
+    /// 操作人
+    pub authority: Pubkey,
+    /// 事件发生时间戳
+    pub timestamp: i64,
+}
+
+#[event]
+/// 指数代币分割执行事件
+/// 表示指数代币分割操作执行完成的链上事件。
+pub struct IndexTokenSplitExecuted {
+    /// 源指数代币ID（被拆分）
+    pub source_index_token_id: u64,
+    /// 新指数代币ID（拆分后）
+    pub new_index_token_id: u64,
+    /// 拆分数量
+    pub amount: u64,
+    /// 操作人
+    pub authority: Pubkey,
+    /// 事件发生时间戳
+    pub timestamp: i64,
+}

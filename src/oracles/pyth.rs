@@ -10,7 +10,7 @@
 
 use anchor_lang::prelude::*;
 use crate::oracles::traits::{OracleAdapter, OracleParams, OraclePriceResult, OracleTwapResult, OracleVwapResult, OracleAdapterType};
-use crate::core::adapter::AdapterTrait;
+// use crate::core::adapter: // 暂时注释掉:AdapterTrait;
 
 /// Pyth Oracle适配器结构体
 /// - 用于对接Solana链上的Pyth预言机，实现统一的Oracle适配接口

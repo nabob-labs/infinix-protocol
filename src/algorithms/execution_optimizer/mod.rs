@@ -18,11 +18,18 @@
 use anchor_lang::prelude::*;
 use crate::algorithms::traits::{Algorithm, ExecutionStrategy, AlgorithmType, ExecutionResult};
 use crate::core::adapter::AdapterTrait;
-use crate::core::types::algo::AlgoParams;
-use crate::errors::algorithm_error::AlgorithmError;
-use crate::core::constants::*;
+use crate::core::types::AlgoParams;
+// use crate::core::types::algo::AlgoParams; // 暂时注释掉
+// use crate::errors::algorithm_error::AlgorithmError; // 暂时注释掉
+// use crate::core::constants::*; // 暂时注释掉
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
+use crate::algorithms::traits::AlgorithmError;
+
+/// 最大再平衡间隔（秒）
+const MAX_REBALANCE_INTERVAL: u64 = 86400; // 24小时
+/// 最大滑点容忍度（基点）
+const MAX_SLIPPAGE_BPS: u64 = 1000; // 10%
 
 pub mod types;
 pub mod genetic;
@@ -271,7 +278,7 @@ pub struct ExecutionOptimizerConfig {
 
 /// 优化器trait
 pub trait Optimizer: Send + Sync {
-    fn optimize(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<OptimizationResult>;
+    fn optimize(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<OptimizationResult>;
     fn name(&self) -> &'static str;
 }
 
@@ -299,28 +306,24 @@ impl Default for ExecutionOptimizerConfig {
 
 /// AdapterTrait 实现
 impl AdapterTrait for ExecutionOptimizerAlgorithm {
-    fn name(&self) -> &'static str { 
-        "execution_optimizer" 
+    fn name(&self) -> &str {
+        "ExecutionOptimizer"
     }
     
-    fn version(&self) -> &'static str { 
-        "2.0.0" 
+    fn version(&self) -> &str {
+        "1.0.0"
     }
     
-    fn supported_assets(&self) -> Vec<String> { 
-        vec![
-            "SOL".to_string(), 
-            "USDC".to_string(),
-            "USDT".to_string(),
-            "ETH".to_string(),
-            "BTC".to_string(),
-            "RAY".to_string(),
-            "SRM".to_string(),
-        ] 
+    fn is_available(&self) -> bool {
+        true
     }
     
-    fn status(&self) -> Option<String> { 
-        Some("active".to_string()) 
+    fn initialize(&mut self) -> anchor_lang::Result<()> {
+        Ok(())
+    }
+    
+    fn cleanup(&mut self) -> anchor_lang::Result<()> {
+        Ok(())
     }
 }
 
@@ -364,7 +367,7 @@ impl Algorithm for ExecutionOptimizerAlgorithm {
 
 /// ExecutionStrategy trait 实现
 impl ExecutionStrategy for ExecutionOptimizerAlgorithm {
-    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &AlgoParams) -> Result<ExecutionResult> {
+    fn execute(&self, _ctx: Context<crate::algorithms::traits::Execute>, params: &AlgoParams) -> anchor_lang::Result<ExecutionResult> {
         self.execute(params)
     }
 }
@@ -414,7 +417,7 @@ impl ExecutionOptimizerAlgorithm {
     }
     
     /// 解析执行优化器参数
-    fn parse_optimizer_params(&self, params: &AlgoParams) -> Result<ExecutionOptimizerParams> {
+    fn parse_optimizer_params(&self, params: &AlgoParams) -> anchor_lang::Result<ExecutionOptimizerParams> {
         if params.params.is_empty() {
             return Err(AlgorithmError::InvalidParameters {
                 reason: "Empty parameters".to_string(),
@@ -430,7 +433,7 @@ impl ExecutionOptimizerAlgorithm {
     }
     
     /// 验证执行优化器参数
-    fn validate_optimizer_params(&self, params: &ExecutionOptimizerParams) -> Result<()> {
+    fn validate_optimizer_params(&self, params: &ExecutionOptimizerParams) -> anchor_lang::Result<()> {
         // 验证订单大小
         require!(
             params.order_size > 0,
@@ -459,7 +462,7 @@ impl ExecutionOptimizerAlgorithm {
     }
     
     /// 获取市场数据
-    fn get_market_data(&self, params: &ExecutionOptimizerParams) -> Result<MarketData> {
+    fn get_market_data(&self, params: &ExecutionOptimizerParams) -> anchor_lang::Result<MarketData> {
         // 实际实现应调用Oracle和DEX接口获取实时市场数据
         Ok(MarketData {
             current_price: 1_000_000, // 模拟价格
@@ -478,7 +481,7 @@ impl ExecutionOptimizerAlgorithm {
     }
     
     /// 执行优化
-    fn optimize_execution(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<OptimizationResult> {
+    fn optimize_execution(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<OptimizationResult> {
         // 检查风险控制
         self.check_risk_limits(params, market_data)?;
         
@@ -503,7 +506,7 @@ impl ExecutionOptimizerAlgorithm {
     }
     
     /// 选择优化器
-    fn select_optimizer(&self, strategy: &OptimizationStrategy) -> Result<&Box<dyn Optimizer>> {
+    fn select_optimizer(&self, strategy: &OptimizationStrategy) -> anchor_lang::Result<&Box<dyn Optimizer>> {
         let optimizer_name = match strategy {
             OptimizationStrategy::Genetic => "genetic",
             OptimizationStrategy::MachineLearning => "ml",
@@ -521,7 +524,7 @@ impl ExecutionOptimizerAlgorithm {
     }
     
     /// 检查风险限制
-    fn check_risk_limits(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> Result<()> {
+    fn check_risk_limits(&self, params: &ExecutionOptimizerParams, market_data: &MarketData) -> anchor_lang::Result<()> {
         // 检查波动率
         let volatility_bps = (market_data.volatility * 10000.0) as u32;
         if volatility_bps > params.risk_params.max_volatility_tolerance_bps {
@@ -552,7 +555,7 @@ impl ExecutionOptimizerAlgorithm {
     }
     
     /// 转换为执行结果
-    fn convert_to_execution_result(&self, optimization_result: &OptimizationResult) -> Result<ExecutionResult> {
+    fn convert_to_execution_result(&self, optimization_result: &OptimizationResult) -> anchor_lang::Result<ExecutionResult> {
         Ok(ExecutionResult {
             optimized_size: optimization_result.optimal_execution_plan.total_execution_amount,
             expected_cost: optimization_result.expected_cost,
@@ -560,7 +563,7 @@ impl ExecutionOptimizerAlgorithm {
     }
     
     /// 记录优化指标
-    fn record_optimization_metrics(&self, result: &OptimizationResult) -> Result<()> {
+    fn record_optimization_metrics(&self, result: &OptimizationResult) -> anchor_lang::Result<()> {
         msg!("Execution Optimization Metrics:");
         msg!("  Optimization Time: {} ms", result.metrics.optimization_time_ms);
         msg!("  Iteration Count: {}", result.metrics.iteration_count);

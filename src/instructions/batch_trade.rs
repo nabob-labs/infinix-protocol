@@ -2,16 +2,16 @@
 //! 该文件实现了BatchTradeInstructionTrait及其最小功能单元实现，所有方法均为生产级实现，逐行专业注释，无伪代码、无省略。
 
 use anchor_lang::prelude::*;
-use crate::core::types::{AssetOperationTrait, AssetBatchOperation, AssetBatchOpType, TokenInfo};
+use crate::core::types::*;
 
 /// 批量交易指令集trait，定义所有批量交易相关操作接口
 pub trait BatchTradeInstructionTrait {
     /// 执行一组批量资产操作
-    fn execute_batch(ctx: &Context<BatchTrade>, ops: Vec<AssetBatchOperation>) -> Result<()>;
+    fn execute_batch(ctx: &Context<BatchTrade>, ops: Vec<AssetBatchOperation>) -> anchor_lang::Result<()>;
     /// 查询批量操作的预期结果
-    fn preview_batch(ctx: &Context<BatchTrade>, ops: Vec<AssetBatchOperation>) -> Result<Vec<u64>>;
+    fn preview_batch(ctx: &Context<BatchTrade>, ops: Vec<AssetBatchOperation>) -> anchor_lang::Result<Vec<u64>>;
     /// 验证批量操作的有效性
-    fn validate_batch(ctx: &Context<BatchTrade>, ops: &Vec<AssetBatchOperation>) -> Result<()>;
+    fn validate_batch(ctx: &Context<BatchTrade>, ops: &Vec<AssetBatchOperation>) -> anchor_lang::Result<()>;
 }
 
 /// Anchor上下文结构体，定义批量交易涉及的账户
@@ -20,9 +20,6 @@ pub struct BatchTrade<'info> {
     /// 操作发起人
     #[account(mut)]
     pub authority: Signer<'info>,
-    /// 资产账户列表（可扩展为多资产）
-    #[account(mut)]
-    pub asset_accounts: Vec<AccountInfo<'info>>,
 }
 
 /// 批量交易指令集实现体
@@ -30,7 +27,7 @@ pub struct BatchTradeInstruction;
 
 impl BatchTradeInstructionTrait for BatchTradeInstruction {
     /// 执行一组批量资产操作
-    fn execute_batch(ctx: &Context<BatchTrade>, ops: Vec<AssetBatchOperation>) -> Result<()> {
+    fn execute_batch(ctx: &Context<BatchTrade>, ops: Vec<AssetBatchOperation>) -> anchor_lang::Result<()> {
         // 遍历所有批量操作
         for op in ops.iter() {
             // 针对每个操作类型，调用对应的资产操作trait方法
@@ -73,7 +70,7 @@ impl BatchTradeInstructionTrait for BatchTradeInstruction {
     }
 
     /// 查询批量操作的预期结果
-    fn preview_batch(ctx: &Context<BatchTrade>, ops: Vec<AssetBatchOperation>) -> Result<Vec<u64>> {
+    fn preview_batch(ctx: &Context<BatchTrade>, ops: Vec<AssetBatchOperation>) -> anchor_lang::Result<Vec<u64>> {
         let mut results = Vec::with_capacity(ops.len());
         // 遍历所有批量操作，调用各自的预览逻辑
         for op in ops.iter() {
@@ -93,7 +90,7 @@ impl BatchTradeInstructionTrait for BatchTradeInstruction {
     }
 
     /// 验证批量操作的有效性
-    fn validate_batch(ctx: &Context<BatchTrade>, ops: &Vec<AssetBatchOperation>) -> Result<()> {
+    fn validate_batch(ctx: &Context<BatchTrade>, ops: &Vec<AssetBatchOperation>) -> anchor_lang::Result<()> {
         // 遍历所有批量操作，调用各自的验证逻辑
         for op in ops.iter() {
             match op.op_type {

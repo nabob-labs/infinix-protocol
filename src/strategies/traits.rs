@@ -5,7 +5,7 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::core::adapter::AdapterTrait;
+// use crate::core::adapter; // 暂时注释掉
 
 /// 策略参数结构体（示例，可根据实际业务扩展）
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]

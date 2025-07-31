@@ -3,30 +3,26 @@
 //!
 //! 本模块实现 Lifinity DEX 适配器，提供与 Lifinity AMM 的链上集成接口，确保交易路由与聚合合规、可维护。
 
+use anchor_lang::prelude::*;
 use crate::core::adapter::AdapterTrait;
 use crate::core::types::{TradeParams, BatchTradeParams, DexParams};
+// // use crate::core::types: // 暂时注释掉:{TradeParams, BatchTradeParams, DexParams}; // 暂时注释掉
 use crate::dex::adapter::{DexAdapter, DexSwapResult, DexAdapterType};
-use anchor_lang::prelude::*;
 
 /// Lifinity DEX 适配器结构体。
 pub struct LifinityAdapter;
 
 impl AdapterTrait for LifinityAdapter {
-    /// 返回适配器名称。
-    fn name(&self) -> &'static str { "lifinity" }
-    /// 返回适配器版本。
-    fn version(&self) -> &'static str { "1.0.0" }
-    /// 返回支持的资产列表。
-    fn supported_assets(&self) -> Vec<String> { 
-        vec!["SOL".to_string(), "USDC".to_string(), "LFNTY".to_string(), "BTC".to_string()] 
-    }
-    /// 返回适配器状态。
-    fn status(&self) -> Option<String> { Some("active".to_string()) }
+    fn name(&self) -> &str { "lifinity" }
+    fn version(&self) -> &str { "1.0.0" }
+    fn is_available(&self) -> bool { true }
+    fn initialize(&mut self) -> anchor_lang::Result<()> { Ok(()) }
+    fn cleanup(&mut self) -> anchor_lang::Result<()> { Ok(()) }
 }
 
 impl DexAdapter for LifinityAdapter {
     /// 执行 Lifinity swap 操作。
-    fn swap(&self, params: &TradeParams) -> Result<DexSwapResult> {
+    fn swap(&self, params: &TradeParams) -> anchor_lang::Result<DexSwapResult> {
         // 生产级实现：集成Lifinity链上CPI调用，参数校验、错误处理、事件追踪
         require!(params.amount_in > 0, crate::errors::asset_error::AssetError::InvalidAmount);
         require!(params.from_token != params.to_token, crate::errors::dex_error::DexError::InvalidTokens);
@@ -101,10 +97,10 @@ pub enum LifinityError {
     #[msg("Operation unsupported")] Unsupported,
 }
 
-/// 自动注册 LifinityAdapter 到工厂。
+/// 自动注册 LifinityAdapter 到工厂
 // #[ctor::ctor]
 fn register_lifinity_adapter() {
-    crate::dex::factory::DEX_FACTORY.register("lifinity", std::sync::Arc::new(LifinityAdapter));
+    // crate::dex::factory::DEX_FACTORY.register("lifinity", std::sync::Arc::new(LifinityAdapter));
 }
 
 #[cfg(test)]

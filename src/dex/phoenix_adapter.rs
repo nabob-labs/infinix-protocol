@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*; // Anchor预导入，包含Result、Context等
 use super::traits::{DexAdapter, SwapParams, SwapResult, AddLiquidityParams, RemoveLiquidityParams, QuoteParams, QuoteResult}; // DEX适配器trait及相关类型
-use crate::core::adapter::AdapterTrait; // 适配器元信息trait，统一接口
+// use crate::core::adapter: // 暂时注释掉:AdapterTrait; // 适配器元信息trait，统一接口
 // 移除未找到的ctor属性
 // use ctor::ctor; // ctor宏用于自动注册
 
@@ -34,7 +34,7 @@ fn auto_register_phoenix_adapter() {
 /// 实现DexAdapter trait，集成Phoenix链上CPI调用（待补充）
 impl DexAdapter for PhoenixAdapter {
     /// 执行 Phoenix swap 操作。
-    fn swap(&self, params: &SwapParams) -> Result<DexSwapResult> {
+    fn swap(&self, params: &SwapParams) -> anchor_lang::Result<DexSwapResult> {
         // 生产级实现：集成Phoenix链上CPI调用，参数校验、错误处理、事件追踪
         require!(params.amount_in > 0, crate::errors::asset_error::AssetError::InvalidAmount);
         // TODO: 调用Phoenix CPI（此处应集成真实CPI调用）
@@ -50,7 +50,7 @@ impl DexAdapter for PhoenixAdapter {
     /// - ctx: Anchor上下文，包含所有必需账户
     /// - params: 添加流动性参数
     /// - 返回：添加后获得的LP token数量
-    fn add_liquidity(&self, ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> Result<u64> {
+    fn add_liquidity(&self, ctx: Context<AddLiquidity>, params: AddLiquidityParams) -> anchor_lang::Result<u64> {
         // TODO: 集成 Phoenix CPI
         Ok(0)
     }
@@ -58,7 +58,7 @@ impl DexAdapter for PhoenixAdapter {
     /// - ctx: Anchor上下文，包含所有必需账户
     /// - params: 移除流动性参数
     /// - 返回：移除后获得的资产数量
-    fn remove_liquidity(&self, ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> Result<u64> {
+    fn remove_liquidity(&self, ctx: Context<RemoveLiquidity>, params: RemoveLiquidityParams) -> anchor_lang::Result<u64> {
         // TODO: 集成 Phoenix CPI
         Ok(0)
     }
@@ -66,7 +66,7 @@ impl DexAdapter for PhoenixAdapter {
     /// - ctx: Anchor上下文，包含所有必需账户
     /// - params: 报价参数
     /// - 返回：QuoteResult结构体，包含预期兑换数量和手续费
-    fn get_quote(&self, ctx: Context<GetQuote>, params: QuoteParams) -> Result<QuoteResult> {
+    fn get_quote(&self, ctx: Context<GetQuote>, params: QuoteParams) -> anchor_lang::Result<QuoteResult> {
         // TODO: 集成 Phoenix CPI
         Ok(QuoteResult { amount_out: 0, fee: 0 })
     }

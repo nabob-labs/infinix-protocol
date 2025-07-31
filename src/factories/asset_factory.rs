@@ -5,8 +5,8 @@
 //! 并逐行专业注释，便于审计、维护、扩展。
 
 use anchor_lang::prelude::*;
-use crate::state::asset::{AssetManager, AssetType};
-use crate::core::performance::ExecutionStats;
+// use crate::state::asset; // 暂时注释掉
+// use crate::core::performance; // 暂时注释掉
 
 /// 资产工厂
 /// - 负责资产管理器的创建与初始化

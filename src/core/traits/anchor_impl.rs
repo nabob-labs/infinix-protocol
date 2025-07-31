@@ -7,14 +7,15 @@
 use anchor_lang::prelude::*;
 use crate::core::traits::dex_oracle::{PriceOracle, DexClient, LiquiditySource};
 use crate::core::traits::types::{DexTradeResult, DexSide};
+use crate::errors::StrategyError;
 
 /// Anchor集成Pyth价格预言机实现
 pub struct AnchorPythPriceOracle;
 
 impl PriceOracle for AnchorPythPriceOracle {
-    fn get_price(&self, token_mint: Pubkey) -> Result<u64> {
+    fn get_price(&self, token_mint: Pubkey) -> anchor_lang::Result<u64> {
         // 生产环境应集成Pyth链上账户读取
-        Err(crate::error::StrategyError::NotImplemented)
+        Err(StrategyError::NotImplemented)
     }
 }
 
@@ -22,12 +23,12 @@ impl PriceOracle for AnchorPythPriceOracle {
 pub struct AnchorJupiterDexClient;
 
 impl DexClient for AnchorJupiterDexClient {
-    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult> {
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult> {
         // 生产环境应集成Jupiter链上调用
-        Err(crate::error::StrategyError::NotImplemented)
+        Err(StrategyError::NotImplemented)
     }
-    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult> {
+        Err(StrategyError::NotImplemented)
     }
 }
 
@@ -35,11 +36,11 @@ impl DexClient for AnchorJupiterDexClient {
 pub struct AnchorOrcaDexClient;
 
 impl DexClient for AnchorOrcaDexClient {
-    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult> {
+        Err(StrategyError::NotImplemented)
     }
-    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult> {
+        Err(StrategyError::NotImplemented)
     }
 }
 
@@ -47,11 +48,11 @@ impl DexClient for AnchorOrcaDexClient {
 pub struct AnchorRaydiumDexClient;
 
 impl DexClient for AnchorRaydiumDexClient {
-    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult> {
+        Err(StrategyError::NotImplemented)
     }
-    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult> {
+        Err(StrategyError::NotImplemented)
     }
 }
 
@@ -59,11 +60,11 @@ impl DexClient for AnchorRaydiumDexClient {
 pub struct AnchorSerumDexClient;
 
 impl DexClient for AnchorSerumDexClient {
-    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> Result<DexTradeResult> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn market_order(&self, token_mint: Pubkey, amount: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult> {
+        Err(StrategyError::NotImplemented)
     }
-    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> Result<DexTradeResult> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn limit_order(&self, token_mint: Pubkey, amount: u64, price: u64, side: DexSide) -> anchor_lang::Result<DexTradeResult> {
+        Err(StrategyError::NotImplemented)
     }
 }
 
@@ -71,11 +72,11 @@ impl DexClient for AnchorSerumDexClient {
 pub struct AnchorRaydiumLiquiditySource;
 
 impl LiquiditySource for AnchorRaydiumLiquiditySource {
-    fn get_liquidity(&self, token_mint: Pubkey) -> Result<u64> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn get_liquidity(&self, token_mint: Pubkey) -> anchor_lang::Result<u64> {
+        Err(StrategyError::NotImplemented)
     }
-    fn get_all_liquidity(&self) -> Result<Vec<(Pubkey, u64)>> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn get_all_liquidity(&self) -> anchor_lang::Result<Vec<(Pubkey, u64)>> {
+        Err(StrategyError::NotImplemented)
     }
 }
 
@@ -83,11 +84,11 @@ impl LiquiditySource for AnchorRaydiumLiquiditySource {
 pub struct AnchorLiquidityAggregator;
 
 impl LiquiditySource for AnchorLiquidityAggregator {
-    fn get_liquidity(&self, token_mint: Pubkey) -> Result<u64> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn get_liquidity(&self, token_mint: Pubkey) -> anchor_lang::Result<u64> {
+        Err(StrategyError::NotImplemented)
     }
-    fn get_all_liquidity(&self) -> Result<Vec<(Pubkey, u64)>> {
-        Err(crate::error::StrategyError::NotImplemented)
+    fn get_all_liquidity(&self) -> anchor_lang::Result<Vec<(Pubkey, u64)>> {
+        Err(StrategyError::NotImplemented)
     }
 }
 
@@ -95,7 +96,7 @@ impl LiquiditySource for AnchorLiquidityAggregator {
 pub struct MockPriceOracle;
 
 impl PriceOracle for MockPriceOracle {
-    fn get_price(&self, _token_mint: Pubkey) -> Result<u64> {
+    fn get_price(&self, _token_mint: Pubkey) -> anchor_lang::Result<u64> {
         Ok(1_000_000) // 返回固定价格，便于测试
     }
 } 

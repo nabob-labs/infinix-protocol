@@ -2,7 +2,7 @@
 // 生产级实现，完整实现OracleAdapterTrait，所有方法均逐行专业注释
 
 use anchor_lang::prelude::*;
-use crate::core::types::{AssetType, OracleAdapterTrait};
+use crate::core::types::OracleAdapterTrait;
 use crate::oracles::traits::*;
 
 /// SwitchboardAdapter结构体，代表Switchboard预言机适配器
@@ -33,7 +33,7 @@ impl OracleAdapter for SwitchboardAdapter {
         "Switchboard"
     }
     /// 获取现价（mock实现，实际应调用Switchboard CPI）
-    fn get_price(&self, _ctx: Context<GetPrice>, params: PriceParams) -> Result<PriceResult> {
+    fn get_price(&self, _ctx: Context<GetPrice>, params: PriceParams) -> anchor_lang::Result<PriceResult> {
         let price = match params.asset_type.as_str() {
             "Crypto" => 102_000_000,
             "Stablecoin" => 1_000_000,
@@ -50,11 +50,11 @@ impl OracleAdapter for SwitchboardAdapter {
         })
     }
     /// 获取TWAP（mock实现）
-    fn get_twap(&self, _ctx: Context<GetTwap>, _params: TwapParams) -> Result<TwapResult> {
+    fn get_twap(&self, _ctx: Context<GetTwap>, _params: TwapParams) -> anchor_lang::Result<TwapResult> {
         Ok(TwapResult { twap: 102_000_000, last_updated: Clock::get()?.unix_timestamp })
     }
     /// 获取VWAP（mock实现）
-    fn get_vwap(&self, _ctx: Context<GetVwap>, _params: VwapParams) -> Result<VwapResult> {
+    fn get_vwap(&self, _ctx: Context<GetVwap>, _params: VwapParams) -> anchor_lang::Result<VwapResult> {
         Ok(VwapResult { vwap: 102_000_000, last_updated: Clock::get()?.unix_timestamp })
     }
     /// 触发事件（mock实现）
